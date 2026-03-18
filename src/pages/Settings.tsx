@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -14,8 +14,7 @@ import { useProjectStore } from '../store/projectStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import { storage } from '../lib/utils';
-import type { Task } from '../types';
+import { deleteProjectById, syncProjectTasks, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
 
 export default function Settings() {
@@ -34,13 +33,6 @@ export default function Settings() {
     baseDate?: string;
   }>({});
 
-  useEffect(() => {
-    if (projectId) {
-      const savedTasks = storage.get<Task[]>(`tasks-${projectId}`, []);
-      setTasks(savedTasks);
-    }
-  }, [projectId, setTasks]);
-
   const resolvedFormData = {
     name: formData.name ?? currentProject?.name ?? '',
     description: formData.description ?? currentProject?.description ?? '',
@@ -49,20 +41,19 @@ export default function Settings() {
     baseDate: formData.baseDate ?? currentProject?.baseDate ?? '',
   };
 
-  const handleSave = () => {
-    if (!projectId) return;
+  const handleSave = async () => {
+    if (!projectId || !currentProject) return;
     setIsSaving(true);
 
-    updateProject(projectId, {
+    const savedProject = await upsertProject({
+      ...currentProject,
+      id: projectId,
+      ownerId: currentProject.ownerId,
       ...resolvedFormData,
       updatedAt: new Date().toISOString(),
     });
 
-    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
-    const updatedProjects = projects.map((project) =>
-      project.id === projectId ? { ...project, ...resolvedFormData, updatedAt: new Date().toISOString() } : project
-    );
-    storage.set('projects', updatedProjects);
+    updateProject(projectId, savedProject);
 
     setTimeout(() => {
       setIsSaving(false);
@@ -70,30 +61,27 @@ export default function Settings() {
     }, 500);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!projectId) return;
 
+    await deleteProjectById(projectId);
     deleteProject(projectId);
-
-    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
-    const updatedProjects = projects.filter((project) => project.id !== projectId);
-    storage.set('projects', updatedProjects);
-    storage.remove(`tasks-${projectId}`);
-    storage.remove(`members-${projectId}`);
 
     navigate('/projects');
   };
 
-  const handleArchive = () => {
-    if (!projectId) return;
+  const handleArchive = async () => {
+    if (!projectId || !currentProject) return;
 
-    updateProject(projectId, { status: 'archived' });
+    const savedProject = await upsertProject({
+      ...currentProject,
+      id: projectId,
+      ownerId: currentProject.ownerId,
+      status: 'archived',
+      updatedAt: new Date().toISOString(),
+    });
 
-    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
-    const updatedProjects = projects.map((project) =>
-      project.id === projectId ? { ...project, status: 'archived' } : project
-    );
-    storage.set('projects', updatedProjects);
+    updateProject(projectId, savedProject);
 
     alert('프로젝트가 보관되었습니다.');
   };
@@ -125,7 +113,7 @@ export default function Settings() {
         }
 
         setTasks(importedTasks);
-        storage.set(`tasks-${projectId}`, importedTasks);
+        void syncProjectTasks(projectId!, importedTasks);
         alert(`${importedTasks.length}개의 작업을 가져왔습니다.`);
       } catch (error) {
         console.error('Import error:', error);

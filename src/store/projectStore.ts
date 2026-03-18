@@ -5,6 +5,7 @@ interface ProjectState {
   projects: Project[];
   currentProject: Project | null;
   members: ProjectMember[];
+  membersLoadedProjectId: string | null;
   isLoading: boolean;
 
   // Actions
@@ -15,7 +16,7 @@ interface ProjectState {
   setCurrentProject: (project: Project | null) => void;
 
   // Members
-  setMembers: (members: ProjectMember[]) => void;
+  setMembers: (members: ProjectMember[], projectId?: string | null) => void;
   addMember: (member: ProjectMember) => void;
   updateMember: (id: string, updates: Partial<ProjectMember>) => void;
   removeMember: (id: string) => void;
@@ -27,6 +28,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   projects: [],
   currentProject: null,
   members: [],
+  membersLoadedProjectId: null,
   isLoading: false,
 
   setProjects: (projects) => set({ projects }),
@@ -53,7 +55,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
   setCurrentProject: (project) => set({ currentProject: project }),
 
-  setMembers: (members) => set({ members }),
+  setMembers: (members, projectId) =>
+    set((state) => ({
+      members,
+      membersLoadedProjectId: projectId ?? state.membersLoadedProjectId,
+    })),
 
   addMember: (member) =>
     set((state) => ({

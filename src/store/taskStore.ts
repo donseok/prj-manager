@@ -6,6 +6,7 @@ interface TaskState {
   tasks: Task[];
   taskTree: Task[];
   flatTasks: Task[];
+  loadedProjectId: string | null;
   selectedTaskId: string | null;
   expandedIds: Set<string>;
   isLoading: boolean;
@@ -16,7 +17,7 @@ interface TaskState {
   historyIndex: number;
 
   // Actions
-  setTasks: (tasks: Task[]) => void;
+  setTasks: (tasks: Task[], projectId?: string | null) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -50,6 +51,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   taskTree: [],
   flatTasks: [],
+  loadedProjectId: null,
   selectedTaskId: null,
   expandedIds: new Set<string>(),
   isLoading: false,
@@ -57,7 +59,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   history: [],
   historyIndex: -1,
 
-  setTasks: (tasks) => {
+  setTasks: (tasks, projectId) => {
     const expandedIds = get().expandedIds;
     const tasksWithExpanded = tasks.map((t) => ({
       ...t,
@@ -69,6 +71,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       tasks: tasksWithExpanded,
       taskTree: tree,
       flatTasks: flat,
+      loadedProjectId: projectId ?? get().loadedProjectId,
     });
   },
 

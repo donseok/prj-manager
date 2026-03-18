@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useState } from 'react';
+import { signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
   const { user, logout } = useAuthStore();
@@ -17,6 +18,11 @@ export default function Header() {
     day: 'numeric',
     weekday: 'short',
   }).format(new Date());
+  const handleLogout = async () => {
+    await signOutSupabase();
+    logout();
+    setShowUserMenu(false);
+  };
 
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
@@ -94,8 +100,7 @@ export default function Header() {
                 </Link>
                 <button
                   onClick={() => {
-                    logout();
-                    setShowUserMenu(false);
+                    void handleLogout();
                   }}
                   className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
                 >

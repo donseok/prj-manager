@@ -11,45 +11,47 @@ import Settings from './pages/Settings';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
-import { storage } from './lib/utils';
-import { sampleProject, sampleMembers, sampleTasks } from './data/sampleData';
-import type { Project, ProjectMember, Task } from './types';
+import { createLocalFallbackUser, ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
+import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
 
 function App() {
   const { setProjects } = useProjectStore();
   const { setUser } = useAuthStore();
 
-  // 초기 데이터 로드
   useEffect(() => {
-    // 로컬 스토리지에서 프로젝트 로드
-    let savedProjects = storage.get<Project[]>('projects', []);
+    let isCancelled = false;
+    let unsubscribe = () => {};
 
-    // 프로젝트가 없으면 샘플 데이터 로드
-    if (savedProjects.length === 0) {
-      savedProjects = [sampleProject];
-      storage.set('projects', savedProjects);
-      storage.set(`members-${sampleProject.id}`, sampleMembers);
-      storage.set(`tasks-${sampleProject.id}`, sampleTasks);
-    }
+    const initializeApp = async () => {
+      const sessionUser = await ensureSupabaseSession();
+      const effectiveUser = sessionUser || createLocalFallbackUser();
+      const projects = await loadInitialProjects(effectiveUser);
 
-    setProjects(savedProjects);
+      if (isCancelled) return;
 
-    // 기본 사용자 설정 (로컬 모드)
-    setUser({
-      id: 'local-user',
-      email: 'user@local.dev',
-      name: '로컬 사용자',
-      createdAt: new Date().toISOString(),
-    });
+      setUser(effectiveUser);
+      setProjects(projects);
+
+      unsubscribe = subscribeToSupabaseAuthChanges((nextUser) => {
+        const nextEffectiveUser = nextUser || createLocalFallbackUser();
+
+        void (async () => {
+          const nextProjects = await loadInitialProjects(nextEffectiveUser);
+          if (isCancelled) return;
+
+          setUser(nextEffectiveUser);
+          setProjects(nextProjects);
+        })();
+      });
+    };
+
+    void initializeApp();
+
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
   }, [setProjects, setUser]);
-
-  // 프로젝트 변경 시 저장
-  const { projects } = useProjectStore();
-  useEffect(() => {
-    if (projects.length > 0) {
-      storage.set('projects', projects);
-    }
-  }, [projects]);
 
   return (
     <BrowserRouter>
@@ -78,22 +80,32 @@ function ProjectDetailWrapper() {
   const { setTasks, expandAll } = useTaskStore();
 
   useEffect(() => {
-    if (projectId) {
-      const project = projects.find((p) => p.id === projectId);
-      if (project) {
-        setCurrentProject(project);
-        // 로컬 멤버 로드
-        const savedMembers = storage.get<ProjectMember[]>(`members-${projectId}`, []);
-        setMembers(savedMembers);
-        // 로컬 태스크 로드
-        const savedTasks = storage.get<Task[]>(`tasks-${projectId}`, []);
-        setTasks(savedTasks);
-        // 모든 태스크 펼치기
-        setTimeout(() => expandAll(), 100);
-      }
-    }
+    let isCancelled = false;
+
+    const loadProjectDetail = async () => {
+      if (!projectId) return;
+
+      const project = projects.find((item) => item.id === projectId);
+      if (!project) return;
+
+      setCurrentProject(project);
+
+      const [members, tasks] = await Promise.all([
+        loadProjectMembers(projectId),
+        loadProjectTasks(projectId),
+      ]);
+
+      if (isCancelled) return;
+
+      setMembers(members, projectId);
+      setTasks(tasks, projectId);
+      setTimeout(() => expandAll(), 100);
+    };
+
+    void loadProjectDetail();
 
     return () => {
+      isCancelled = true;
       setCurrentProject(null);
     };
   }, [projectId, projects, setCurrentProject, setMembers, setTasks, expandAll]);

@@ -11,14 +11,18 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
+import { useAuthStore } from '../store/authStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
-import type { Project } from '../types';
+import { createLocalFallbackUser } from '../lib/supabase';
+import { deleteProjectById, syncProjectMembers, upsertProject } from '../lib/dataRepository';
+import type { Project, ProjectMember } from '../types';
 
 export default function ProjectList() {
   const navigate = useNavigate();
   const { projects, addProject, deleteProject, updateProject } = useProjectStore();
+  const { user } = useAuthStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -39,36 +43,62 @@ export default function ProjectList() {
   const activeProjects = projects.filter((project) => project.status === 'active').length;
   const archivedProjects = projects.filter((project) => project.status === 'archived').length;
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     if (!newProject.name.trim()) return;
 
+    const owner = user || createLocalFallbackUser();
+    const now = new Date().toISOString();
     const project: Project = {
       id: generateId(),
-      ownerId: 'local-user',
+      ownerId: owner.id,
       name: newProject.name,
       description: newProject.description,
       startDate: newProject.startDate,
       endDate: newProject.endDate,
       status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    addProject(project);
+    const savedProject = await upsertProject(project);
+    const ownerMember: ProjectMember = {
+      id: generateId(),
+      projectId: savedProject.id,
+      userId: owner.id,
+      name: owner.name,
+      role: 'owner',
+      createdAt: now,
+    };
+
+    await syncProjectMembers(savedProject.id, [ownerMember]);
+    addProject(savedProject);
     setShowCreateModal(false);
     setNewProject({ name: '', description: '', startDate: '', endDate: '' });
-    navigate(`/projects/${project.id}`);
+    navigate(`/projects/${savedProject.id}`);
   };
 
-  const handleDeleteProject = (id: string) => {
+  const handleDeleteProject = async (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
+      await deleteProjectById(id);
       deleteProject(id);
     }
     setMenuOpenId(null);
   };
 
-  const handleArchiveProject = (id: string) => {
-    updateProject(id, { status: 'archived' });
+  const handleArchiveProject = async (id: string) => {
+    const project = projects.find((item) => item.id === id);
+    if (!project) return;
+
+    const savedProject = await upsertProject({
+      ...project,
+      status: 'archived',
+      updatedAt: new Date().toISOString(),
+    });
+
+    updateProject(id, {
+      status: savedProject.status,
+      updatedAt: savedProject.updatedAt,
+    });
     setMenuOpenId(null);
   };
 

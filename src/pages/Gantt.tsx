@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
@@ -13,7 +12,7 @@ import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart from '../components/wbs/GanttChart';
-import { storage, cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
+import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
 import { exportGanttWorkbook } from '../lib/excel';
 import type { Task } from '../types';
@@ -36,8 +35,7 @@ const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
 ];
 
 export default function Gantt() {
-  const { projectId } = useParams<{ projectId: string }>();
-  const { tasks, flatTasks, setTasks, toggleExpand } = useTaskStore();
+  const { tasks, flatTasks, toggleExpand } = useTaskStore();
   const { currentProject, members } = useProjectStore();
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -49,13 +47,6 @@ export default function Gantt() {
 
   const tableRef = useRef<HTMLDivElement>(null);
   const rowHeight = density === 'compact' ? 34 : 42;
-
-  useEffect(() => {
-    if (projectId) {
-      const savedTasks = storage.get<Task[]>(`tasks-${projectId}`, []);
-      setTasks(savedTasks);
-    }
-  }, [projectId, setTasks]);
 
   const taskMap = useMemo(
     () => Object.fromEntries(tasks.map((task) => [task.id, task])),

@@ -17,9 +17,9 @@ import Button from '../components/common/Button';
 import {
   generateId,
   cn,
-  storage,
 } from '../lib/utils';
 import { exportWbsWorkbook } from '../lib/excel';
+import { syncProjectTasks } from '../lib/dataRepository';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
@@ -29,6 +29,7 @@ export default function WBS() {
   const {
     tasks,
     flatTasks,
+    loadedProjectId,
     addTask,
     updateTask,
     deleteTask,
@@ -41,30 +42,21 @@ export default function WBS() {
     redo,
     history,
     historyIndex,
-    setTasks,
   } = useTaskStore();
 
   const [selectedRows] = useState<Set<string>>(new Set());
-
-  // 로컬 스토리지에서 작업 로드
-  useEffect(() => {
-    if (projectId) {
-      const savedTasks = storage.get<Task[]>(`tasks-${projectId}`, []);
-      setTasks(savedTasks);
-    }
-  }, [projectId, setTasks]);
 
   // 변경 시 자동 저장 (디바운스)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (projectId && tasks.length > 0) {
+    if (projectId && loadedProjectId === projectId) {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
       saveTimeoutRef.current = setTimeout(() => {
-        storage.set(`tasks-${projectId}`, tasks);
-      }, 500);
+        void syncProjectTasks(projectId, tasks);
+      }, 700);
     }
 
     return () => {
@@ -72,7 +64,7 @@ export default function WBS() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [projectId, tasks]);
+  }, [loadedProjectId, projectId, tasks]);
 
   // 키보드 단축키
   useEffect(() => {

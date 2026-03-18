@@ -4,12 +4,13 @@ import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users } from 'l
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import { generateId, storage } from '../lib/utils';
+import { generateId } from '../lib/utils';
+import { syncProjectMembers } from '../lib/dataRepository';
 import type { ProjectMember } from '../types';
 
 export default function Members() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { members, setMembers, addMember, updateMember, removeMember, currentProject } = useProjectStore();
+  const { members, membersLoadedProjectId, addMember, updateMember, removeMember, currentProject } = useProjectStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -19,17 +20,14 @@ export default function Members() {
   });
 
   useEffect(() => {
-    if (projectId) {
-      const savedMembers = storage.get<ProjectMember[]>(`members-${projectId}`, []);
-      setMembers(savedMembers);
-    }
-  }, [projectId, setMembers]);
+    if (!projectId || membersLoadedProjectId !== projectId) return;
 
-  useEffect(() => {
-    if (projectId && members.length >= 0) {
-      storage.set(`members-${projectId}`, members);
-    }
-  }, [projectId, members]);
+    const timeoutId = setTimeout(() => {
+      void syncProjectMembers(projectId, members);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [members, membersLoadedProjectId, projectId]);
 
   const handleAddMember = () => {
     if (!newMember.name.trim()) return;
