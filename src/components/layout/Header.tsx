@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { FolderKanban, User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays } from 'lucide-react';
+import { User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays } from 'lucide-react';
+import DKFlowLogo from '../common/DKFlowLogo';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -22,14 +23,14 @@ export default function Header() {
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-white/20 bg-[rgba(255,250,244,0.56)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl dark:border-[var(--border-color)] dark:bg-[rgba(15,18,23,0.6)] sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-[image:var(--gradient-primary)] shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02]">
-              <FolderKanban className="w-5 h-5 text-white" />
+            <div className="transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02] shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] rounded-2xl">
+              <DKFlowLogo size={44} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[color:var(--text-muted)]">Project OS</p>
-              <span className="block truncate text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-                프로젝트 관리
+              <span className="block truncate text-lg font-bold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                DK Flow
               </span>
+              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">업무의 흐름을 설계하다</p>
             </div>
           </Link>
 
