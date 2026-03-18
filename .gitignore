@@ -25,3 +25,5 @@ npm-debug.log*
 
 # Temp files
 nul
+.vercel
+.env*.local

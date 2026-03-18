@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Clock3,
@@ -13,10 +13,13 @@ import {
   TrendingUp,
   PieChart as PieChartIcon,
   CalendarClock,
+  FileDown,
+  Loader2,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
+import { generateProjectReport } from '../lib/exportReport';
 import {
   calculateOverallProgress,
   getDelayedTasks,
@@ -165,6 +168,21 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [tasks]);
 
+  // 보고서 다운로드
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async () => {
+    if (!currentProject || isExporting) return;
+    setIsExporting(true);
+    try {
+      await generateProjectReport({ project: currentProject, tasks, members });
+    } catch (e) {
+      console.error('보고서 생성 실패:', e);
+      alert('보고서 생성에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -197,6 +215,15 @@ export default function Dashboard() {
                   간트 차트
                 </Button>
               </Link>
+              <Button
+                variant="outline"
+                className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                onClick={handleExport}
+                disabled={isExporting}
+              >
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                {isExporting ? '생성중...' : '현황 보고서'}
+              </Button>
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -358,7 +385,7 @@ export default function Dashboard() {
           </div>
 
           {assigneeData.length > 0 ? (
-            <div className="mt-6 h-[270px]">
+            <div className="mt-6 h-[270px]" id="chart-assignee">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={assigneeData} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="4 6" stroke="rgba(127,111,97,0.14)" horizontal={false} />
@@ -484,7 +511,7 @@ export default function Dashboard() {
           </div>
 
           {phaseData.length > 0 ? (
-            <div className="mt-6 h-[300px]">
+            <div className="mt-6 h-[300px]" id="chart-phase-progress">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={phaseData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="4 6" stroke="rgba(127,111,97,0.14)" />
@@ -598,7 +625,7 @@ export default function Dashboard() {
 
           {weightData.length > 0 ? (
             <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center" id="chart-weight">
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie

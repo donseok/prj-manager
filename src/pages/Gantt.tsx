@@ -7,12 +7,15 @@ import {
   CalendarRange,
   Clock3,
   Target,
+  Download,
 } from 'lucide-react';
 import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart from '../components/wbs/GanttChart';
 import { storage, cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
+import Button from '../components/common/Button';
+import { exportGanttWorkbook } from '../lib/excel';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 
@@ -138,6 +141,22 @@ export default function Gantt() {
   const selectedDelay = selectedTask ? getDelayDays(selectedTask) : 0;
   const delayedCount = tasks.filter((task) => getDelayDays(task) > 0).length;
   const activeCount = tasks.filter((task) => task.status !== 'completed').length;
+
+  const handleExportExcel = () => {
+    if (filteredFlatTasks.length === 0) {
+      alert('현재 조건에 맞는 작업이 없습니다.');
+      return;
+    }
+
+    exportGanttWorkbook({
+      projectName: currentProject?.name,
+      tasks: filteredFlatTasks,
+      members,
+      filterLabel: FILTER_OPTIONS.find((option) => option.value === filterMode)?.label || '전체',
+      searchQuery,
+      weeksToShow,
+    });
+  };
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -292,6 +311,10 @@ export default function Gantt() {
                 {option.label}
               </button>
             ))}
+            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={filteredFlatTasks.length === 0}>
+              <Download className="w-4 h-4" />
+              엑셀 다운로드
+            </Button>
           </div>
         </div>
 

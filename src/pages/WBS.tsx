@@ -9,6 +9,7 @@ import {
   Redo2,
   ExpandIcon,
   ShrinkIcon,
+  Download,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -18,6 +19,7 @@ import {
   cn,
   storage,
 } from '../lib/utils';
+import { exportWbsWorkbook } from '../lib/excel';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
@@ -128,6 +130,19 @@ export default function WBS() {
   // 셀 값 변경
   const handleCellChange = (taskId: string, field: keyof Task, value: unknown) => {
     updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() });
+  };
+
+  const handleExportExcel = () => {
+    if (tasks.length === 0) {
+      alert('내보낼 작업이 없습니다.');
+      return;
+    }
+
+    exportWbsWorkbook({
+      projectName: currentProject?.name,
+      tasks,
+      members,
+    });
   };
 
   // 셀 렌더링
@@ -373,6 +388,10 @@ export default function WBS() {
               <Button variant="outline" size="sm" onClick={collapseAll}>
                 <ShrinkIcon className="w-4 h-4" />
                 전체 접기
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={tasks.length === 0}>
+                <Download className="w-4 h-4" />
+                엑셀 다운로드
               </Button>
             </div>
 

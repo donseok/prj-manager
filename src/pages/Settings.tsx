@@ -16,12 +16,12 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { storage } from '../lib/utils';
 import type { Task } from '../types';
-import * as XLSX from 'xlsx';
+import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
 
 export default function Settings() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { currentProject, updateProject, deleteProject } = useProjectStore();
+  const { currentProject, members, updateProject, deleteProject } = useProjectStore();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -104,25 +104,11 @@ export default function Settings() {
       return;
     }
 
-    const exportData = tasks.map((task) => ({
-      구분: task.level === 1 ? 'Phase' : task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : 'Function',
-      작업명: task.name,
-      산출물: task.output || '',
-      담당자: task.assigneeId || '',
-      가중치: task.weight,
-      계획시작: task.planStart || '',
-      계획종료: task.planEnd || '',
-      계획공정율: task.planProgress,
-      실적시작: task.actualStart || '',
-      실적종료: task.actualEnd || '',
-      실적공정율: task.actualProgress,
-      상태: task.status,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'WBS');
-    XLSX.writeFile(workbook, `${currentProject?.name || 'project'}_WBS.xlsx`);
+    exportWbsWorkbook({
+      projectName: currentProject?.name,
+      tasks,
+      members,
+    });
   };
 
   const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,41 +118,7 @@ export default function Settings() {
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
       try {
-        const data = new Uint8Array(loadEvent.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
-
-        const importedTasks: Task[] = jsonData.map((row, index) => {
-          const levelMap: Record<string, number> = {
-            Phase: 1,
-            Activity: 2,
-            Task: 3,
-            Function: 4,
-          };
-
-          return {
-            id: crypto.randomUUID(),
-            projectId: projectId!,
-            parentId: null,
-            level: levelMap[String(row['구분'] ?? '')] || 3,
-            orderIndex: index,
-            name: String(row['작업명'] ?? ''),
-            output: String(row['산출물'] ?? ''),
-            assigneeId: null,
-            weight: parseFloat(String(row['가중치'] ?? '')) || 0,
-            planStart: row['계획시작'] ? String(row['계획시작']) : null,
-            planEnd: row['계획종료'] ? String(row['계획종료']) : null,
-            planProgress: parseFloat(String(row['계획공정율'] ?? '')) || 0,
-            actualStart: row['실적시작'] ? String(row['실적시작']) : null,
-            actualEnd: row['실적종료'] ? String(row['실적종료']) : null,
-            actualProgress: parseFloat(String(row['실적공정율'] ?? '')) || 0,
-            status: (String(row['상태'] ?? 'pending') as Task['status']) || 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-        });
+        const importedTasks = parseTasksFromWorkbook(loadEvent.target?.result as ArrayBuffer, projectId!);
 
         if (tasks.length > 0 && !confirm('기존 작업을 덮어쓰시겠습니까?')) {
           return;
@@ -330,7 +282,7 @@ export default function Settings() {
             <div className="mt-5 flex flex-wrap gap-3">
               <Button variant="outline" onClick={handleExportExcel}>
                 <Download className="w-4 h-4" />
-                엑셀 내보내기
+                WBS 엑셀 내보내기
               </Button>
 
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-white/55 px-5 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/84 dark:bg-white/5 dark:hover:bg-white/8">
