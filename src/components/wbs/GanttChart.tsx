@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   format,
   startOfWeek,
@@ -7,54 +7,99 @@ import {
   differenceInDays,
   isSameDay,
   parseISO,
+  min as minDate,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, ScanSearch } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import Button from '../common/Button';
 
 interface GanttChartProps {
   tasks: Task[];
+  selectedTaskId?: string | null;
   startDate?: Date;
   weeksToShow?: number;
+  dayWidth?: number;
+  rowHeight?: number;
+  highlightWeekends?: boolean;
   onTaskClick?: (task: Task) => void;
-  onDateChange?: (taskId: string, field: 'planStart' | 'planEnd' | 'actualStart' | 'actualEnd', date: string) => void;
 }
 
-const CELL_WIDTH = 40; // 하루 너비
-const ROW_HEIGHT = 36;
-const HEADER_HEIGHT = 60;
+const DEFAULT_DAY_WIDTH = 44;
+const DEFAULT_ROW_HEIGHT = 42;
+const HEADER_HEIGHT = 68;
 
 export default function GanttChart({
   tasks,
+  selectedTaskId = null,
   startDate: propStartDate,
   weeksToShow = 12,
+  dayWidth = DEFAULT_DAY_WIDTH,
+  rowHeight = DEFAULT_ROW_HEIGHT,
+  highlightWeekends = true,
   onTaskClick,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [, setScrollLeft] = useState(0);
-  const [viewStartDate, setViewStartDate] = useState(() => {
-    if (propStartDate) return startOfWeek(propStartDate, { weekStartsOn: 1 });
-    // 오늘 기준으로 2주 전부터 시작
-    return startOfWeek(addWeeks(new Date(), -2), { weekStartsOn: 1 });
-  });
 
+  const recommendedStartDate = useMemo(() => {
+    if (propStartDate) return startOfWeek(propStartDate, { weekStartsOn: 1 });
+
+    const taskStartDates = tasks
+      .flatMap((task) => [task.planStart, task.actualStart])
+      .filter(Boolean)
+      .map((date) => parseISO(date!));
+
+    if (taskStartDates.length === 0) {
+      return startOfWeek(addWeeks(new Date(), -1), { weekStartsOn: 1 });
+    }
+
+    return startOfWeek(addDays(minDate(taskStartDates), -7), { weekStartsOn: 1 });
+  }, [propStartDate, tasks]);
+
+  const [manualViewStartDate, setManualViewStartDate] = useState<Date | null>(null);
   const today = new Date();
 
-  // 날짜 범위 계산
+  const selectedTask = useMemo(
+    () => tasks.find((task) => task.id === selectedTaskId) ?? null,
+    [selectedTaskId, tasks]
+  );
+
+  const selectedAnchorDate = useMemo(() => {
+    const anchor =
+      selectedTask?.planStart ||
+      selectedTask?.actualStart ||
+      selectedTask?.planEnd ||
+      selectedTask?.actualEnd;
+
+    return anchor ? parseISO(anchor) : null;
+  }, [selectedTask]);
+
+  const baseStartDate = manualViewStartDate ?? recommendedStartDate;
+  const displayStartDate = useMemo(() => {
+    if (!selectedAnchorDate) return baseStartDate;
+
+    const baseEndDate = addDays(baseStartDate, weeksToShow * 7 - 1);
+    if (selectedAnchorDate < baseStartDate || selectedAnchorDate > baseEndDate) {
+      return startOfWeek(addDays(selectedAnchorDate, -7), { weekStartsOn: 1 });
+    }
+
+    return baseStartDate;
+  }, [baseStartDate, selectedAnchorDate, weeksToShow]);
+
   const dateRange = useMemo(() => {
     const dates: Date[] = [];
     const totalDays = weeksToShow * 7;
-    for (let i = 0; i < totalDays; i++) {
-      dates.push(addDays(viewStartDate, i));
+    for (let index = 0; index < totalDays; index += 1) {
+      dates.push(addDays(displayStartDate, index));
     }
     return dates;
-  }, [viewStartDate, weeksToShow]);
+  }, [displayStartDate, weeksToShow]);
 
-  // 월 단위 그룹
+  const viewEndDate = dateRange[dateRange.length - 1];
+
   const months = useMemo(() => {
-    const result: { month: string; days: number }[] = [];
+    const result: Array<{ month: string; days: number }> = [];
     let currentMonth = '';
     let dayCount = 0;
 
@@ -67,7 +112,7 @@ export default function GanttChart({
         currentMonth = monthKey;
         dayCount = 1;
       } else {
-        dayCount++;
+        dayCount += 1;
       }
     });
 
@@ -78,16 +123,14 @@ export default function GanttChart({
     return result;
   }, [dateRange]);
 
-  // 날짜를 x 좌표로 변환
   const dateToX = (date: Date | string | null | undefined): number | null => {
     if (!date) return null;
-    const d = typeof date === 'string' ? parseISO(date) : date;
-    const daysDiff = differenceInDays(d, viewStartDate);
+    const parsedDate = typeof date === 'string' ? parseISO(date) : date;
+    const daysDiff = differenceInDays(parsedDate, displayStartDate);
     if (daysDiff < 0 || daysDiff >= dateRange.length) return null;
-    return daysDiff * CELL_WIDTH;
+    return daysDiff * dayWidth;
   };
 
-  // 간트 바 계산
   const calculateBar = (
     start: string | null | undefined,
     end: string | null | undefined
@@ -100,173 +143,236 @@ export default function GanttChart({
     if (startX === null && endX === null) return null;
 
     const left = startX ?? 0;
-    const right = endX !== null ? endX + CELL_WIDTH : dateRange.length * CELL_WIDTH;
-    const width = Math.max(right - left, CELL_WIDTH / 2);
+    const right = endX !== null ? endX + dayWidth : dateRange.length * dayWidth;
+    const width = Math.max(right - left, dayWidth / 2);
 
     return { left: Math.max(left, 0), width };
   };
 
-  // 오늘 위치
   const todayX = dateToX(today);
+  const barHeight = rowHeight >= 40 ? 10 : 8;
+  const planBarTop = rowHeight >= 40 ? 8 : 6;
+  const actualBarTop = planBarTop + barHeight + 6;
 
-  // 이전/다음 주 이동
+  useEffect(() => {
+    if (!selectedTask || !containerRef.current) return;
+
+    const rowIndex = tasks.findIndex((task) => task.id === selectedTask.id);
+    if (rowIndex < 0) return;
+
+    const anchorX =
+      selectedAnchorDate
+        ? Math.max(differenceInDays(selectedAnchorDate, displayStartDate) * dayWidth, 0)
+        : null;
+
+    containerRef.current.scrollTo({
+      top: Math.max(rowIndex * rowHeight - rowHeight * 3, 0),
+      left: anchorX !== null ? Math.max(anchorX - dayWidth * 5, 0) : containerRef.current.scrollLeft,
+      behavior: 'smooth',
+    });
+  }, [dayWidth, displayStartDate, rowHeight, selectedAnchorDate, selectedTask, tasks]);
+
   const handlePrevWeek = () => {
-    setViewStartDate((prev) => addWeeks(prev, -4));
+    setManualViewStartDate(addWeeks(displayStartDate, -Math.max(2, Math.floor(weeksToShow / 2))));
   };
 
   const handleNextWeek = () => {
-    setViewStartDate((prev) => addWeeks(prev, 4));
+    setManualViewStartDate(addWeeks(displayStartDate, Math.max(2, Math.floor(weeksToShow / 2))));
   };
 
   const handleGoToToday = () => {
-    setViewStartDate(startOfWeek(addWeeks(new Date(), -2), { weekStartsOn: 1 }));
+    setManualViewStartDate(startOfWeek(addDays(new Date(), -7), { weekStartsOn: 1 }));
   };
 
-  // 스크롤 동기화
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollLeft(e.currentTarget.scrollLeft);
+  const handleFitToTasks = () => {
+    setManualViewStartDate(recommendedStartDate);
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-      {/* 툴바 */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center gap-2">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="flex flex-col gap-3 border-b border-[var(--border-color)] px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handlePrevWeek}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={handleGoToToday}>
-            <CalendarDays className="w-4 h-4 mr-1" />
+            <CalendarDays className="w-4 h-4" />
             오늘
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleFitToTasks}>
+            <ScanSearch className="w-4 h-4" />
+            일정에 맞춤
           </Button>
           <Button variant="ghost" size="sm" onClick={handleNextWeek}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {format(viewStartDate, 'yyyy년 M월', { locale: ko })} ~{' '}
-          {format(addDays(viewStartDate, weeksToShow * 7 - 1), 'yyyy년 M월', { locale: ko })}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedTask && (
+            <div className="surface-badge">
+              선택됨: {selectedTask.name || '이름 없는 작업'}
+            </div>
+          )}
+          <div className="surface-badge">
+            {format(displayStartDate, 'yyyy년 M월 d일', { locale: ko })} ~{' '}
+            {format(viewEndDate, 'yyyy년 M월 d일', { locale: ko })}
+          </div>
         </div>
       </div>
 
-      {/* 간트 차트 영역 */}
-      <div className="flex-1 overflow-auto" ref={containerRef} onScroll={handleScroll}>
+      <div className="flex-1 overflow-auto" ref={containerRef}>
         <div
           style={{
-            minWidth: dateRange.length * CELL_WIDTH,
-            minHeight: tasks.length * ROW_HEIGHT + HEADER_HEIGHT,
+            minWidth: dateRange.length * dayWidth,
+            minHeight: tasks.length * rowHeight + HEADER_HEIGHT,
           }}
         >
-          {/* 헤더 */}
           <div
-            className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+            className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[rgba(255,248,241,0.88)] backdrop-blur-2xl dark:bg-[rgba(15,18,23,0.88)]"
             style={{ height: HEADER_HEIGHT }}
           >
-            {/* 월 헤더 */}
-            <div className="flex h-1/2 border-b border-gray-100 dark:border-gray-700">
-              {months.map((m, i) => (
+            <div className="flex h-1/2 border-b border-[var(--border-color)]">
+              {months.map((month) => (
                 <div
-                  key={i}
-                  className="flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border-r border-gray-100 dark:border-gray-700"
-                  style={{ width: m.days * CELL_WIDTH }}
+                  key={month.month}
+                  className="flex items-center justify-center border-r border-[var(--border-color)] text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]"
+                  style={{ width: month.days * dayWidth }}
                 >
-                  {format(parseISO(`${m.month}-01`), 'yyyy년 M월', { locale: ko })}
+                  {format(parseISO(`${month.month}-01`), 'yyyy년 M월', { locale: ko })}
                 </div>
               ))}
             </div>
 
-            {/* 일 헤더 */}
             <div className="flex h-1/2">
-              {dateRange.map((date, i) => {
+              {dateRange.map((date) => {
                 const isToday = isSameDay(date, today);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 return (
                   <div
-                    key={i}
+                    key={date.toISOString()}
                     className={cn(
-                      'flex flex-col items-center justify-center text-xs border-r border-gray-100 dark:border-gray-700',
-                      isToday && 'bg-blue-100 dark:bg-blue-900 font-bold text-blue-700 dark:text-blue-300',
-                      isWeekend && !isToday && 'bg-gray-50 dark:bg-gray-900 text-gray-400 dark:text-gray-500'
+                      'flex flex-col items-center justify-center border-r border-[var(--border-color)] text-xs',
+                      isToday && 'bg-[rgba(15,118,110,0.12)] font-semibold text-[color:var(--accent-primary)]',
+                      highlightWeekends &&
+                        isWeekend &&
+                        !isToday &&
+                        'bg-black/[0.025] text-[color:var(--text-muted)] dark:bg-white/[0.03]'
                     )}
-                    style={{ width: CELL_WIDTH }}
+                    style={{ width: dayWidth }}
                   >
-                    <span className="text-gray-700 dark:text-gray-300">{format(date, 'd')}</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">{format(date, 'E', { locale: ko })}</span>
+                    <span className="text-[color:var(--text-primary)]">{format(date, 'd')}</span>
+                    <span className="text-[10px] text-[color:var(--text-secondary)]">
+                      {format(date, 'E', { locale: ko })}
+                    </span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* 바디 */}
           <div className="relative">
-            {/* 그리드 라인 */}
             <div className="absolute inset-0 pointer-events-none">
-              {dateRange.map((date, i) => {
+              {dateRange.map((date, index) => {
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 return (
                   <div
-                    key={i}
+                    key={`${date.toISOString()}-grid`}
                     className={cn(
-                      'absolute top-0 bottom-0 border-r border-gray-100 dark:border-gray-700',
-                      isWeekend && 'bg-gray-50/50 dark:bg-gray-900/50'
+                      'absolute top-0 bottom-0 border-r border-[var(--border-color)]',
+                      highlightWeekends && isWeekend && 'bg-black/[0.02] dark:bg-white/[0.03]'
                     )}
-                    style={{ left: i * CELL_WIDTH, width: CELL_WIDTH }}
+                    style={{ left: index * dayWidth, width: dayWidth }}
                   />
                 );
               })}
             </div>
 
-            {/* 오늘 라인 */}
             {todayX !== null && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
-                style={{ left: todayX + CELL_WIDTH / 2 }}
-              />
+              <>
+                <div
+                  className="pointer-events-none absolute top-0 bottom-0 z-20 w-0.5 bg-[color:var(--accent-danger)]"
+                  style={{ left: todayX + dayWidth / 2 }}
+                />
+                <div
+                  className="pointer-events-none absolute top-3 z-20 -translate-x-1/2 rounded-full bg-[color:var(--accent-danger)] px-2 py-1 text-[10px] font-semibold text-white shadow-[0_16px_36px_-20px_rgba(203,75,95,0.9)]"
+                  style={{ left: todayX + dayWidth / 2 }}
+                >
+                  오늘
+                </div>
+              </>
             )}
 
-            {/* 작업 행 */}
-            {tasks.map((task) => {
+            {tasks.map((task, rowIndex) => {
               const planBar = calculateBar(task.planStart, task.planEnd);
               const actualBar = calculateBar(task.actualStart, task.actualEnd);
+              const isSelected = task.id === selectedTaskId;
 
               return (
                 <div
                   key={task.id}
-                  className="relative border-b border-gray-100 dark:border-gray-700 hover:bg-blue-50/30 dark:hover:bg-blue-900/20"
-                  style={{ height: ROW_HEIGHT }}
+                  className={cn(
+                    'relative border-b border-[var(--border-color)] transition-colors hover:bg-[rgba(15,118,110,0.04)]',
+                    task.level === 1 && 'bg-black/[0.02] dark:bg-white/[0.03]',
+                    isSelected && 'bg-[rgba(15,118,110,0.08)]'
+                  )}
+                  style={{ height: rowHeight }}
                   onClick={() => onTaskClick?.(task)}
                 >
-                  {/* 계획 바 */}
                   {planBar && (
                     <div
-                      className="absolute top-1 h-3 bg-blue-200 dark:bg-blue-800 border border-blue-400 dark:border-blue-600 rounded cursor-pointer hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                      className={cn(
+                        'absolute rounded-full border border-white/15 bg-[linear-gradient(135deg,#155e75,#1f8f86)] shadow-[0_12px_24px_-16px_rgba(21,94,117,0.8)] transition-all',
+                        isSelected && 'ring-2 ring-[rgba(15,118,110,0.22)] ring-offset-1 ring-offset-transparent'
+                      )}
                       style={{
                         left: planBar.left,
+                        top: planBarTop,
                         width: planBar.width,
+                        height: barHeight,
                       }}
                       title={`계획: ${task.planStart} ~ ${task.planEnd}`}
                     />
                   )}
 
-                  {/* 실적 바 */}
                   {actualBar && (
-                    <div
-                      className="absolute top-5 h-3 bg-green-400 dark:bg-green-600 border border-green-500 dark:border-green-500 rounded cursor-pointer hover:bg-green-500 dark:hover:bg-green-500 transition-colors"
-                      style={{
-                        left: actualBar.left,
-                        width: actualBar.width * (task.actualProgress / 100),
-                      }}
-                      title={`실적: ${task.actualStart} ~ ${task.actualEnd} (${task.actualProgress}%)`}
-                    />
+                    <>
+                      <div
+                        className="absolute rounded-full bg-[rgba(31,163,122,0.16)]"
+                        style={{
+                          left: actualBar.left,
+                          top: actualBarTop,
+                          width: actualBar.width,
+                          height: barHeight,
+                        }}
+                      />
+                      <div
+                        className={cn(
+                          'absolute rounded-full border border-white/10 bg-[linear-gradient(135deg,#1fa37a,#34c997)] shadow-[0_12px_24px_-16px_rgba(31,163,122,0.82)] transition-all',
+                          isSelected && 'ring-2 ring-[rgba(31,163,122,0.24)] ring-offset-1 ring-offset-transparent'
+                        )}
+                        style={{
+                          left: actualBar.left,
+                          top: actualBarTop,
+                          width: Math.max(actualBar.width * (task.actualProgress / 100), task.actualProgress > 0 ? 8 : 0),
+                          height: barHeight,
+                        }}
+                        title={`실적: ${task.actualStart} ~ ${task.actualEnd} (${task.actualProgress}%)`}
+                      />
+                    </>
                   )}
 
-                  {/* 작업명 (왼쪽 고정되지 않은 경우) */}
                   {!planBar && !actualBar && (
+                    <div className="absolute left-2 top-0 flex h-full items-center text-xs text-[color:var(--text-muted)]">
+                      일정 없음
+                    </div>
+                  )}
+
+                  {isSelected && (
                     <div
-                      className="absolute top-0 left-2 h-full flex items-center text-xs text-gray-400 dark:text-gray-500"
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-[rgba(15,118,110,0.12)] px-2.5 py-1 text-[10px] font-semibold text-[color:var(--accent-primary)]"
                     >
-                      {task.name || '일정 없음'}
+                      {rowIndex + 1}
                     </div>
                   )}
                 </div>

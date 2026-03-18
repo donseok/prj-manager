@@ -1,182 +1,241 @@
 import { Link } from 'react-router-dom';
-import { Plus, FolderOpen, BarChart3, ArrowRight, Sparkles, TrendingUp, Clock } from 'lucide-react';
+import {
+  Plus,
+  FolderOpen,
+  BarChart3,
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+  Clock3,
+  Layers3,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 
 export default function Home() {
   const { projects } = useProjectStore();
 
-  const recentProjects = projects.slice(0, 5);
-  const activeProjects = projects.filter(p => p.status === 'active').length;
+  const recentProjects = projects.slice(0, 4);
+  const activeProjects = projects.filter((project) => project.status === 'active').length;
+  const archivedProjects = projects.filter((project) => project.status === 'archived').length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-violet-600 to-purple-700 p-8 md:p-10 shadow-2xl">
-        {/* Decorative dots pattern */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }}
-        />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-yellow-300" />
-            <span className="text-sm font-medium text-blue-100">프로젝트 관리 시스템</span>
+    <div className="space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
+        <div className="app-panel-dark relative overflow-hidden p-7 md:p-10">
+          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[-7rem] left-[20%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.16),transparent_72%)] blur-3xl" />
+
+          <div className="relative">
+            <div className="surface-badge border-white/10 bg-white/[0.07] text-white/70">
+              <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+              2026 Workspace Edition
+            </div>
+            <h1 className="mt-6 max-w-3xl text-[clamp(2.5rem,6vw,4.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
+              세련된 흐름으로
+              <br />
+              프로젝트를 운영하세요
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 md:text-lg">
+              WBS, 일정, 멤버 관리 화면을 하나의 톤으로 다시 묶었습니다. 빠르게 훑어봐도
+              구조가 보이고, 오래 봐도 지루하지 않은 운영용 인터페이스를 목표로 했습니다.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/projects/new">
+                <Button className="min-w-[10rem]">
+                  <Plus className="w-4 h-4" />
+                  새 프로젝트 시작
+                </Button>
+              </Link>
+              <Link to="/projects">
+                <Button variant="outline" className="border-white/12 bg-white/[0.06] text-white hover:bg-white/[0.1]">
+                  전체 프로젝트
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">전체 프로젝트</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{projects.length}</p>
+                <p className="mt-1 text-sm text-white/54">진행과 보관 프로젝트를 포함한 전체 수</p>
+              </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">진행중</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{activeProjects}</p>
+                <p className="mt-1 text-sm text-white/54">현재 작업이 이어지고 있는 프로젝트</p>
+              </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">최근 기록</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{recentProjects.length}</p>
+                <p className="mt-1 text-sm text-white/54">빠르게 다시 열 수 있는 최근 워크스페이스</p>
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-            IT 프로젝트를 효율적으로<br />관리하세요
-          </h1>
-          <p className="text-blue-100 text-lg mb-6 max-w-xl">
-            WBS 기반의 체계적인 일정 관리와 실시간 진척 현황 모니터링으로 프로젝트를 성공적으로 완료하세요.
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-1">
+          <div className="metric-card p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="eyebrow-stat">Active Ratio</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  {projects.length > 0 ? Math.round((activeProjects / projects.length) * 100) : 0}%
+                </h2>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[image:var(--gradient-primary)] text-white shadow-[0_20px_42px_-24px_rgba(15,118,110,0.72)]">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+              진행 상태의 프로젝트 비중을 바로 확인할 수 있도록 홈에서도 운영 밀도를 드러냈습니다.
+            </p>
+          </div>
+
+          <div className="app-panel p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="eyebrow-stat">Archive</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  {archivedProjects}
+                </h2>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_42px_-24px_rgba(203,109,55,0.68)]">
+                <Layers3 className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+              보관 프로젝트도 같은 레이아웃 안에서 자연스럽게 관리할 수 있게 분리했습니다.
+            </p>
+          </div>
+
+          <div className="app-panel p-6">
+            <p className="eyebrow-stat">Quick Access</p>
+            <div className="mt-4 space-y-3">
+              {recentProjects.length > 0 ? (
+                recentProjects.slice(0, 3).map((project) => (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="flex items-center justify-between rounded-[22px] border border-[var(--border-color)] bg-white/45 px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/78 dark:bg-white/5 dark:hover:bg-white/8"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[color:var(--text-primary)]">{project.name}</p>
+                      <p className="mt-1 text-xs text-[color:var(--text-muted)]">{project.startDate || '시작일 미정'}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)]" />
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-[var(--border-color)] px-4 py-6 text-center text-sm text-[color:var(--text-secondary)]">
+                  최근 프로젝트가 없습니다
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <Link to="/projects/new" className="metric-card p-6 transition-transform duration-300 hover:-translate-y-1">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-28px_rgba(15,118,110,0.78)]">
+            <Plus className="h-6 w-6" />
+          </div>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">새 프로젝트</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+            새 프로젝트의 기본 정보부터 설정하고 바로 대시보드로 진입합니다.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <Link to="/projects/new">
-              <Button className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg shadow-blue-900/30 px-6 py-2.5">
-                <Plus className="w-4 h-4 mr-2" />
-                새 프로젝트 시작
-              </Button>
-            </Link>
-            <Link to="/projects">
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6 py-2.5">
-                프로젝트 둘러보기
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-        {/* Decorative elements */}
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute right-20 top-10 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl"></div>
-      </div>
-
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Link
-          to="/projects/new"
-          className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
-              <Plus className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">새 프로젝트</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">새로운 프로젝트를 시작합니다</p>
-          </div>
         </Link>
 
-        <Link
-          to="/projects"
-          className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div className="relative">
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
-              <FolderOpen className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">프로젝트 목록</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">전체 프로젝트를 확인합니다</p>
+        <Link to="/projects" className="metric-card p-6 transition-transform duration-300 hover:-translate-y-1">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_24px_48px_-28px_rgba(203,109,55,0.72)]">
+            <FolderOpen className="h-6 w-6" />
           </div>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">프로젝트 라이브러리</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+            모든 프로젝트를 카드 뷰로 확인하고 상태별로 빠르게 접근할 수 있습니다.
+          </p>
         </Link>
 
-        <div className="group relative bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5"></div>
-          <div className="relative">
-            <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-violet-500/30">
-              <BarChart3 className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1">전체 현황</h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                {projects.length}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">개 프로젝트</span>
-            </div>
-            <div className="flex items-center gap-1 mt-2 text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-sm font-medium">{activeProjects}개 진행중</span>
-            </div>
+        <div className="metric-card p-6">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#123d64,#23547b)] text-white shadow-[0_24px_48px_-28px_rgba(18,61,100,0.72)]">
+            <BarChart3 className="h-6 w-6" />
           </div>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">운영 중심 대시보드</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+            단순 카드 나열 대신 핵심 지표와 작업 흐름을 중심으로 읽히도록 레이아웃을 재구성했습니다.
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* 최근 프로젝트 */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/25">
-              <Clock className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">최근 프로젝트</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">최근에 작업한 프로젝트들</p>
-            </div>
+      <section className="app-panel overflow-hidden">
+        <div className="flex flex-col gap-4 border-b border-[var(--border-color)] px-6 py-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="page-kicker">Recent Workspace</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+              최근 프로젝트
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              방금 작업하던 흐름으로 다시 돌아갈 수 있도록 최근 프로젝트 접근성을 높였습니다.
+            </p>
           </div>
           <Link
             to="/projects"
-            className="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[color:var(--accent-primary)] transition-transform hover:translate-x-0.5"
           >
             전체 보기
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         {recentProjects.length > 0 ? (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {recentProjects.map((project, index) => (
+          <div className="grid gap-4 p-6 md:grid-cols-2">
+            {recentProjects.map((project) => (
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className="flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 group"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="group rounded-[24px] border border-[var(--border-color)] bg-white/45 p-5 transition-all duration-200 hover:-translate-y-1 hover:bg-white/80 hover:shadow-[0_28px_60px_-34px_rgba(17,24,39,0.26)] dark:bg-white/5 dark:hover:bg-white/8"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/50 dark:to-violet-900/50 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                    <FolderOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="surface-badge">
+                      <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+                      최근 접근
+                    </div>
+                    <h3 className="mt-4 truncate text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
                       {project.name}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {project.startDate} ~ {project.endDate || '진행중'}
+                    <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+                      {project.startDate || '시작일 미정'} {project.endDate ? `~ ${project.endDate}` : '~ 진행중'}
                     </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                      project.status === 'active'
-                        ? 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/50 dark:to-green-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
-                    }`}
-                  >
+                  <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold text-[color:var(--text-secondary)]">
                     {project.status === 'active' ? '진행중' : '보관됨'}
                   </span>
-                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 px-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-3xl flex items-center justify-center mx-auto mb-5">
-              <FolderOpen className="w-10 h-10 text-gray-400 dark:text-gray-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">아직 프로젝트가 없습니다</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">새 프로젝트를 만들어 시작하세요</p>
+          <div className="empty-state px-6 py-12">
+            <FolderOpen className="h-12 w-12 text-[color:var(--text-muted)]" />
+            <h3 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+              아직 프로젝트가 없습니다
+            </h3>
+            <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
+              첫 프로젝트를 생성하면 홈 화면의 최근 워크스페이스 영역도 함께 활성화됩니다.
+            </p>
             <Link to="/projects/new">
-              <Button className="shadow-lg shadow-blue-500/25">
-                <Plus className="w-4 h-4 mr-2" />
-                새 프로젝트 만들기
+              <Button>
+                <Plus className="w-4 h-4" />
+                첫 프로젝트 만들기
               </Button>
             </Link>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

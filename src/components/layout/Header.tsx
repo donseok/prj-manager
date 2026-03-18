@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FolderKanban, User, LogOut, Settings, Moon, Sun, ChevronRight } from 'lucide-react';
+import { FolderKanban, User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -10,69 +10,82 @@ export default function Header() {
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
+  const todayLabel = new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date());
 
   return (
-    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-3 sticky top-0 z-40 transition-all duration-300">
-      <div className="flex items-center justify-between">
-        {/* 로고 및 프로젝트명 */}
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-300 group-hover:scale-105">
+    <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-white/20 bg-[rgba(255,250,244,0.56)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl dark:border-[var(--border-color)] dark:bg-[rgba(15,18,23,0.6)] sm:px-5">
+        <div className="flex min-w-0 items-center gap-4">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-[image:var(--gradient-primary)] shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02]">
               <FolderKanban className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              프로젝트 관리
-            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-[color:var(--text-muted)]">Project OS</p>
+              <span className="block truncate text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                프로젝트 관리
+              </span>
+            </div>
           </Link>
 
           {currentProject && (
-            <div className="flex items-center gap-2 ml-2">
-              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-              <span className="px-3 py-1 bg-gradient-to-r from-blue-50 to-violet-50 dark:from-blue-900/30 dark:to-violet-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium border border-blue-100 dark:border-blue-800/50">
-                {currentProject.name}
-              </span>
+            <div className="hidden min-w-0 items-center gap-2 lg:flex">
+              <ChevronRight className="w-4 h-4 text-[color:var(--text-muted)]" />
+              <div className="surface-badge max-w-[24rem]">
+                <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
+                <span className="truncate">{currentProject.name}</span>
+              </div>
             </div>
           )}
         </div>
 
-        {/* 오른쪽 영역 */}
-        <div className="flex items-center gap-2">
-          {/* 다크모드 토글 */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-2 rounded-full border border-[var(--border-color)] bg-white/40 px-3 py-2 text-sm text-[color:var(--text-secondary)] backdrop-blur-xl dark:bg-white/5 md:flex">
+            <CalendarDays className="h-4 w-4 text-[color:var(--accent-secondary)]" />
+            <span>{todayLabel}</span>
+          </div>
+
           <button
             onClick={toggleTheme}
-            className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/45 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
             title={isDark ? '라이트 모드' : '다크 모드'}
           >
-            <div className="relative">
-              {isDark ? (
-                <Sun className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-colors group-hover:rotate-45 duration-300" />
-              ) : (
-                <Moon className="w-5 h-5 text-slate-600 group-hover:text-slate-800 transition-colors group-hover:-rotate-12 duration-300" />
-              )}
-            </div>
+            {isDark ? (
+              <Sun className="w-5 h-5 text-amber-300 transition-all duration-300 group-hover:rotate-45 group-hover:text-amber-200" />
+            ) : (
+              <Moon className="w-5 h-5 text-slate-700 transition-all duration-300 group-hover:-rotate-12 group-hover:text-slate-900" />
+            )}
           </button>
 
-          {/* 사용자 메뉴 */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
+              className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-white/45 px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/82 dark:bg-white/5 dark:hover:bg-white/10"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-violet-500 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-all">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all group-hover:scale-[1.03]">
                 <User className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.name || '사용자'}</span>
+              <div className="hidden sm:block">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Operator</p>
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{user?.name || '사용자'}</p>
+              </div>
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl shadow-gray-200/50 dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700 py-2 z-50 animate-scale-in">
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 mb-1">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">로그인 계정</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.email || 'user@example.com'}</p>
+              <div className="absolute right-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-[24px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-2 shadow-[0_32px_80px_-42px_rgba(0,0,0,0.55)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
+                <div className="rounded-[20px] border border-white/10 bg-[image:var(--gradient-primary)] p-4 text-white shadow-[0_24px_52px_-28px_rgba(15,118,110,0.82)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/72">로그인 계정</p>
+                  <p className="mt-2 text-base font-semibold tracking-[-0.03em]">{user?.name || '사용자'}</p>
+                  <p className="mt-1 truncate text-sm text-white/72">{user?.email || 'user@example.com'}</p>
                 </div>
                 <Link
-                  to="/settings"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  to={settingsLink}
+                  className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
                   onClick={() => setShowUserMenu(false)}
                 >
                   <Settings className="w-4 h-4" />
@@ -83,7 +96,7 @@ export default function Header() {
                     logout();
                     setShowUserMenu(false);
                   }}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full transition-colors"
+                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
                 >
                   <LogOut className="w-4 h-4" />
                   로그아웃

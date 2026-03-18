@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, MoreVertical, Trash2, Archive, Search } from 'lucide-react';
+import {
+  Plus,
+  FolderOpen,
+  MoreVertical,
+  Trash2,
+  Archive,
+  Search,
+  ArrowRight,
+  Sparkles,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -22,10 +31,13 @@ export default function ProjectList() {
   });
 
   const filteredProjects = projects.filter(
-    (p) =>
-      p.status !== 'deleted' &&
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (project) =>
+      project.status !== 'deleted' &&
+      project.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeProjects = projects.filter((project) => project.status === 'active').length;
+  const archivedProjects = projects.filter((project) => project.status === 'archived').length;
 
   const handleCreateProject = () => {
     if (!newProject.name.trim()) return;
@@ -61,173 +73,250 @@ export default function ProjectList() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">프로젝트</h1>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          새 프로젝트
-        </Button>
-      </div>
+    <div className="space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
+          <div className="pointer-events-none absolute right-[-4rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
+          <div className="relative">
+            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+              <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+              Project Library
+            </div>
+            <h1 className="mt-5 text-[clamp(2rem,4vw,3.8rem)] font-semibold tracking-[-0.06em] text-white">
+              프로젝트를 한곳에서
+              <br />
+              선명하게 관리합니다
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 md:text-base">
+              검색, 상태, 최근성까지 한 번에 읽히는 카드 뷰로 재구성했습니다. 프로젝트 생성 모달도
+              같은 시각 언어로 맞춰 워크플로우가 끊기지 않도록 정리했습니다.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="w-4 h-4" />
+                새 프로젝트
+              </Button>
+              <Link to="/">
+                <Button variant="outline" className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]">
+                  홈으로
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
 
-      {/* 검색 */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Total</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {projects.length}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">전체 프로젝트 수</p>
+          </div>
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Active</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {activeProjects}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">현재 운영 중</p>
+          </div>
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Archived</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {archivedProjects}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">보관된 프로젝트</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="app-panel p-4 md:p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="page-kicker">Search & Filter</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+              프로젝트 탐색
+            </h2>
+          </div>
+          <Button variant="outline" onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-4 h-4" />
+            새 프로젝트
+          </Button>
+        </div>
+
+        <div className="mt-5 relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--text-muted)]" />
           <input
             type="text"
-            placeholder="프로젝트 검색..."
+            placeholder="프로젝트 이름으로 검색"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="field-input pl-12"
           />
         </div>
-      </div>
+      </section>
 
-      {/* 프로젝트 그리드 */}
       {filteredProjects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md dark:hover:shadow-gray-900 transition-shadow relative"
+              className="metric-card group p-5 transition-all duration-300 hover:-translate-y-1"
             >
-              <Link to={`/projects/${project.id}`} className="block">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">{project.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {project.description || '설명 없음'}
-                    </p>
+              <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--accent-primary),transparent)] opacity-55" />
+
+              <div className="relative">
+                <div className="flex items-start justify-between gap-3">
+                  <Link to={`/projects/${project.id}`} className="min-w-0 flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-28px_rgba(15,118,110,0.72)]">
+                        <FolderOpen className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                          {project.name}
+                        </h3>
+                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                          {project.description || '프로젝트 설명이 아직 없습니다.'}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="relative">
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setMenuOpenId(menuOpenId === project.id ? null : project.id);
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/50 text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-white/82 hover:text-[color:var(--text-primary)] dark:bg-white/5 dark:hover:bg-white/8"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+
+                    {menuOpenId === project.id && (
+                      <div className="absolute right-0 top-full z-10 mt-2 w-40 overflow-hidden rounded-[20px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-1.5 shadow-[0_26px_64px_-38px_rgba(0,0,0,0.48)] backdrop-blur-2xl dark:bg-[image:var(--gradient-dark)]">
+                        <button
+                          onClick={() => handleArchiveProject(project.id)}
+                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                        >
+                          <Archive className="w-4 h-4" />
+                          보관
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          삭제
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    {project.startDate || '시작일 미정'}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      project.status === 'active'
-                        ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {project.status === 'active' ? '진행중' : '보관됨'}
-                  </span>
-                </div>
-              </Link>
 
-              {/* 메뉴 버튼 */}
-              <div className="absolute top-4 right-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpenId(menuOpenId === project.id ? null : project.id);
-                  }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                >
-                  <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </button>
-
-                {menuOpenId === project.id && (
-                  <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-                    <button
-                      onClick={() => handleArchiveProject(project.id)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
-                    >
-                      <Archive className="w-4 h-4" />
-                      보관
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProject(project.id)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700 w-full"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      삭제
-                    </button>
+                <Link to={`/projects/${project.id}`} className="mt-5 block">
+                  <div className="rounded-[22px] border border-[var(--border-color)] bg-white/45 p-4 dark:bg-white/5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[color:var(--text-secondary)]">
+                        {project.startDate || '시작일 미정'}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          project.status === 'active'
+                            ? 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]'
+                            : 'bg-black/5 text-[color:var(--text-secondary)] dark:bg-white/8'
+                        }`}
+                      >
+                        {project.status === 'active' ? '진행중' : '보관됨'}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <p className="text-sm font-medium text-[color:var(--text-primary)]">프로젝트 열기</p>
+                      <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)] transition-transform duration-200 group-hover:translate-x-1" />
+                    </div>
                   </div>
-                )}
+                </Link>
               </div>
             </div>
           ))}
-        </div>
+        </section>
       ) : (
-        <div className="text-center py-12">
-          <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchQuery ? '검색 결과가 없습니다' : '프로젝트가 없습니다'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {searchQuery ? '다른 검색어를 입력해보세요' : '새 프로젝트를 만들어 시작하세요'}
-          </p>
-          {!searchQuery && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              새 프로젝트 만들기
-            </Button>
-          )}
-        </div>
+        <section className="app-panel">
+          <div className="empty-state px-6 py-16">
+            <FolderOpen className="h-12 w-12 text-[color:var(--text-muted)]" />
+            <h3 className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+              {searchQuery ? '검색 결과가 없습니다' : '프로젝트가 없습니다'}
+            </h3>
+            <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
+              {searchQuery
+                ? '다른 키워드로 검색하거나 새 프로젝트를 생성해보세요.'
+                : '첫 프로젝트를 만들면 여기에서 카드 기반으로 관리할 수 있습니다.'}
+            </p>
+            {!searchQuery && (
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="w-4 h-4" />
+                새 프로젝트 만들기
+              </Button>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* 프로젝트 생성 모달 */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="새 프로젝트"
         size="md"
       >
-        <div className="p-6 space-y-4">
+        <div className="space-y-5 p-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              프로젝트명 *
-            </label>
+            <label className="field-label">프로젝트명 *</label>
             <input
               type="text"
               value={newProject.name}
-              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-              className="w-full"
-              placeholder="프로젝트 이름을 입력하세요"
+              onChange={(event) => setNewProject({ ...newProject, name: event.target.value })}
+              className="field-input"
+              placeholder="예: 통합 운영 대시보드 고도화"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">설명</label>
+            <label className="field-label">설명</label>
             <textarea
               value={newProject.description}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              placeholder="프로젝트 설명을 입력하세요"
+              onChange={(event) => setNewProject({ ...newProject, description: event.target.value })}
+              className="field-textarea"
+              rows={4}
+              placeholder="프로젝트 목적, 범위, 전달 포인트를 간단히 적어주세요"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">시작일</label>
+              <label className="field-label">시작일</label>
               <input
                 type="date"
                 value={newProject.startDate}
-                onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
-                className="w-full"
+                onChange={(event) => setNewProject({ ...newProject, startDate: event.target.value })}
+                className="field-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">종료일</label>
+              <label className="field-label">종료일</label>
               <input
                 type="date"
                 value={newProject.endDate}
-                onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
-                className="w-full"
+                onChange={(event) => setNewProject({ ...newProject, endDate: event.target.value })}
+                className="field-input"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
               취소
             </Button>
             <Button onClick={handleCreateProject} disabled={!newProject.name.trim()}>

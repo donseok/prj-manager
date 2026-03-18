@@ -10,25 +10,25 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none';
+      'inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-[-0.01em] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[rgba(15,118,110,0.28)] focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none';
 
     const variants = {
       primary:
-        'bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:from-blue-500 hover:to-violet-500 focus:ring-blue-500 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0',
+        'border border-white/10 bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-24px_rgba(15,118,110,0.85)] hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0',
       secondary:
-        'bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 text-gray-900 dark:text-gray-100 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-500 focus:ring-gray-500 shadow-sm hover:shadow-md',
+        'border border-[var(--border-color)] bg-[image:var(--gradient-secondary)] text-[var(--bg-inverse)] shadow-[0_20px_45px_-26px_rgba(203,109,55,0.7)] hover:-translate-y-0.5 hover:saturate-125',
       outline:
-        'border-2 border-gray-200 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:ring-blue-500',
+        'border border-[var(--border-color)] bg-white/60 text-[color:var(--text-primary)] backdrop-blur-xl hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:bg-white/85 dark:bg-white/5 dark:hover:bg-white/8',
       ghost:
-        'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 focus:ring-gray-500',
+        'bg-transparent text-[color:var(--text-secondary)] hover:bg-black/5 hover:text-[color:var(--text-primary)] dark:hover:bg-white/6 dark:hover:text-[color:var(--text-primary)]',
       danger:
-        'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 focus:ring-red-500 shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 active:translate-y-0',
+        'border border-white/10 bg-[linear-gradient(135deg,#cb4b5f,#a83653)] text-white shadow-[0_22px_44px_-24px_rgba(203,75,95,0.86)] hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0',
     };
 
     const sizes = {
-      sm: 'px-3.5 py-1.5 text-sm',
-      md: 'px-5 py-2.5 text-sm',
-      lg: 'px-7 py-3.5 text-base',
+      sm: 'px-4 py-2 text-sm',
+      md: 'px-5 py-3 text-sm',
+      lg: 'px-6 py-3.5 text-base',
     };
 
     return (

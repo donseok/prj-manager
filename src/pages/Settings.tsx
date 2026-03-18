@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, Trash2, Archive, Download, Upload, AlertTriangle } from 'lucide-react';
+import {
+  Save,
+  Trash2,
+  Archive,
+  Download,
+  Upload,
+  AlertTriangle,
+  Sparkles,
+  CalendarDays,
+} from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
@@ -17,28 +26,14 @@ export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    baseDate: '',
-  });
+  const [formData, setFormData] = useState<{
+    name?: string;
+    description?: string;
+    startDate?: string;
+    endDate?: string;
+    baseDate?: string;
+  }>({});
 
-  // 프로젝트 데이터 로드
-  useEffect(() => {
-    if (currentProject) {
-      setFormData({
-        name: currentProject.name || '',
-        description: currentProject.description || '',
-        startDate: currentProject.startDate || '',
-        endDate: currentProject.endDate || '',
-        baseDate: currentProject.baseDate || '',
-      });
-    }
-  }, [currentProject]);
-
-  // 작업 로드
   useEffect(() => {
     if (projectId) {
       const savedTasks = storage.get<Task[]>(`tasks-${projectId}`, []);
@@ -46,19 +41,26 @@ export default function Settings() {
     }
   }, [projectId, setTasks]);
 
+  const resolvedFormData = {
+    name: formData.name ?? currentProject?.name ?? '',
+    description: formData.description ?? currentProject?.description ?? '',
+    startDate: formData.startDate ?? currentProject?.startDate ?? '',
+    endDate: formData.endDate ?? currentProject?.endDate ?? '',
+    baseDate: formData.baseDate ?? currentProject?.baseDate ?? '',
+  };
+
   const handleSave = () => {
     if (!projectId) return;
     setIsSaving(true);
 
     updateProject(projectId, {
-      ...formData,
+      ...resolvedFormData,
       updatedAt: new Date().toISOString(),
     });
 
-    // 로컬 스토리지에도 저장
-    const projects = storage.get('projects', []) as any[];
-    const updatedProjects = projects.map((p) =>
-      p.id === projectId ? { ...p, ...formData, updatedAt: new Date().toISOString() } : p
+    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
+    const updatedProjects = projects.map((project) =>
+      project.id === projectId ? { ...project, ...resolvedFormData, updatedAt: new Date().toISOString() } : project
     );
     storage.set('projects', updatedProjects);
 
@@ -73,9 +75,8 @@ export default function Settings() {
 
     deleteProject(projectId);
 
-    // 로컬 스토리지에서도 삭제
-    const projects = storage.get('projects', []) as any[];
-    const updatedProjects = projects.filter((p) => p.id !== projectId);
+    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
+    const updatedProjects = projects.filter((project) => project.id !== projectId);
     storage.set('projects', updatedProjects);
     storage.remove(`tasks-${projectId}`);
     storage.remove(`members-${projectId}`);
@@ -88,17 +89,15 @@ export default function Settings() {
 
     updateProject(projectId, { status: 'archived' });
 
-    // 로컬 스토리지에도 저장
-    const projects = storage.get('projects', []) as any[];
-    const updatedProjects = projects.map((p) =>
-      p.id === projectId ? { ...p, status: 'archived' } : p
+    const projects = storage.get('projects', []) as Array<Record<string, unknown>>;
+    const updatedProjects = projects.map((project) =>
+      project.id === projectId ? { ...project, status: 'archived' } : project
     );
     storage.set('projects', updatedProjects);
 
     alert('프로젝트가 보관되었습니다.');
   };
 
-  // 엑셀 내보내기
   const handleExportExcel = () => {
     if (tasks.length === 0) {
       alert('내보낼 작업이 없습니다.');
@@ -120,62 +119,57 @@ export default function Settings() {
       상태: task.status,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'WBS');
-
-    XLSX.writeFile(wb, `${currentProject?.name || 'project'}_WBS.xlsx`);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'WBS');
+    XLSX.writeFile(workbook, `${currentProject?.name || 'project'}_WBS.xlsx`);
   };
 
-  // 엑셀 가져오기
-  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = (loadEvent) => {
       try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const data = new Uint8Array(loadEvent.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
-        // 데이터 변환
-        const importedTasks: Task[] = jsonData.map((row: any, index: number) => {
+        const importedTasks: Task[] = jsonData.map((row, index) => {
           const levelMap: Record<string, number> = {
-            'Phase': 1,
-            'Activity': 2,
-            'Task': 3,
-            'Function': 4,
+            Phase: 1,
+            Activity: 2,
+            Task: 3,
+            Function: 4,
           };
 
           return {
             id: crypto.randomUUID(),
             projectId: projectId!,
             parentId: null,
-            level: levelMap[row['구분']] || 3,
+            level: levelMap[String(row['구분'] ?? '')] || 3,
             orderIndex: index,
-            name: row['작업명'] || '',
-            output: row['산출물'] || '',
+            name: String(row['작업명'] ?? ''),
+            output: String(row['산출물'] ?? ''),
             assigneeId: null,
-            weight: parseFloat(row['가중치']) || 0,
-            planStart: row['계획시작'] || null,
-            planEnd: row['계획종료'] || null,
-            planProgress: parseFloat(row['계획공정율']) || 0,
-            actualStart: row['실적시작'] || null,
-            actualEnd: row['실적종료'] || null,
-            actualProgress: parseFloat(row['실적공정율']) || 0,
-            status: row['상태'] || 'pending',
+            weight: parseFloat(String(row['가중치'] ?? '')) || 0,
+            planStart: row['계획시작'] ? String(row['계획시작']) : null,
+            planEnd: row['계획종료'] ? String(row['계획종료']) : null,
+            planProgress: parseFloat(String(row['계획공정율'] ?? '')) || 0,
+            actualStart: row['실적시작'] ? String(row['실적시작']) : null,
+            actualEnd: row['실적종료'] ? String(row['실적종료']) : null,
+            actualProgress: parseFloat(String(row['실적공정율'] ?? '')) || 0,
+            status: (String(row['상태'] ?? 'pending') as Task['status']) || 'pending',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
         });
 
-        if (tasks.length > 0) {
-          if (!confirm('기존 작업을 덮어쓰시겠습니까?')) {
-            return;
-          }
+        if (tasks.length > 0 && !confirm('기존 작업을 덮어쓰시겠습니까?')) {
+          return;
         }
 
         setTasks(importedTasks);
@@ -187,167 +181,224 @@ export default function Settings() {
       }
     };
     reader.readAsArrayBuffer(file);
-
-    // 파일 입력 초기화
-    e.target.value = '';
+    event.target.value = '';
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">프로젝트 설정</h1>
-
-      {/* 기본 정보 */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">기본 정보</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">프로젝트명 *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+    <div className="space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
+          <div className="pointer-events-none absolute right-[-5rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
+          <div className="relative">
+            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+              <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+              Project Settings
+            </div>
+            <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
+              {currentProject?.name || '프로젝트'} 설정
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
+              프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button onClick={handleSave} isLoading={isSaving}>
+                <Save className="w-4 h-4" />
+                저장
+              </Button>
+              <Button variant="outline" className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]" onClick={handleArchive}>
+                <Archive className="w-4 h-4" />
+                보관
+              </Button>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">설명</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-            />
+        <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-1">
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Tasks</p>
+            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {tasks.length}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">등록된 작업 수</p>
           </div>
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Base Date</p>
+            <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {formData.baseDate || '미설정'}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">공정율 기준일</p>
+          </div>
+          <div className="metric-card p-6">
+            <p className="eyebrow-stat">Schedule</p>
+            <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+              {formData.startDate || '미정'}
+            </p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+              {formData.endDate ? `~ ${formData.endDate}` : '종료일 미정'}
+            </p>
+          </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-2 gap-4">
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="app-panel p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_22px_44px_-26px_rgba(15,118,110,0.76)]">
+              <CalendarDays className="h-5 w-5" />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">시작일</label>
+              <p className="page-kicker">Core Information</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                기본 정보
+              </h2>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <label className="field-label">프로젝트명 *</label>
               <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type="text"
+                value={resolvedFormData.name}
+                onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                className="field-input"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">종료일</label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <label className="field-label">설명</label>
+              <textarea
+                value={resolvedFormData.description}
+                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                className="field-textarea"
+                rows={5}
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">진척기준일</label>
-            <input
-              type="date"
-              value={formData.baseDate}
-              onChange={(e) => setFormData({ ...formData, baseDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">공정율 계산의 기준이 되는 날짜입니다</p>
-          </div>
-        </div>
-
-        <div className="flex justify-end mt-6">
-          <Button onClick={handleSave} isLoading={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
-            저장
-          </Button>
-        </div>
-      </div>
-
-      {/* 데이터 관리 */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">데이터 관리</h2>
-
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={handleExportExcel}>
-            <Download className="w-4 h-4 mr-2" />
-            엑셀 내보내기
-          </Button>
-
-          <label className="cursor-pointer inline-flex items-center justify-center font-medium rounded-lg transition-colors px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <Upload className="w-4 h-4 mr-2" />
-            엑셀 가져오기
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImportExcel}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-          엑셀 파일로 WBS 데이터를 내보내거나 가져올 수 있습니다
-        </p>
-      </div>
-
-      {/* 위험 영역 */}
-      <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-6">
-        <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" />
-          위험 영역
-        </h2>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-red-100 dark:border-red-900">
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">프로젝트 보관</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">프로젝트를 보관 처리합니다. 복원 가능합니다.</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="field-label">시작일</label>
+                <input
+                  type="date"
+                  value={resolvedFormData.startDate}
+                  onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
+                  className="field-input"
+                />
+              </div>
+              <div>
+                <label className="field-label">종료일</label>
+                <input
+                  type="date"
+                  value={resolvedFormData.endDate}
+                  onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
+                  className="field-input"
+                />
+              </div>
             </div>
-            <Button variant="outline" onClick={handleArchive}>
-              <Archive className="w-4 h-4 mr-2" />
-              보관
-            </Button>
-          </div>
 
-          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-red-100 dark:border-red-900">
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">프로젝트 삭제</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">프로젝트와 모든 데이터가 영구 삭제됩니다.</p>
+              <label className="field-label">진척기준일</label>
+              <input
+                type="date"
+                value={resolvedFormData.baseDate}
+                onChange={(event) => setFormData({ ...formData, baseDate: event.target.value })}
+                className="field-input"
+              />
+              <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+                공정율 계산의 기준이 되는 날짜입니다.
+              </p>
             </div>
-            <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              삭제
-            </Button>
+
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSave} isLoading={isSaving}>
+                <Save className="w-4 h-4" />
+                저장
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 삭제 확인 모달 */}
+        <div className="space-y-6">
+          <div className="app-panel p-6">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+              데이터 관리
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              WBS 데이터를 내보내거나 다시 가져와 현재 프로젝트 구조를 재정렬할 수 있습니다.
+            </p>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button variant="outline" onClick={handleExportExcel}>
+                <Download className="w-4 h-4" />
+                엑셀 내보내기
+              </Button>
+
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-white/55 px-5 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/84 dark:bg-white/5 dark:hover:bg-white/8">
+                <Upload className="w-4 h-4" />
+                엑셀 가져오기
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportExcel}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[30px] border border-[rgba(203,75,95,0.16)] bg-[linear-gradient(180deg,rgba(255,244,245,0.88),rgba(255,248,244,0.72))] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)] dark:bg-[linear-gradient(180deg,rgba(49,20,28,0.66),rgba(23,16,20,0.72))]">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
+              <AlertTriangle className="w-5 h-5" />
+              위험 영역
+            </h2>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-[22px] border border-[rgba(203,75,95,0.14)] bg-white/70 p-4 dark:bg-white/[0.04]">
+                <p className="font-medium text-[color:var(--text-primary)]">프로젝트 보관</p>
+                <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+                  프로젝트를 보관 처리합니다. 필요할 때 다시 복원할 수 있습니다.
+                </p>
+                <div className="mt-4">
+                  <Button variant="outline" onClick={handleArchive}>
+                    <Archive className="w-4 h-4" />
+                    보관
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-[22px] border border-[rgba(203,75,95,0.14)] bg-white/70 p-4 dark:bg-white/[0.04]">
+                <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
+                <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+                  프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
+                </p>
+                <div className="mt-4">
+                  <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
+                    <Trash2 className="w-4 h-4" />
+                    삭제
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         title="프로젝트 삭제"
         size="sm"
       >
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">정말 삭제하시겠습니까?</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">이 작업은 되돌릴 수 없습니다.</p>
-            </div>
-          </div>
-
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            <strong>{currentProject?.name}</strong> 프로젝트와 모든 작업, 멤버 정보가 영구적으로 삭제됩니다.
+        <div className="space-y-5 p-6">
+          <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
+            프로젝트와 모든 관련 데이터가 영구 삭제됩니다. 정말 진행하시겠습니까?
           </p>
-
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
               취소
             </Button>
             <Button variant="danger" onClick={handleDelete}>
+              <Trash2 className="w-4 h-4" />
               삭제
             </Button>
           </div>

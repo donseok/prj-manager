@@ -38,33 +38,34 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 배경 */}
       <div
-        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-[#0c1016]/62 backdrop-blur-xl animate-fade-in"
         onClick={onClose}
       />
 
-      {/* 모달 */}
       <div
         className={cn(
-          'relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-900/20 dark:shadow-black/40 w-full mx-4 animate-scale-in border border-gray-200/50 dark:border-gray-700/50',
+          'relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-[image:var(--gradient-surface)] shadow-[0_52px_120px_-56px_rgba(0,0,0,0.72)] backdrop-blur-2xl animate-scale-in dark:border-[var(--border-color)]',
           sizes[size]
         )}
       >
-        {/* 헤더 */}
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.2),transparent_70%)] blur-3xl" />
+
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+          <div className="relative flex items-center justify-between border-b border-[var(--border-color)] px-6 py-5">
+            <div>
+              <p className="page-kicker text-[0.62rem]">Workspace Dialog</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{title}</h2>
+            </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:rotate-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/45 text-[color:var(--text-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 hover:text-[color:var(--text-primary)] dark:bg-white/5 dark:hover:bg-white/10"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         )}
 
-        {/* 컨텐츠 */}
         <div className={cn(!title && 'pt-4')}>{children}</div>
       </div>
     </div>
