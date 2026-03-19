@@ -124,6 +124,7 @@ export async function upsertProject(project: Project): Promise<Project> {
   }
 
   const row = toProjectRow(project);
+  console.log('[dataRepository] upsertProject row:', JSON.stringify(row));
 
   const { data, error } = await supabase
     .from('projects')
@@ -132,8 +133,8 @@ export async function upsertProject(project: Project): Promise<Project> {
     .single();
 
   if (error) {
-    console.error('Failed to save project:', error);
-    throw new Error(`프로젝트 저장 실패: ${error.message}`);
+    console.error('Failed to save project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    throw new Error(`프로젝트 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
   }
 
   return mapProjectRow(data as ProjectRow);
@@ -321,8 +322,9 @@ function mapProjectRow(row: ProjectRow): Project {
   };
 }
 
-function toProjectRow(project: Project): ProjectRow {
-  return {
+function toProjectRow(project: Project) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row: Record<string, any> = {
     id: project.id,
     owner_id: project.ownerId,
     name: project.name,
@@ -331,11 +333,15 @@ function toProjectRow(project: Project): ProjectRow {
     end_date: project.endDate || null,
     base_date: project.baseDate || null,
     status: project.status,
-    completed_at: project.completedAt || null,
     settings: project.settings ?? {},
     created_at: project.createdAt,
     updated_at: project.updatedAt,
   };
+  // completed_at은 값이 있을 때만 전송 (마이그레이션 미적용 환경 호환)
+  if (project.completedAt) {
+    row.completed_at = project.completedAt;
+  }
+  return row;
 }
 
 function mapProjectMemberRow(row: ProjectMemberRow): ProjectMember {
@@ -387,8 +393,9 @@ function mapTaskRow(row: TaskRow): Task {
   };
 }
 
-function toTaskRow(task: Task): TaskRow {
-  return {
+function toTaskRow(task: Task) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row: Record<string, any> = {
     id: task.id,
     project_id: task.projectId,
     parent_id: task.parentId || null,
@@ -399,9 +406,6 @@ function toTaskRow(task: Task): TaskRow {
     output: task.output || null,
     assignee_id: task.assigneeId || null,
     weight: task.weight,
-    duration_days: task.durationDays ?? null,
-    predecessor_ids: task.predecessorIds ?? null,
-    task_source: task.taskSource ?? null,
     plan_start: task.planStart || null,
     plan_end: task.planEnd || null,
     plan_progress: task.planProgress,
@@ -412,4 +416,9 @@ function toTaskRow(task: Task): TaskRow {
     created_at: task.createdAt,
     updated_at: task.updatedAt,
   };
+  // 마이그레이션 4 추가 필드 — 값이 있을 때만 전송
+  if (task.durationDays != null) row.duration_days = task.durationDays;
+  if (task.predecessorIds != null) row.predecessor_ids = task.predecessorIds;
+  if (task.taskSource != null) row.task_source = task.taskSource;
+  return row;
 }

@@ -162,13 +162,14 @@ export default function ProjectList() {
       setShowCreateModal(false);
       setNewProject({ name: '', description: '', startDate: '', endDate: '', creationMode: 'blank', sourceProjectId: '' });
       navigate(`/projects/${savedProject.id}`);
-    } catch (error) {
-      console.error('Failed to create project:', error);
+    } catch (err) {
+      console.error('Failed to create project:', err);
       setShowCreateModal(false);
+      const msg = err instanceof Error ? err.message : String(err);
       showFeedback({
         tone: 'error',
         title: '프로젝트 생성 실패',
-        message: error instanceof Error ? error.message : '프로젝트를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        message: msg,
       });
     } finally {
       setIsCreating(false);
