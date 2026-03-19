@@ -1,5 +1,6 @@
 import { TASK_STATUS_LABELS, LEVEL_LABELS, type Project, type ProjectMember, type Task } from '../types';
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
+import { isSupabaseConfigured, supabase } from './supabase';
 
 export interface ChatbotContext {
   project: Project | null;
@@ -297,7 +298,7 @@ function buildExportGuideAnswer(): string {
   ].join('\n');
 }
 
-function buildFallbackAnswer(question: string, context: ChatbotContext): string {
+function buildFallbackFromLocal(question: string, context: ChatbotContext): string | null {
   const normalizedQuestion = normalizeText(question);
   const relatedTasks = context.tasks
     .map((task) => {
@@ -314,16 +315,71 @@ function buildFallbackAnswer(question: string, context: ChatbotContext): string 
 
   if (relatedTasks.length > 0) {
     return [
-      '질문 의도를 하나로 특정하진 못했지만, 현재 데이터에서 관련 가능성이 높은 작업은 아래와 같습니다.',
+      '현재 대시보드 데이터에서 관련 가능성이 높은 작업입니다.',
       ...relatedTasks.map((name) => `- ${name}`),
       '작업명이나 담당자명을 조금 더 구체적으로 적어주시면 상태와 일정까지 바로 정리해 드릴게요.',
     ].join('\n');
   }
 
-  return `질문을 더 구체적으로 적어주시면 정확도가 올라갑니다.\n예: "지연 작업 요약", "홍길동 업무 현황", "설계 검토 작업 상태", "WBS 엑셀은 어디서 받아?"`;
+  return null;
 }
 
-export function createChatbotReply(question: string, context: ChatbotContext): string {
+async function searchSupabaseForAnswer(question: string): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const keyword = question.trim();
+  if (keyword.length < 2) return null;
+
+  try {
+    // 프로젝트 검색
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('name, status, start_date, end_date')
+      .ilike('name', `%${keyword}%`)
+      .limit(3);
+
+    if (projects && projects.length > 0) {
+      const lines = projects.map((p: { name: string; status: string; start_date: string | null; end_date: string | null }) =>
+        `- ${p.name} | 상태: ${p.status} | ${p.start_date || '미정'} ~ ${p.end_date || '미정'}`
+      );
+      return [`데이터베이스에서 관련 프로젝트를 찾았습니다.`, ...lines].join('\n');
+    }
+
+    // 작업 검색
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('name, status, plan_start, plan_end, actual_progress')
+      .ilike('name', `%${keyword}%`)
+      .limit(5);
+
+    if (tasks && tasks.length > 0) {
+      const lines = tasks.map((t: { name: string; status: string; plan_start: string | null; plan_end: string | null; actual_progress: number }) =>
+        `- ${t.name} | 상태: ${TASK_STATUS_LABELS[t.status as keyof typeof TASK_STATUS_LABELS] || t.status} | 공정률: ${Math.round(t.actual_progress)}%`
+      );
+      return [`데이터베이스에서 관련 작업을 찾았습니다.`, ...lines].join('\n');
+    }
+
+    // 멤버 검색
+    const { data: members } = await supabase
+      .from('project_members')
+      .select('name, role')
+      .ilike('name', `%${keyword}%`)
+      .limit(3);
+
+    if (members && members.length > 0) {
+      const lines = members.map((m: { name: string; role: string }) => `- ${m.name} | 역할: ${m.role}`);
+      return [`데이터베이스에서 관련 멤버를 찾았습니다.`, ...lines].join('\n');
+    }
+  } catch (error) {
+    console.error('Chatbot DB search failed:', error);
+  }
+
+  return null;
+}
+
+const NOT_FOUND_MESSAGE = '해당 정보는 현재 대시보드 데이터와 데이터베이스에서 찾을 수 없습니다.\n작업명, 담당자명, 또는 키워드를 더 구체적으로 입력해 주세요.';
+
+export async function createChatbotReply(question: string, context: ChatbotContext): Promise<string> {
   const trimmedQuestion = question.trim();
   const normalizedQuestion = normalizeText(trimmedQuestion);
   const asksWbs = hasKeyword(normalizedQuestion, ['wbs', '작업구조']);
@@ -337,6 +393,7 @@ export function createChatbotReply(question: string, context: ChatbotContext): s
     return buildGreeting(context);
   }
 
+  // 1단계: 대시보드 데이터에서 즉시 검색
   const matchedTask = matchTask(trimmedQuestion, context.tasks);
   if (matchedTask) {
     return buildTaskDetailAnswer(matchedTask, context);
@@ -387,7 +444,20 @@ export function createChatbotReply(question: string, context: ChatbotContext): s
     return `현재 선택된 프로젝트가 없어서 일반 안내로 답변드릴게요.\n${HELP_TEXT}`;
   }
 
-  return buildFallbackAnswer(trimmedQuestion, context);
+  // 2단계: 로컬 대시보드 데이터에서 유사 작업 검색
+  const localFallback = buildFallbackFromLocal(trimmedQuestion, context);
+  if (localFallback) {
+    return localFallback;
+  }
+
+  // 3단계: Supabase 데이터베이스에서 검색
+  const dbResult = await searchSupabaseForAnswer(trimmedQuestion);
+  if (dbResult) {
+    return dbResult;
+  }
+
+  // 4단계: 정보 없음 — 거짓 답변 금지
+  return NOT_FOUND_MESSAGE;
 }
 
 export function createChatbotGreeting(context: ChatbotContext): string {

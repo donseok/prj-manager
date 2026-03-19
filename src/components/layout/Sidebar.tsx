@@ -18,7 +18,7 @@ export default function Sidebar() {
       sidebarCollapsed && 'justify-center px-0',
       isActive
         ? 'border border-white/10 bg-white/12 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.48)]'
-        : 'text-white/72 hover:bg-white/6 hover:text-white'
+        : 'text-white/84 hover:bg-white/10 hover:text-white'
     );
 
   // 접힌 상태
@@ -29,7 +29,7 @@ export default function Sidebar() {
           <div className="flex w-full flex-col items-center p-3 gap-3">
             <button
               onClick={toggleSidebar}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
               title="사이드바 펼치기"
             >
               <PanelLeftOpen className="h-4 w-4" />
@@ -48,7 +48,7 @@ export default function Sidebar() {
                       'flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200',
                       isActive
                         ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
-                        : 'border-transparent bg-white/[0.03] text-white/68 hover:border-white/8 hover:bg-white/[0.06] hover:text-white'
+                        : 'border-transparent bg-white/[0.08] text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
                     )
                   }
                   title={project.name}
@@ -98,6 +98,7 @@ export default function Sidebar() {
             <NavLink
               to="/projects/new"
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              
               title="새 프로젝트"
             >
               <Plus className="w-4 h-4" />
@@ -117,39 +118,39 @@ export default function Sidebar() {
             <div />
             <button
               onClick={toggleSidebar}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
               title="사이드바 접기"
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/60">Workspace</p>
+          <div className="rounded-[26px] border border-white/12 bg-white/[0.08] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/78">Workspace</p>
             <h2 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
               Planning cockpit
             </h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">
+            <p className="mt-2 text-sm leading-6 text-white/82">
               일정, WBS, 팀 상태를 하나의 워크스페이스 톤으로 정리했습니다.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/58">Projects</p>
+              <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Projects</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{projects.length}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/58">Active</p>
+              <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Active</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{activeProjects}</p>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.035] p-4">
+          <div className="mt-4 rounded-[24px] border border-white/12 bg-white/[0.06] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/60">프로젝트</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/78">프로젝트</h3>
               <NavLink
                 to="/projects"
-                className="text-xs font-medium text-white/62 transition-colors hover:text-white"
+                className="text-xs font-medium text-white/80 transition-colors hover:text-white"
               >
                 전체 보기
               </NavLink>
@@ -164,7 +165,7 @@ export default function Sidebar() {
                       'group flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-all duration-200',
                       isActive
                         ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
-                        : 'border-transparent bg-white/[0.03] text-white/68 hover:border-white/8 hover:bg-white/[0.06] hover:text-white'
+                        : 'border-transparent bg-white/[0.08] text-white/82 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
                     )
                   }
                 >
@@ -172,29 +173,29 @@ export default function Sidebar() {
                     'flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
                     project.id === projectId
                       ? 'bg-white/14'
-                      : 'bg-white/[0.06] group-hover:bg-white/10'
+                      : 'bg-white/[0.1] group-hover:bg-white/14'
                   )}>
                     <FolderOpen className={cn(
                       'h-4 w-4 transition-colors',
-                      project.id === projectId ? 'text-white' : 'text-white/68 group-hover:text-white'
+                      project.id === projectId ? 'text-white' : 'text-white/84 group-hover:text-white'
                     )} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-0.5 text-xs text-white/60">
+                    <p className="mt-0.5 text-xs text-white/74">
                       {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : '준비'}
                     </p>
                   </div>
                   <ChevronRight className={cn(
                     'h-4 w-4 transition-all duration-200',
-                    project.id === projectId ? 'translate-x-0 text-white' : '-translate-x-1 text-white/0 group-hover:translate-x-0 group-hover:text-white/62'
+                    project.id === projectId ? 'translate-x-0 text-white' : '-translate-x-1 text-white/0 group-hover:translate-x-0 group-hover:text-white/82'
                   )} />
                 </NavLink>
               ))}
               {projects.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center">
+                <div className="rounded-2xl border border-dashed border-white/12 px-4 py-8 text-center">
                   <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/40" />
-                  <p className="text-sm text-white/65">프로젝트 없음</p>
+                  <p className="text-sm text-white/82">프로젝트 없음</p>
                 </div>
               )}
             </div>
@@ -202,10 +203,10 @@ export default function Sidebar() {
 
           <div className="mt-4">
             <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/60">메뉴</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/78">메뉴</p>
               <NavLink
                 to="/projects/new"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
                 title="새 프로젝트"
               >
                 <Plus className="w-4 h-4" />
@@ -255,8 +256,8 @@ export default function Sidebar() {
             )}
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,118,110,0.18),rgba(203,109,55,0.12))] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/65">Workflow Hint</p>
+          <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80">Workflow Hint</p>
             <p className="mt-2 text-sm font-medium text-white">WBS에서 드래그로 순서를 바꾸고, 간트에서 일정 흐름을 바로 확인하세요.</p>
           </div>
         </div>

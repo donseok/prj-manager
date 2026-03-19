@@ -37,16 +37,16 @@
 .dark {
   color-scheme: dark;
   --bg-primary: #0f1217;
-  --bg-secondary: rgba(20, 24, 31, 0.76);
-  --bg-secondary-solid: #141820;
-  --bg-tertiary: rgba(34, 38, 47, 0.95);
-  --bg-elevated: rgba(255, 255, 255, 0.05);
+  --bg-secondary: rgba(22, 27, 34, 0.88);
+  --bg-secondary-solid: #1a2029;
+  --bg-tertiary: rgba(42, 48, 58, 0.96);
+  --bg-elevated: rgba(255, 255, 255, 0.1);
   --bg-inverse: #faf5ed;
   --text-primary: #f5efe7;
-  --text-secondary: #b6aa9d;
-  --text-muted: #857a70;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.13);
+  --text-secondary: #d8cec4;
+  --text-muted: #b6aa9e;
+  --border-color: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.2);
   --accent-primary: #32b6ab;
   --accent-primary-strong: #66d6c6;
   --accent-secondary: #f0a167;
@@ -56,7 +56,7 @@
   --accent-danger: #ff738a;
   --gradient-primary: linear-gradient(135deg, #18a79b 0%, #2d8ac8 50%, #475df1 100%);
   --gradient-secondary: linear-gradient(135deg, #ffd091 0%, #f08a53 100%);
-  --gradient-surface: linear-gradient(180deg, rgba(27, 31, 40, 0.92), rgba(18, 21, 28, 0.88));
+  --gradient-surface: linear-gradient(180deg, rgba(33, 38, 47, 0.96), rgba(20, 24, 31, 0.92));
   --gradient-dark: linear-gradient(165deg, rgba(17, 20, 26, 0.98), rgba(10, 12, 16, 0.94));
   --shadow-sm: 0 14px 28px -22px rgba(0, 0, 0, 0.52);
   --shadow-md: 0 28px 56px -34px rgba(0, 0, 0, 0.56);
@@ -282,6 +282,10 @@ select {
   -webkit-backdrop-filter: blur(24px);
 }
 
+.dark .app-panel {
+  border-color: var(--border-strong);
+}
+
 .app-panel-strong {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 240, 0.85));
   border: 1px solid rgba(49, 37, 22, 0.12);
@@ -292,13 +296,13 @@ select {
 }
 
 .dark .app-panel-strong {
-  background: linear-gradient(180deg, rgba(21, 24, 31, 0.92), rgba(14, 17, 23, 0.88));
-  border-color: var(--border-color);
+  background: linear-gradient(180deg, rgba(24, 29, 36, 0.96), rgba(16, 20, 26, 0.92));
+  border-color: var(--border-strong);
 }
 
 .app-panel-dark {
   background: var(--gradient-dark);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 30px;
   color: #f5efe7;
   box-shadow: 0 48px 100px -52px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -352,7 +356,9 @@ select {
 }
 
 .dark .surface-badge {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .field-label {
@@ -378,8 +384,9 @@ select {
 .dark .field-input,
 .dark .field-select,
 .dark .field-textarea {
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .field-input,
@@ -426,7 +433,8 @@ select {
 }
 
 .dark .metric-card {
-  background: linear-gradient(180deg, rgba(22, 26, 33, 0.9), rgba(16, 19, 25, 0.82));
+  background: linear-gradient(180deg, rgba(31, 36, 44, 0.96), rgba(21, 25, 32, 0.92));
+  border-color: var(--border-strong);
 }
 
 .eyebrow-stat {
@@ -435,6 +443,11 @@ select {
   text-transform: uppercase;
   color: var(--text-muted);
   font-weight: 700;
+}
+
+.dark .page-kicker,
+.dark .eyebrow-stat {
+  color: #cbbfb3;
 }
 
 .app-table {
@@ -460,7 +473,7 @@ select {
 }
 
 .dark .app-table thead th {
-  background: rgba(18, 21, 28, 0.88);
+  background: rgba(24, 29, 36, 0.94);
 }
 
 .app-table td {

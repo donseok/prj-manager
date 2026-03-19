@@ -28,7 +28,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-black/8 bg-[rgba(255,250,244,0.82)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl dark:border-[var(--border-color)] dark:bg-[rgba(15,18,23,0.6)] sm:px-5">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" className="flex items-center gap-3 group">
             <div className="transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02] shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] rounded-2xl">
@@ -54,14 +54,14 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-2 rounded-full border border-[var(--border-color)] bg-white/70 px-3 py-2 text-sm text-[color:var(--text-secondary)] backdrop-blur-xl dark:bg-white/5 md:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-sm text-[color:var(--text-secondary)] backdrop-blur-xl md:flex">
             <CalendarDays className="h-4 w-4 text-[color:var(--accent-secondary)]" />
             <span>{todayLabel}</span>
           </div>
 
           <button
             onClick={toggleTheme}
-            className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 dark:bg-white/5 dark:hover:bg-white/10"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
             title={isDark ? '라이트 모드' : '다크 모드'}
           >
             {isDark ? (
@@ -74,7 +74,7 @@ export default function Header() {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-white/70 px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 dark:bg-white/5 dark:hover:bg-white/10"
+              className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all group-hover:scale-[1.03]">
                 <User className="w-4 h-4 text-white" />

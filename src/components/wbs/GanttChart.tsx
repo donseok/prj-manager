@@ -257,7 +257,7 @@ export default function GanttChart({
                       highlightWeekends &&
                         isWeekend &&
                         !isToday &&
-                        'bg-black/[0.025] text-[color:var(--text-muted)] dark:bg-white/[0.03]'
+                        'bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)]'
                     )}
                     style={{ width: dayWidth }}
                   >
@@ -280,7 +280,7 @@ export default function GanttChart({
                     key={`${date.toISOString()}-grid`}
                     className={cn(
                       'absolute top-0 bottom-0 border-r border-[var(--border-color)]',
-                      highlightWeekends && isWeekend && 'bg-black/[0.02] dark:bg-white/[0.03]'
+                      highlightWeekends && isWeekend && 'bg-[color:var(--bg-tertiary)]'
                     )}
                     style={{ left: index * dayWidth, width: dayWidth }}
                   />
@@ -313,7 +313,7 @@ export default function GanttChart({
                   key={task.id}
                   className={cn(
                     'relative border-b border-[var(--border-color)] transition-colors hover:bg-[rgba(15,118,110,0.04)]',
-                    task.level === 1 && 'bg-black/[0.02] dark:bg-white/[0.03]',
+                    task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
                     isSelected && 'bg-[rgba(15,118,110,0.08)]'
                   )}
                   style={{ height: rowHeight }}

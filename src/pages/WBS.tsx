@@ -314,7 +314,7 @@ export default function WBS() {
             onChange={(e) => handleCellChange(task.id, 'status', e.target.value as TaskStatus)}
             className={cn(
               'cell-select rounded-full px-2 py-1 text-xs font-semibold',
-              task.status === 'pending' && 'bg-black/5 text-[color:var(--text-secondary)] dark:bg-white/8',
+              task.status === 'pending' && 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
               task.status === 'in_progress' && 'bg-[rgba(15,118,110,0.1)] text-[color:var(--accent-primary)]',
               task.status === 'completed' && 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
               task.status === 'on_hold' && 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
@@ -454,7 +454,7 @@ export default function WBS() {
                 <tr
                   key={task.id}
                   className={cn(
-                    task.level === 1 && 'bg-black/[0.025] dark:bg-white/[0.03]',
+                    task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
                     selectedRows.has(task.id) && 'bg-[rgba(15,118,110,0.08)]'
                   )}
                 >

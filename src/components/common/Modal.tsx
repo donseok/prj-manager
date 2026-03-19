@@ -59,7 +59,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
             </div>
             <button
               onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/70 text-[color:var(--text-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 hover:text-[color:var(--text-primary)] dark:bg-white/5 dark:hover:bg-white/10"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
             >
               <X className="w-5 h-5" />
             </button>

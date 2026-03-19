@@ -49,10 +49,15 @@ interface TaskRow {
   updated_at: string;
 }
 
+const sampleWorkspaceMap = new Map(sampleWorkspaces.map((workspace) => [workspace.project.id, workspace]));
+
 export async function loadInitialProjects() {
+  ensureLocalSampleWorkspace();
+
   if (canUseSupabase()) {
     // RLS가 admin/user 권한에 따라 자동으로 필터링
-    return loadProjects();
+    const remoteProjects = await loadProjects();
+    return mergeProjectsWithSamples(remoteProjects);
   }
 
   return ensureLocalSampleWorkspace();
@@ -116,6 +121,11 @@ export async function deleteProjectById(projectId: string) {
 }
 
 export async function loadProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const sampleWorkspace = sampleWorkspaceMap.get(projectId);
+  if (sampleWorkspace) {
+    return storage.get<ProjectMember[]>(`members-${projectId}`, sampleWorkspace.members);
+  }
+
   if (canUseSupabase() && supabase) {
     const { data, error } = await supabase
       .from('project_members')
@@ -179,6 +189,11 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
 }
 
 export async function loadProjectTasks(projectId: string): Promise<Task[]> {
+  const sampleWorkspace = sampleWorkspaceMap.get(projectId);
+  if (sampleWorkspace) {
+    return storage.get<Task[]>(`tasks-${projectId}`, sampleWorkspace.tasks);
+  }
+
   if (canUseSupabase() && supabase) {
     const { data, error } = await supabase
       .from('tasks')
@@ -250,9 +265,7 @@ function canUseSupabase() {
 
 function ensureLocalSampleWorkspace() {
   const storedProjects = storage.get<Project[]>('projects', []);
-  const sampleProjectIds = new Set(sampleWorkspaces.map((ws) => ws.project.id));
-  const userProjects = storedProjects.filter((project) => !sampleProjectIds.has(project.id));
-  const mergedProjects = [...sampleWorkspaces.map((ws) => ws.project), ...userProjects];
+  const mergedProjects = mergeProjectsWithSamples(storedProjects);
 
   storage.set('projects', mergedProjects);
   for (const ws of sampleWorkspaces) {
@@ -261,6 +274,12 @@ function ensureLocalSampleWorkspace() {
   }
 
   return mergedProjects;
+}
+
+function mergeProjectsWithSamples(projects: Project[]) {
+  const sampleProjectIds = new Set(sampleWorkspaces.map((workspace) => workspace.project.id));
+  const userProjects = projects.filter((project) => !sampleProjectIds.has(project.id));
+  return [...sampleWorkspaces.map((workspace) => workspace.project), ...userProjects];
 }
 
 function mapProjectRow(row: ProjectRow): Project {

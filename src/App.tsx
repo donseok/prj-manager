@@ -54,7 +54,9 @@ function App() {
 
     const initializeApp = async () => {
       if (!isSupabaseConfigured) {
-        // Supabase 미설정 시 로딩만 끝내고 로그인 페이지로
+        const projects = await loadInitialProjects();
+        if (isCancelled) return;
+        setProjects(projects);
         setLoading(false);
         return;
       }

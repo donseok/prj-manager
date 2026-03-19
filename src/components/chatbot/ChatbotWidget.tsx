@@ -84,16 +84,18 @@ export default function ChatbotWidget() {
     setIsOpen(true);
 
     timerRef.current = window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-          role: 'assistant',
-          text: createChatbotReply(question, context),
-        },
-      ]);
-      setIsThinking(false);
-      timerRef.current = null;
+      void createChatbotReply(question, context).then((reply) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            role: 'assistant',
+            text: reply,
+          },
+        ]);
+        setIsThinking(false);
+        timerRef.current = null;
+      });
     }, 420);
   };
 

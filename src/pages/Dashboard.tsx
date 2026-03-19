@@ -191,14 +191,14 @@ export default function Dashboard() {
           <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
 
           <div className="relative">
-            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+            <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
               <Zap className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Project Dashboard
             </div>
             <h1 className="mt-6 text-[clamp(2rem,4vw,3.9rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 운영 현황
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/78 md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
               {currentProject?.description || '프로젝트 진행 현황을 한눈에 확인하고, 이번 주와 다음 주의 흐름까지 빠르게 파악할 수 있도록 대시보드를 재구성했습니다.'}
             </p>
 
@@ -210,14 +210,14 @@ export default function Dashboard() {
                 </Button>
               </Link>
               <Link to={`/projects/${projectId}/gantt`}>
-                <Button variant="outline" className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]">
+                <Button variant="outline" className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]">
                   <Calendar className="w-4 h-4" />
                   간트 차트
                 </Button>
               </Link>
               <Button
                 variant="outline"
-                className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]"
                 onClick={handleExport}
                 disabled={isExporting}
               >
@@ -227,16 +227,16 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">전체 작업</p>
+              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">전체 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{stats.totalTasks}</p>
               </div>
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">멤버</p>
+              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">멤버</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{members.length}</p>
               </div>
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">지연</p>
+              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">지연</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{stats.delayedTasks}</p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function Dashboard() {
 
           {statusData.length > 0 ? (
             <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="rounded-[24px] border border-[var(--border-color)] bg-white/70 p-5 dark:bg-white/5">
+              <div className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
                 <p className="eyebrow-stat">Task Pool</p>
                 <p className="mt-4 text-5xl font-semibold tracking-[-0.06em] text-[color:var(--text-primary)]">
                   {stats.totalTasks}
@@ -342,7 +342,7 @@ export default function Dashboard() {
                 {statusData.map((item) => (
                   <div
                     key={item.name}
-                    className="rounded-[20px] border border-[var(--border-color)] bg-white/70 px-4 py-4 dark:bg-white/5"
+                    className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-4"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
@@ -351,7 +351,7 @@ export default function Dashboard() {
                       </div>
                       <span className="text-sm text-[color:var(--text-secondary)]">{item.value}개</span>
                     </div>
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-black/[0.05] dark:bg-white/[0.08]">
+                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
                       <div
                         className="h-full rounded-full"
                         style={{
@@ -428,7 +428,7 @@ export default function Dashboard() {
                 >
                   <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="rounded-full bg-white/60 px-2.5 py-1 font-semibold text-[color:var(--accent-danger)] dark:bg-white/8">
+                    <span className="rounded-full bg-[rgba(203,75,95,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-danger)]">
                       {getDelayDays(task)}일 지연
                     </span>
                     <span className="text-[color:var(--text-secondary)]">종료: {formatDate(task.planEnd)}</span>
@@ -453,7 +453,7 @@ export default function Dashboard() {
           {thisWeekTasks.length > 0 ? (
             <ul className="space-y-3">
               {thisWeekTasks.map((task) => (
-                <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
+                <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                   <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
                   <p className="mt-2 flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
                     <Calendar className="h-3.5 w-3.5" />
@@ -478,7 +478,7 @@ export default function Dashboard() {
           {nextWeekTasks.length > 0 ? (
             <ul className="space-y-3">
               {nextWeekTasks.map((task) => (
-                <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
+                <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                   <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
                   <p className="mt-2 flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
                     <Calendar className="h-3.5 w-3.5" />
@@ -554,17 +554,17 @@ export default function Dashboard() {
           {timeline ? (
             <div className="mt-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                   <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">시작일</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.startDate)}</p>
                 </div>
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                   <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">종료일</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.endDate)}</p>
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-[var(--border-color)] bg-white/70 p-5 dark:bg-white/5">
+              <div className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[color:var(--text-secondary)]">일정 경과율</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{Math.round(timeline.elapsedPercent)}%</span>
@@ -582,15 +582,15 @@ export default function Dashboard() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-white/70 p-4 text-center dark:bg-white/5">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">총 일수</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{timeline.totalDays}</p>
                 </div>
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-white/70 p-4 text-center dark:bg-white/5">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">경과일</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{Math.max(0, timeline.elapsedDays)}</p>
                 </div>
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-white/70 p-4 text-center dark:bg-white/5">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
                     {timeline.remainingDays >= 0 ? '잔여일' : '초과일'}
                   </p>
@@ -656,7 +656,7 @@ export default function Dashboard() {
               </div>
               <div className="space-y-3">
                 {weightData.map((item, i) => (
-                  <div key={item.name} className="rounded-[16px] border border-[var(--border-color)] bg-white/70 px-4 py-3 dark:bg-white/5">
+                  <div key={item.name} className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <span
@@ -692,7 +692,7 @@ export default function Dashboard() {
                 <li key={task.id} className="rounded-[22px] border border-[rgba(31,163,122,0.16)] bg-[rgba(31,163,122,0.06)] p-4">
                   <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="rounded-full bg-white/60 px-2.5 py-1 font-semibold text-[color:var(--accent-success)] dark:bg-white/8">
+                    <span className="rounded-full bg-[rgba(31,163,122,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-success)]">
                       완료
                     </span>
                     <span className="text-[color:var(--text-secondary)]">완료일: {formatDate(task.actualEnd)}</span>
@@ -730,7 +730,7 @@ function QueueCard({ title, subtitle, icon, tone, children }: QueueCardProps) {
     <div className="app-panel overflow-hidden">
       <div className={`bg-gradient-to-r ${toneClass[tone]} border-b border-[var(--border-color)] px-5 py-5`}>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-white/70 text-[color:var(--text-primary)] shadow-[0_18px_36px_-22px_rgba(17,24,39,0.22)] dark:bg-white/8">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[18px] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[0_18px_36px_-22px_rgba(17,24,39,0.22)]">
             {icon}
           </div>
           <div>

@@ -25,7 +25,7 @@ import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 export default function ProjectList() {
   const navigate = useNavigate();
   const { projects, addProject, deleteProject, updateProject } = useProjectStore();
-  const { user } = useAuthStore();
+  const { user, isAdmin } = useAuthStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -136,10 +136,12 @@ export default function ProjectList() {
               같은 시각 언어로 맞춰 워크플로우가 끊기지 않도록 정리했습니다.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="w-4 h-4" />
-                새 프로젝트
-              </Button>
+              {isAdmin && (
+                <Button onClick={() => setShowCreateModal(true)}>
+                  <Plus className="w-4 h-4" />
+                  새 프로젝트
+                </Button>
+              )}
               <Link to="/">
                 <Button variant="outline" className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]">
                   홈으로
@@ -183,10 +185,12 @@ export default function ProjectList() {
               프로젝트 탐색
             </h2>
           </div>
-          <Button variant="outline" onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4" />
-            새 프로젝트
-          </Button>
+          {isAdmin && (
+            <Button variant="outline" onClick={() => setShowCreateModal(true)}>
+              <Plus className="w-4 h-4" />
+              새 프로젝트
+            </Button>
+          )}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -202,7 +206,7 @@ export default function ProjectList() {
               className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
                 statusFilter === tab.key
                   ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.1)] text-[color:var(--accent-primary)]'
-                  : 'border-[var(--border-color)] bg-white/50 text-[color:var(--text-secondary)] hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/8'
+                  : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]'
               }`}
             >
               {tab.icon}
@@ -210,7 +214,7 @@ export default function ProjectList() {
               <span className={`ml-1 rounded-full px-1.5 py-0.5 text-xs ${
                 statusFilter === tab.key
                   ? 'bg-[rgba(15,118,110,0.15)] text-[color:var(--accent-primary)]'
-                  : 'bg-black/5 text-[color:var(--text-muted)] dark:bg-white/8'
+                  : 'bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)]'
               }`}>
                 {tab.count}
               </span>
@@ -263,14 +267,14 @@ export default function ProjectList() {
                         event.stopPropagation();
                         setMenuOpenId(menuOpenId === project.id ? null : project.id);
                       }}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/50 text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-white/82 hover:text-[color:var(--text-primary)] dark:bg-white/5 dark:hover:bg-white/8"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </button>
 
                     {menuOpenId === project.id && (
                       <div className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-[20px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-1.5 shadow-[0_26px_64px_-38px_rgba(0,0,0,0.48)] backdrop-blur-2xl dark:bg-[image:var(--gradient-dark)]">
-                        {project.status !== 'preparing' && (
+                        {isAdmin && project.status !== 'preparing' && (
                           <button
                             onClick={() => handleChangeStatus(project.id, 'preparing')}
                             className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
@@ -279,7 +283,7 @@ export default function ProjectList() {
                             준비로 변경
                           </button>
                         )}
-                        {project.status !== 'active' && (
+                        {isAdmin && project.status !== 'active' && (
                           <button
                             onClick={() => handleChangeStatus(project.id, 'active')}
                             className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
@@ -288,7 +292,7 @@ export default function ProjectList() {
                             진행으로 변경
                           </button>
                         )}
-                        {project.status !== 'completed' && (
+                        {isAdmin && project.status !== 'completed' && (
                           <button
                             onClick={() => handleChangeStatus(project.id, 'completed')}
                             className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
@@ -297,21 +301,30 @@ export default function ProjectList() {
                             완료 처리
                           </button>
                         )}
-                        <div className="my-1 border-t border-[var(--border-color)]" />
-                        <button
-                          onClick={() => handleDeleteProject(project.id)}
-                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          삭제
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <div className="my-1 border-t border-[var(--border-color)]" />
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              삭제
+                            </button>
+                          </>
+                        )}
+                        {!isAdmin && (
+                          <p className="px-3 py-2 text-xs text-[color:var(--text-muted)]">
+                            조회/수정만 가능합니다
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
 
                 <Link to={`/projects/${project.id}`} className="mt-5 block">
-                  <div className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
+                  <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-[color:var(--text-secondary)]">
                         {project.startDate || '시작일 미정'}
@@ -353,7 +366,7 @@ export default function ProjectList() {
                 ? '다른 키워드로 검색하거나 새 프로젝트를 생성해보세요.'
                 : '첫 프로젝트를 만들면 여기에서 카드 기반으로 관리할 수 있습니다.'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && isAdmin && (
               <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className="w-4 h-4" />
                 새 프로젝트 만들기

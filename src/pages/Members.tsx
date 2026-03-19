@@ -83,7 +83,7 @@ export default function Members() {
     owner: 'bg-[rgba(18,61,100,0.12)] text-[color:var(--accent-ink)]',
     admin: 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]',
     member: 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
-    viewer: 'bg-black/5 text-[color:var(--text-secondary)] dark:bg-white/8',
+    viewer: 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
   };
 
   return (
@@ -92,14 +92,14 @@ export default function Members() {
         <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
           <div className="pointer-events-none absolute right-[-5rem] top-[-5rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
           <div className="relative">
-            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+            <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
               <Users className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Team Workspace
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 팀 구성
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
               참여자를 단순 목록이 아니라 역할과 편집 상태가 명확하게 보이는 팀 보드 형태로 정리했습니다.
             </p>
             <div className="mt-8">
@@ -155,7 +155,7 @@ export default function Members() {
             {members.map((member) => (
               <div
                 key={member.id}
-                className="rounded-[24px] border border-[var(--border-color)] bg-white/70 p-5 shadow-[0_20px_48px_-34px_rgba(17,24,39,0.18)] dark:bg-white/5"
+                className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5 shadow-[0_20px_48px_-34px_rgba(17,24,39,0.18)]"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -206,7 +206,7 @@ export default function Members() {
                   </div>
                 </div>
 
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[var(--border-color)] bg-white/50 px-4 py-3 dark:bg-white/5">
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
                   <div className="flex items-center gap-2 text-sm text-[color:var(--text-secondary)]">
                     <ShieldCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />
                     역할 지정
@@ -228,7 +228,7 @@ export default function Members() {
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleStartEdit(member)}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-white/55 text-[color:var(--text-secondary)] transition-colors hover:bg-white/82 hover:text-[color:var(--text-primary)] dark:bg-white/5 dark:hover:bg-white/8"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>

@@ -18,7 +18,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary:
         'border border-[var(--border-color)] bg-[image:var(--gradient-secondary)] text-[var(--bg-inverse)] shadow-[0_20px_45px_-26px_rgba(203,109,55,0.7)] hover:-translate-y-0.5 hover:saturate-125',
       outline:
-        'border border-[var(--border-color)] bg-white/60 text-[color:var(--text-primary)] backdrop-blur-xl hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:bg-white/85 dark:bg-white/5 dark:hover:bg-white/8',
+        'border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] backdrop-blur-xl hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:bg-[color:var(--bg-secondary-solid)]',
       ghost:
         'bg-transparent text-[color:var(--text-secondary)] hover:bg-black/5 hover:text-[color:var(--text-primary)] dark:hover:bg-white/6 dark:hover:text-[color:var(--text-primary)]',
       danger:

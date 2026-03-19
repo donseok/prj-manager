@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
+import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -25,6 +26,7 @@ export default function Settings() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { currentProject, members, updateProject, deleteProject } = useProjectStore();
+  const { isAdmin } = useAuthStore();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -143,14 +145,14 @@ export default function Settings() {
         <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
           <div className="pointer-events-none absolute right-[-5rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
           <div className="relative">
-            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+            <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Project Settings
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 설정
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
               프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -294,12 +296,14 @@ export default function Settings() {
                 return (
                   <button
                     key={item.status}
-                    onClick={() => !isCurrent && handleChangeStatus(item.status)}
-                    disabled={isCurrent}
+                    onClick={() => !isCurrent && isAdmin && handleChangeStatus(item.status)}
+                    disabled={isCurrent || !isAdmin}
                     className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
                       isCurrent
                         ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
-                        : 'border-[var(--border-color)] bg-white/50 hover:bg-white/80 dark:bg-white/[0.04] dark:hover:bg-white/8'
+                        : !isAdmin
+                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
                     }`}
                   >
                     <div
@@ -324,6 +328,9 @@ export default function Settings() {
                 );
               })}
             </div>
+            {!isAdmin && (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">상태 변경은 관리자만 가능합니다.</p>
+            )}
 
             {currentProject?.completedAt && (
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
@@ -346,7 +353,7 @@ export default function Settings() {
                 WBS 엑셀 내보내기
               </Button>
 
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-white/55 px-5 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/84 dark:bg-white/5 dark:hover:bg-white/8">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-tertiary)]">
                 <Upload className="w-4 h-4" />
                 엑셀 가져오기
                 <input
@@ -359,27 +366,29 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-[rgba(203,75,95,0.16)] bg-[linear-gradient(180deg,rgba(255,244,245,0.88),rgba(255,248,244,0.72))] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)] dark:bg-[linear-gradient(180deg,rgba(49,20,28,0.66),rgba(23,16,20,0.72))]">
-            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
-              <AlertTriangle className="w-5 h-5" />
-              위험 영역
-            </h2>
+          {isAdmin && (
+            <div className="rounded-[30px] border border-[rgba(203,75,95,0.16)] bg-[linear-gradient(180deg,rgba(255,244,245,0.88),rgba(255,248,244,0.72))] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)] dark:bg-[linear-gradient(180deg,rgba(49,20,28,0.66),rgba(23,16,20,0.72))]">
+              <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
+                <AlertTriangle className="w-5 h-5" />
+                위험 영역
+              </h2>
 
-            <div className="mt-5">
-              <div className="rounded-[22px] border border-[rgba(203,75,95,0.14)] bg-white/70 p-4 dark:bg-white/[0.04]">
-                <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
-                <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
-                  프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
-                </p>
-                <div className="mt-4">
-                  <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
-                    <Trash2 className="w-4 h-4" />
-                    삭제
-                  </Button>
+              <div className="mt-5">
+              <div className="rounded-[22px] border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.08)] p-4 dark:bg-[rgba(203,75,95,0.12)]">
+                  <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+                    프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
+                  </p>
+                  <div className="mt-4">
+                    <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
+                      <Trash2 className="w-4 h-4" />
+                      삭제
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
