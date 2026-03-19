@@ -577,7 +577,7 @@ export default function WBS() {
                 <th className="w-40 text-left">
                   산출물
                 </th>
-                <th className="w-28 text-left">
+                <th className="w-36 text-left">
                   담당자
                 </th>
                 <th className="w-24 text-right">
