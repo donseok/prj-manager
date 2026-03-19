@@ -11,10 +11,10 @@
   --bg-elevated: rgba(255, 255, 255, 0.58);
   --bg-inverse: #15181d;
   --text-primary: #17181d;
-  --text-secondary: #665e58;
-  --text-muted: #94877e;
-  --border-color: rgba(49, 37, 22, 0.12);
-  --border-strong: rgba(17, 23, 32, 0.09);
+  --text-secondary: #4a4440;
+  --text-muted: #7a6f68;
+  --border-color: rgba(49, 37, 22, 0.18);
+  --border-strong: rgba(17, 23, 32, 0.14);
   --accent-primary: #0f766e;
   --accent-primary-strong: #155e75;
   --accent-secondary: #cb6d37;
@@ -283,8 +283,8 @@ select {
 }
 
 .app-panel-strong {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 247, 240, 0.74));
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 240, 0.85));
+  border: 1px solid rgba(49, 37, 22, 0.12);
   border-radius: 32px;
   box-shadow: var(--shadow-xl), var(--ring-soft);
   backdrop-filter: blur(28px);
@@ -343,7 +343,7 @@ select {
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
   border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.65);
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 600;
@@ -413,7 +413,7 @@ select {
   overflow: hidden;
   border-radius: 28px;
   border: 1px solid var(--border-color);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 248, 242, 0.7));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 242, 0.85));
   box-shadow: var(--shadow-md), var(--ring-soft);
 }
 

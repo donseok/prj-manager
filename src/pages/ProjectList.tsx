@@ -122,7 +122,7 @@ export default function ProjectList() {
         <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
           <div className="pointer-events-none absolute right-[-4rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
           <div className="relative">
-            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/72">
+            <div className="surface-badge border-white/10 bg-white/[0.06] text-white/82">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Project Library
             </div>
@@ -131,7 +131,7 @@ export default function ProjectList() {
               <br />
               선명하게 관리합니다
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80 md:text-base">
               검색, 상태, 최근성까지 한 번에 읽히는 카드 뷰로 재구성했습니다. 프로젝트 생성 모달도
               같은 시각 언어로 맞춰 워크플로우가 끊기지 않도록 정리했습니다.
             </p>
@@ -311,7 +311,7 @@ export default function ProjectList() {
                 </div>
 
                 <Link to={`/projects/${project.id}`} className="mt-5 block">
-                  <div className="rounded-[22px] border border-[var(--border-color)] bg-white/45 p-4 dark:bg-white/5">
+                  <div className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-[color:var(--text-secondary)]">
                         {project.startDate || '시작일 미정'}

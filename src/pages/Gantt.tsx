@@ -162,25 +162,25 @@ export default function Gantt() {
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 일정 흐름
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/78 md:text-base">
               검색, 상태 필터, 시야 범위, 선택된 작업 정보까지 한 화면에서 처리할 수 있게 간트 페이지 전체를 다시 구성했습니다.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">표시 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">표시 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{filteredFlatTasks.length}</p>
-                <p className="mt-1 text-sm text-white/54">현재 필터 기준 표시 개수</p>
+                <p className="mt-1 text-sm text-white/78">현재 필터 기준 표시 개수</p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">오픈 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">오픈 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeCount}</p>
-                <p className="mt-1 text-sm text-white/54">완료되지 않은 전체 작업</p>
+                <p className="mt-1 text-sm text-white/78">완료되지 않은 전체 작업</p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">지연 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">지연 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{delayedCount}</p>
-                <p className="mt-1 text-sm text-white/54">즉시 확인이 필요한 일정</p>
+                <p className="mt-1 text-sm text-white/78">즉시 확인이 필요한 일정</p>
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function Gantt() {
                 />
               </div>
 
-              <div className="rounded-[22px] border border-[var(--border-color)] bg-white/45 p-4 dark:bg-white/5">
+              <div className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 dark:bg-white/5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{selectedTask.actualProgress}%</span>
@@ -258,7 +258,7 @@ export default function Gantt() {
               </div>
 
               {selectedTask.output && (
-                <div className="rounded-[22px] border border-[var(--border-color)] bg-white/45 p-4 text-sm leading-6 text-[color:var(--text-secondary)] dark:bg-white/5">
+                <div className="rounded-[22px] border border-[var(--border-color)] bg-white/70 p-4 text-sm leading-6 text-[color:var(--text-secondary)] dark:bg-white/5">
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
                     산출물
                   </p>
@@ -361,7 +361,7 @@ export default function Gantt() {
 
       <div className="app-panel flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
-          <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-white/35 dark:bg-white/[0.03]">
+          <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-white/60 dark:bg-white/[0.03]">
             <div className="flex h-[64px] items-center justify-between border-b border-[var(--border-color)] px-4">
               <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--text-muted)]">
                 작업 목록
@@ -493,7 +493,7 @@ function DetailMetric({
         'rounded-[20px] border p-4',
         tone === 'danger'
           ? 'border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.06)]'
-          : 'border-[var(--border-color)] bg-white/45 dark:bg-white/5'
+          : 'border-[var(--border-color)] bg-white/70 dark:bg-white/5'
       )}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">

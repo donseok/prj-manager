@@ -125,7 +125,7 @@ export default function Sidebar() {
           </div>
 
           <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/45">Workspace</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/60">Workspace</p>
             <h2 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
               Planning cockpit
             </h2>
@@ -134,11 +134,11 @@ export default function Sidebar() {
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">Projects</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/58">Projects</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{projects.length}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">Active</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/58">Active</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{activeProjects}</p>
               </div>
             </div>
@@ -146,10 +146,10 @@ export default function Sidebar() {
 
           <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.035] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/42">프로젝트</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/60">프로젝트</h3>
               <NavLink
                 to="/projects"
-                className="text-xs font-medium text-white/48 transition-colors hover:text-white"
+                className="text-xs font-medium text-white/62 transition-colors hover:text-white"
               >
                 전체 보기
               </NavLink>
@@ -176,12 +176,12 @@ export default function Sidebar() {
                   )}>
                     <FolderOpen className={cn(
                       'h-4 w-4 transition-colors',
-                      project.id === projectId ? 'text-white' : 'text-white/56 group-hover:text-white'
+                      project.id === projectId ? 'text-white' : 'text-white/68 group-hover:text-white'
                     )} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-0.5 text-xs text-white/45">
+                    <p className="mt-0.5 text-xs text-white/60">
                       {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : '준비'}
                     </p>
                   </div>
@@ -193,8 +193,8 @@ export default function Sidebar() {
               ))}
               {projects.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center">
-                  <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/22" />
-                  <p className="text-sm text-white/52">프로젝트 없음</p>
+                  <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/40" />
+                  <p className="text-sm text-white/65">프로젝트 없음</p>
                 </div>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function Sidebar() {
 
           <div className="mt-4">
             <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/42">메뉴</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/60">메뉴</p>
               <NavLink
                 to="/projects/new"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
@@ -256,7 +256,7 @@ export default function Sidebar() {
           </div>
 
           <div className="mt-4 rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,118,110,0.18),rgba(203,109,55,0.12))] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/52">Workflow Hint</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/65">Workflow Hint</p>
             <p className="mt-2 text-sm font-medium text-white">WBS에서 드래그로 순서를 바꾸고, 간트에서 일정 흐름을 바로 확인하세요.</p>
           </div>
         </div>

@@ -27,7 +27,7 @@ export default function Home() {
           <div className="pointer-events-none absolute bottom-[-7rem] left-[20%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.16),transparent_72%)] blur-3xl" />
 
           <div className="relative">
-            <div className="surface-badge border-white/10 bg-white/[0.07] text-white/70">
+            <div className="surface-badge border-white/10 bg-white/[0.07] text-white/80">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               2026 Workspace Edition
             </div>
@@ -36,7 +36,7 @@ export default function Home() {
               <br />
               프로젝트를 운영하세요
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/70 md:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80 md:text-lg">
               WBS, 일정, 멤버 관리 화면을 하나의 톤으로 다시 묶었습니다. 빠르게 훑어봐도
               구조가 보이고, 오래 봐도 지루하지 않은 운영용 인터페이스를 목표로 했습니다.
             </p>
@@ -58,19 +58,19 @@ export default function Home() {
 
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">전체 프로젝트</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">전체 프로젝트</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{projects.length}</p>
-                <p className="mt-1 text-sm text-white/54">준비·진행·완료 프로젝트 전체 수</p>
+                <p className="mt-1 text-sm text-white/68">준비·진행·완료 프로젝트 전체 수</p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">진행중</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">진행중</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeProjects}</p>
-                <p className="mt-1 text-sm text-white/54">현재 작업이 이어지고 있는 프로젝트</p>
+                <p className="mt-1 text-sm text-white/68">현재 작업이 이어지고 있는 프로젝트</p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">최근 기록</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/60">최근 기록</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{recentProjects.length}</p>
-                <p className="mt-1 text-sm text-white/54">빠르게 다시 열 수 있는 최근 워크스페이스</p>
+                <p className="mt-1 text-sm text-white/68">빠르게 다시 열 수 있는 최근 워크스페이스</p>
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function Home() {
                   <Link
                     key={project.id}
                     to={`/projects/${project.id}`}
-                    className="flex items-center justify-between rounded-[22px] border border-[var(--border-color)] bg-white/45 px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/78 dark:bg-white/5 dark:hover:bg-white/8"
+                    className="flex items-center justify-between rounded-[22px] border border-[var(--border-color)] bg-white/70 px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/78 dark:bg-white/5 dark:hover:bg-white/8"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-[color:var(--text-primary)]">{project.name}</p>
@@ -196,7 +196,7 @@ export default function Home() {
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
-                className="group rounded-[24px] border border-[var(--border-color)] bg-white/45 p-5 transition-all duration-200 hover:-translate-y-1 hover:bg-white/80 hover:shadow-[0_28px_60px_-34px_rgba(17,24,39,0.26)] dark:bg-white/5 dark:hover:bg-white/8"
+                className="group rounded-[24px] border border-[var(--border-color)] bg-white/70 p-5 transition-all duration-200 hover:-translate-y-1 hover:bg-white/80 hover:shadow-[0_28px_60px_-34px_rgba(17,24,39,0.26)] dark:bg-white/5 dark:hover:bg-white/8"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
