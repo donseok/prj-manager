@@ -101,9 +101,7 @@ function App() {
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
+            <Layout />
           }
         >
           <Route index element={<Home />} />
@@ -117,14 +115,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="manual" element={<UserManual />} />
-          <Route
-            path="admin/users"
-            element={
-              <AdminRoute>
-                <UserManagement />
-              </AdminRoute>
-            }
-          />
+          <Route path="admin/users" element={<UserManagement />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -23,7 +23,7 @@ const getInitialTheme = (): Theme => {
       return saved;
     }
   }
-  return 'system';
+  return 'dark';
 };
 
 const calculateIsDark = (theme: Theme): boolean => {
