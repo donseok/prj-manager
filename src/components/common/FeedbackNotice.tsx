@@ -42,6 +42,7 @@ export default function FeedbackNotice({ tone, title, message, onClose, classNam
 
   return (
     <div
+      data-testid="feedback-notice"
       className={cn(
         'flex items-start gap-3 rounded-[24px] border px-4 py-3.5 shadow-[0_22px_48px_-36px_rgba(17,24,39,0.2)]',
         toneStyles[tone].wrapper,

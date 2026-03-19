@@ -41,7 +41,7 @@ export default function Home() {
               2026 Workspace Edition
             </div>
             <h1 className="mt-6 max-w-3xl text-[clamp(2.5rem,6vw,4.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
-              한눈에 잡히는
+              한눈에 잡히는{' '}
               <br />
               프로젝트 운영
             </h1>

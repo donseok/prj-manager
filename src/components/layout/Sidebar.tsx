@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
+import { PROJECT_STATUS_COLORS } from '../../types';
 
 // ─── Nav item definitions ────────────────────────────────────
 
@@ -202,9 +203,10 @@ export default function Sidebar() {
                       project.id === projectId ? 'text-white' : 'text-white/84 group-hover:text-white'
                     )} />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1" title={project.name}>
                     <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-0.5 text-xs text-white/84">
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-white/84">
+                      <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: PROJECT_STATUS_COLORS[project.status] }} />
                       {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : '준비'}
                     </p>
                   </div>

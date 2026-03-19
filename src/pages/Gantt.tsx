@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Maximize2,
 } from 'lucide-react';
 import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
@@ -20,6 +21,7 @@ import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
 import FeedbackNotice from '../components/common/FeedbackNotice';
+import Modal from '../components/common/Modal';
 import { exportGanttWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useAutoSave } from '../hooks/useAutoSave';
@@ -55,6 +57,7 @@ export default function Gantt() {
   const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(12);
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const tableRef = useRef<HTMLDivElement>(null);
@@ -344,6 +347,7 @@ export default function Gantt() {
               )}
 
               <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                <div data-testid="gantt-quick-edit">
                 <div className="flex flex-col gap-3 border-b border-[var(--border-color)] pb-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
@@ -359,6 +363,7 @@ export default function Gantt() {
                       size="sm"
                       onClick={() => void saveNow()}
                       disabled={!currentProject || saveStatus === 'saving'}
+                      data-testid="gantt-save-button"
                     >
                       {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       저장
@@ -398,6 +403,7 @@ export default function Gantt() {
                       type="text"
                       value={selectedTask.name}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'name', event.target.value)}
+                      data-testid="gantt-edit-name"
                       className="field-input"
                     />
                   </div>
@@ -408,6 +414,7 @@ export default function Gantt() {
                       type="text"
                       value={selectedTask.output || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'output', event.target.value)}
+                      data-testid="gantt-edit-output"
                       className="field-input"
                     />
                   </div>
@@ -417,6 +424,7 @@ export default function Gantt() {
                     <select
                       value={selectedTask.assigneeId || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'assigneeId', event.target.value || null)}
+                      data-testid="gantt-edit-assignee"
                       className="field-select"
                     >
                       <option value="">미지정</option>
@@ -433,6 +441,7 @@ export default function Gantt() {
                     <select
                       value={selectedTask.status}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'status', event.target.value as Task['status'])}
+                      data-testid="gantt-edit-status"
                       className="field-select"
                     >
                       {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
@@ -449,6 +458,7 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.planStart || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planStart', event.target.value || null)}
+                      data-testid="gantt-edit-plan-start"
                       className="field-input"
                     />
                   </div>
@@ -459,6 +469,7 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.planEnd || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planEnd', event.target.value || null)}
+                      data-testid="gantt-edit-plan-end"
                       className="field-input"
                     />
                   </div>
@@ -469,6 +480,7 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.actualStart || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualStart', event.target.value || null)}
+                      data-testid="gantt-edit-actual-start"
                       className="field-input"
                     />
                   </div>
@@ -479,6 +491,7 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.actualEnd || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualEnd', event.target.value || null)}
+                      data-testid="gantt-edit-actual-end"
                       className="field-input"
                     />
                   </div>
@@ -497,6 +510,7 @@ export default function Gantt() {
                           Math.min(100, Math.max(0, Number(event.target.value) || 0))
                         )
                       }
+                      data-testid="gantt-edit-actual-progress"
                       className="field-input"
                     />
                   </div>
@@ -515,9 +529,11 @@ export default function Gantt() {
                           Math.min(100, Math.max(0, Number(event.target.value) || 0))
                         )
                       }
+                      data-testid="gantt-edit-plan-progress"
                       className="field-input"
                     />
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -623,7 +639,14 @@ export default function Gantt() {
         </div>
       </section>
 
-      <div className="app-panel flex min-h-0 flex-1 overflow-hidden">
+      <div className="app-panel relative flex min-h-0 flex-1 overflow-hidden">
+        <button
+          onClick={() => setIsPopupOpen(true)}
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+          title="크게 보기"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
           <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
             <div ref={tableRef} className="flex-1 overflow-auto" onScroll={handleLeftScroll}>
@@ -645,6 +668,7 @@ export default function Gantt() {
                 return (
                   <div
                     key={task.id}
+                    data-testid={`gantt-row-${task.id}`}
                     className={cn(
                       'flex cursor-pointer items-center border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
                       isSelected && 'bg-[rgba(15,118,110,0.08)]',
@@ -744,6 +768,22 @@ export default function Gantt() {
           선택한 작업으로 차트가 자동 포커스됩니다
         </div>
       </div>
+
+      <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="간트 차트 전체 보기" size="fullscreen">
+        <div className="relative h-full w-full overflow-hidden">
+          <div className="absolute inset-0">
+            <GanttChart
+              tasks={filteredFlatTasks}
+              selectedTaskId={resolvedSelectedTaskId}
+              onTaskClick={(task) => setSelectedTaskId(task.id)}
+              weeksToShow={weeksToShow}
+              dayWidth={density === 'compact' ? 32 : 44}
+              rowHeight={rowHeight}
+              highlightWeekends={highlightWeekends}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

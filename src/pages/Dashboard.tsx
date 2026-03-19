@@ -248,13 +248,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-1">
-            <div className={inProgressMetricClassName}>
+            <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-1">
+              <div className={inProgressMetricClassName}>
               <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_40px_-26px_rgba(203,109,55,0.7)]' : progressSectionIconClassName}>
                 <Clock3 className="h-5 w-5" />
               </div>
-              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">진행중 작업</p>
-              <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                <p className="mt-4 text-sm text-[color:var(--text-secondary)]">진행중 작업</p>
+              <p data-testid="dashboard-in-progress-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.inProgressTasks}
               </p>
             </div>
@@ -264,7 +264,7 @@ export default function Dashboard() {
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">완료 작업</p>
-              <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+              <p data-testid="dashboard-completed-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.completedTasks}
               </p>
             </div>
@@ -274,7 +274,7 @@ export default function Dashboard() {
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">리스크 작업</p>
-              <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+              <p data-testid="dashboard-delayed-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.delayedTasks}
               </p>
             </div>

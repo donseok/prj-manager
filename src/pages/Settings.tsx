@@ -320,17 +320,17 @@ export default function Settings() {
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Base Date</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {formData.baseDate || '미설정'}
+              {resolvedFormData.baseDate || '미설정'}
             </p>
             <p className="mt-2 text-sm text-[color:var(--text-secondary)]">공정율 기준일</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Schedule</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {formData.startDate || '미정'}
+              {resolvedFormData.startDate || '미정'}
             </p>
             <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-              {formData.endDate ? `~ ${formData.endDate}` : '종료일 미정'}
+              {resolvedFormData.endDate ? `~ ${resolvedFormData.endDate}` : '종료일 미정'}
             </p>
           </div>
         </div>
@@ -443,6 +443,7 @@ export default function Settings() {
                     type="button"
                     onClick={() => void handleStatusModeChange(mode.key)}
                     disabled={!isAdmin || isCurrentMode || isStatusModeSaving}
+                    data-testid={`settings-status-mode-${mode.key}`}
                     className={`rounded-[22px] border p-4 text-left transition-all duration-200 ${
                       isCurrentMode
                         ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
@@ -481,6 +482,7 @@ export default function Settings() {
                     key={item.status}
                     onClick={() => !isCurrent && isAdmin && isManualStatus && handleChangeStatus(item.status)}
                     disabled={isCurrent || !isAdmin || !isManualStatus}
+                    data-testid={`settings-project-status-${item.status}`}
                     className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
                       isCurrent
                         ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
@@ -566,7 +568,7 @@ export default function Settings() {
                     프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
                   </p>
                   <div className="mt-4">
-                    <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
+                    <Button variant="danger" onClick={() => setShowDeleteModal(true)} data-testid="settings-delete-project-button">
                       <Trash2 className="w-4 h-4" />
                       삭제
                     </Button>

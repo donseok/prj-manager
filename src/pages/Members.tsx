@@ -187,6 +187,7 @@ export default function Members() {
               size="sm"
               onClick={() => void saveNow()}
               disabled={!projectId || saveStatus === 'saving'}
+              data-testid="members-save-button"
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               저장
@@ -216,7 +217,7 @@ export default function Members() {
               )}
               {saveStatus === 'idle' && '자동 저장 준비'}
             </div>
-            <Button variant="outline" onClick={() => setShowAddModal(true)}>
+            <Button variant="outline" onClick={() => setShowAddModal(true)} data-testid="members-add-button">
               <Plus className="w-4 h-4" />
               멤버 추가
             </Button>
@@ -228,6 +229,7 @@ export default function Members() {
             {members.map((member) => (
               <div
                 key={member.id}
+                data-testid={`member-card-${member.id}`}
                 className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5 shadow-[0_20px_48px_-34px_rgba(17,24,39,0.18)]"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -301,12 +303,14 @@ export default function Members() {
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleStartEdit(member)}
+                      aria-label={`${member.name} 편집`}
                       className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteMember(member)}
+                      aria-label={`${member.name} 삭제`}
                       className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.05)] text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.12)]"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -369,7 +373,7 @@ export default function Members() {
             <Button variant="ghost" onClick={() => setShowAddModal(false)}>
               취소
             </Button>
-            <Button onClick={handleAddMember} disabled={!newMember.name.trim()}>
+            <Button onClick={handleAddMember} disabled={!newMember.name.trim()} data-testid="members-confirm-add-button">
               추가
             </Button>
           </div>

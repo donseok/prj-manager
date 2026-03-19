@@ -7,7 +7,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
 }
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
@@ -34,10 +34,13 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    fullscreen: 'max-w-none',
   };
 
+  const isFullscreen = size === 'fullscreen';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={cn('fixed inset-0 z-50 flex items-center justify-center', !isFullscreen && 'p-4')}>
       <div
         className="absolute inset-0 bg-[#0c1016]/62 backdrop-blur-xl animate-fade-in"
         onClick={onClose}
@@ -45,7 +48,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
       <div
         className={cn(
-          'relative w-full overflow-hidden rounded-[30px] border border-white/10 bg-[image:var(--gradient-surface)] shadow-[0_52px_120px_-56px_rgba(0,0,0,0.72)] backdrop-blur-2xl animate-scale-in dark:border-[var(--border-color)]',
+          'relative w-full overflow-hidden border border-white/10 bg-[image:var(--gradient-surface)] shadow-[0_52px_120px_-56px_rgba(0,0,0,0.72)] backdrop-blur-2xl animate-scale-in dark:border-[var(--border-color)]',
+          isFullscreen ? 'flex h-full flex-col rounded-none' : 'rounded-[30px]',
           sizes[size]
         )}
       >
@@ -66,7 +70,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
           </div>
         )}
 
-        <div className={cn(!title && 'pt-4')}>{children}</div>
+        <div className={cn(!title && 'pt-4', isFullscreen && 'flex-1 overflow-auto')} style={isFullscreen ? { height: 'calc(100% - 5rem)' } : undefined}>{children}</div>
       </div>
     </div>
   );

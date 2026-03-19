@@ -15,11 +15,13 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Maximize2,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
+import Modal from '../components/common/Modal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
@@ -62,6 +64,7 @@ export default function WBS() {
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'child' | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const dragOverCounterRef = useRef(0);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
@@ -221,9 +224,16 @@ export default function WBS() {
     }
   };
 
-  // 셀 값 변경
-  const handleCellChange = (taskId: string, field: keyof Task, value: unknown) => {
-    updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() });
+  // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
+  const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
+    updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
+  };
+
+  // 셀 편집 완료 시 히스토리 기록
+  const handleCellCommit = () => {
+    const { tasks: currentTasks } = useTaskStore.getState();
+    useTaskStore.getState().setTasks(currentTasks, undefined, { recordHistory: true });
+    setEditingCell(null);
   };
 
   const handleExportExcel = () => {
@@ -279,10 +289,10 @@ export default function WBS() {
             type="text"
             value={task.name}
             onChange={(e) => handleCellChange(task.id, 'name', e.target.value)}
-            onBlur={() => setEditingCell(null)}
+            onBlur={() => handleCellCommit()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') setEditingCell(null);
-              if (e.key === 'Escape') setEditingCell(null);
+              if (e.key === 'Enter') handleCellCommit();
+              if (e.key === 'Escape') handleCellCommit();
             }}
             className="cell-input"
             autoFocus
@@ -303,9 +313,9 @@ export default function WBS() {
             type="text"
             value={task.output || ''}
             onChange={(e) => handleCellChange(task.id, 'output', e.target.value)}
-            onBlur={() => setEditingCell(null)}
+            onBlur={() => handleCellCommit()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') setEditingCell(null);
+              if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
             }}
             className="cell-input"
             autoFocus
@@ -323,7 +333,7 @@ export default function WBS() {
         return (
           <select
             value={task.assigneeId || ''}
-            onChange={(e) => handleCellChange(task.id, 'assigneeId', e.target.value || null)}
+            onChange={(e) => handleCellChange(task.id, 'assigneeId', e.target.value || null, true)}
             className="cell-select text-sm"
           >
             <option value="">-</option>
@@ -341,9 +351,9 @@ export default function WBS() {
             type="number"
             value={task.weight}
             onChange={(e) => handleCellChange(task.id, 'weight', parseFloat(e.target.value) || 0)}
-            onBlur={() => setEditingCell(null)}
+            onBlur={() => handleCellCommit()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') setEditingCell(null);
+              if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
             }}
             className="cell-input text-right"
             step="0.01"
@@ -367,7 +377,7 @@ export default function WBS() {
           <input
             type="date"
             value={dateValue || ''}
-            onChange={(e) => handleCellChange(task.id, columnId as keyof Task, e.target.value || null)}
+            onChange={(e) => handleCellChange(task.id, columnId as keyof Task, e.target.value || null, true)}
             className="cell-input text-sm"
           />
         );
@@ -383,9 +393,9 @@ export default function WBS() {
             onChange={(e) =>
               handleCellChange(task.id, columnId as keyof Task, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))
             }
-            onBlur={() => setEditingCell(null)}
+            onBlur={() => handleCellCommit()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') setEditingCell(null);
+              if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
             }}
             className="cell-input text-right"
             min="0"
@@ -417,7 +427,8 @@ export default function WBS() {
         return (
           <select
             value={task.status}
-            onChange={(e) => handleCellChange(task.id, 'status', e.target.value as TaskStatus)}
+            onChange={(e) => handleCellChange(task.id, 'status', e.target.value as TaskStatus, true)}
+            data-testid={`wbs-status-${task.id}`}
             className={cn(
               'cell-select rounded-full px-2 py-1 text-xs font-semibold',
               task.status === 'pending' && 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
@@ -519,6 +530,7 @@ export default function WBS() {
                 size="sm"
                 onClick={() => void saveNow()}
                 disabled={!currentProject || saveStatus === 'saving'}
+                data-testid="wbs-save-button"
               >
                 {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 저장
@@ -529,11 +541,11 @@ export default function WBS() {
               <Button variant="ghost" size="sm" onClick={redo} disabled={historyIndex >= history.length - 1}>
                 <Redo2 className="w-4 h-4" />
               </Button>
-              <div className="surface-badge">
+              <div className="surface-badge shrink-0">
                 총 {tasks.length}개 작업
               </div>
               <div className={cn(
-                'surface-badge',
+                'surface-badge shrink-0',
                 saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
               )}>
                 {saveStatus === 'pending' && '변경사항 저장 대기'}
@@ -562,57 +574,39 @@ export default function WBS() {
         </div>
       </section>
 
-      <div className="app-panel flex-1 overflow-hidden">
+      <div className="app-panel relative flex-1 overflow-hidden">
+        <button
+          onClick={() => setIsPopupOpen(true)}
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+          title="크게 보기"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
         <div className="h-full overflow-auto">
           <table className="app-table">
             <thead>
               <tr>
-                <th className="w-8 text-left"></th>
-                <th className="w-20 text-left">
-                  구분
-                </th>
-                <th className="min-w-[280px] text-left">
-                  작업명
-                </th>
-                <th className="w-40 text-left">
-                  산출물
-                </th>
-                <th className="w-36 text-left">
-                  담당자
-                </th>
-                <th className="w-24 text-right">
-                  가중치
-                </th>
-                <th className="w-32 text-left">
-                  계획시작
-                </th>
-                <th className="w-32 text-left">
-                  계획종료
-                </th>
-                <th className="w-32 text-left">
-                  계획공정율
-                </th>
-                <th className="w-32 text-left">
-                  실적시작
-                </th>
-                <th className="w-32 text-left">
-                  실적종료
-                </th>
-                <th className="w-32 text-left">
-                  실적공정율
-                </th>
-                <th className="w-28 text-left">
-                  상태
-                </th>
-                <th className="w-24 text-center">
-                  액션
-                </th>
+                <th className="w-8 text-center"></th>
+                <th className="w-20 text-center">구분</th>
+                <th className="min-w-[280px] text-center">작업명</th>
+                <th className="w-40 text-center">산출물</th>
+                <th className="min-w-[120px] text-center whitespace-nowrap">담당자</th>
+                <th className="w-24 text-center whitespace-nowrap">가중치</th>
+                <th className="w-32 text-center whitespace-nowrap">계획시작</th>
+                <th className="w-32 text-center whitespace-nowrap">계획종료</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">계획공정율</th>
+                <th className="w-32 text-center whitespace-nowrap">실적시작</th>
+                <th className="w-32 text-center whitespace-nowrap">실적종료</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">실적공정율</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">상태</th>
+                <th className="w-24 text-center">액션</th>
               </tr>
             </thead>
             <tbody>
               {flatTasks.map((task) => (
                 <tr
                   key={task.id}
+                  data-testid={`wbs-row-${task.id}`}
                   draggable
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onDragEnd={handleDragEnd}
@@ -697,6 +691,62 @@ export default function WBS() {
           )}
         </div>
       </div>
+
+      <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="WBS 전체 보기" size="fullscreen">
+        <div className="h-full overflow-auto">
+          <table className="app-table">
+            <thead>
+              <tr>
+                <th className="w-8 text-center"></th>
+                <th className="w-20 text-center">구분</th>
+                <th className="min-w-[280px] text-center">작업명</th>
+                <th className="w-40 text-center">산출물</th>
+                <th className="min-w-[120px] text-center whitespace-nowrap">담당자</th>
+                <th className="w-24 text-center whitespace-nowrap">가중치</th>
+                <th className="w-32 text-center whitespace-nowrap">계획시작</th>
+                <th className="w-32 text-center whitespace-nowrap">계획종료</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">계획공정율</th>
+                <th className="w-32 text-center whitespace-nowrap">실적시작</th>
+                <th className="w-32 text-center whitespace-nowrap">실적종료</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">실적공정율</th>
+                <th className="min-w-[100px] text-center whitespace-nowrap">상태</th>
+                <th className="w-24 text-center">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              {flatTasks.map((task) => (
+                <tr
+                  key={task.id}
+                  className={cn(
+                    task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
+                  )}
+                >
+                  <td className="border-r border-[var(--border-color)]">
+                    <div className="flex items-center">
+                      {renderCell(task, 'expand')}
+                    </div>
+                  </td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'level')}</td>
+                  <td className="border-r border-[var(--border-color)]">
+                    <div className="flex items-center">{renderCell(task, 'name')}</div>
+                  </td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'output')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'assignee')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'weight')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planStart')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planEnd')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planProgress')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualStart')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualEnd')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualProgress')}</td>
+                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'status')}</td>
+                  <td>{renderCell(task, 'actions')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={Boolean(pendingDeleteTask)}

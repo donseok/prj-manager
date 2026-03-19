@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shield, ShieldCheck, Search, Users } from 'lucide-react';
-import { loadAllProfiles, updateUserSystemRole } from '../lib/supabase';
+import { isSupabaseConfigured, loadAllProfiles, updateUserSystemRole } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import type { SystemRole } from '../types';
 
@@ -20,11 +20,24 @@ export default function UserManagement() {
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isSupabaseConfigured && user) {
+      // 로컬 모드: 현재 사용자 정보 표시
+      setProfiles([{
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        systemRole: user.systemRole,
+        createdAt: user.createdAt,
+      }]);
+      setLoading(false);
+      return;
+    }
+
     void loadAllProfiles().then((data) => {
       setProfiles(data);
       setLoading(false);
     });
-  }, []);
+  }, [user]);
 
   const filtered = profiles.filter(
     (p) =>

@@ -282,8 +282,12 @@ function ensureLocalSampleWorkspace() {
 
 function mergeProjectsWithSamples(projects: Project[]) {
   const sampleProjectIds = new Set(sampleWorkspaces.map((workspace) => workspace.project.id));
+  const storedProjectMap = new Map(projects.map((project) => [project.id, project]));
   const userProjects = projects.filter((project) => !sampleProjectIds.has(project.id));
-  return [...sampleWorkspaces.map((workspace) => workspace.project), ...userProjects];
+  return [
+    ...sampleWorkspaces.map((workspace) => storedProjectMap.get(workspace.project.id) ?? workspace.project),
+    ...userProjects,
+  ];
 }
 
 function mapProjectRow(row: ProjectRow): Project {

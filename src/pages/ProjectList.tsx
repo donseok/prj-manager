@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus,
   FolderOpen,
@@ -35,11 +35,19 @@ import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function ProjectList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { projects, addProject, deleteProject } = useProjectStore();
   const { user, isAdmin } = useAuthStore();
   const { isDark } = useThemeStore();
   const { changeStatus } = useProjectStatus();
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // /projects/new 경로 접근 시 생성 모달 자동 오픈
+  useEffect(() => {
+    if (location.pathname === '/projects/new' && isAdmin) {
+      setShowCreateModal(true);
+    }
+  }, [location.pathname, isAdmin]);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null);
@@ -242,7 +250,7 @@ export default function ProjectList() {
             </h2>
           </div>
           {isAdmin && (
-            <Button variant="outline" onClick={() => setShowCreateModal(true)}>
+            <Button variant="outline" onClick={() => setShowCreateModal(true)} data-testid="projects-open-create-button">
               <Plus className="w-4 h-4" />
               새 프로젝트
             </Button>
@@ -478,10 +486,14 @@ export default function ProjectList() {
               type="text"
               value={newProject.name}
               onChange={(event) => setNewProject({ ...newProject, name: event.target.value })}
+              data-testid="projects-create-name"
               className="field-input"
               placeholder="예: 통합 운영 대시보드 고도화"
               autoFocus
             />
+            {newProject.name.length > 0 && !newProject.name.trim() && (
+              <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">프로젝트명을 입력해주세요.</p>
+            )}
           </div>
 
           <div>
@@ -489,6 +501,7 @@ export default function ProjectList() {
             <textarea
               value={newProject.description}
               onChange={(event) => setNewProject({ ...newProject, description: event.target.value })}
+              data-testid="projects-create-description"
               className="field-textarea"
               rows={4}
               placeholder="프로젝트 목적, 범위, 전달 포인트를 간단히 적어주세요"
@@ -520,7 +533,7 @@ export default function ProjectList() {
             <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
               취소
             </Button>
-            <Button onClick={handleCreateProject} disabled={!newProject.name.trim()}>
+            <Button onClick={handleCreateProject} disabled={!newProject.name.trim()} data-testid="projects-create-submit" title={!newProject.name.trim() ? '프로젝트명을 입력해주세요' : undefined}>
               생성
             </Button>
           </div>

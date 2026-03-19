@@ -24,7 +24,7 @@ interface TaskState {
     options?: { recordHistory?: boolean; resetHistory?: boolean }
   ) => void;
   addTask: (task: Task) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  updateTask: (id: string, updates: Partial<Task>, options?: { recordHistory?: boolean }) => void;
   deleteTask: (id: string) => void;
   moveTask: (taskId: string, newParentId: string | null, newIndex: number) => void;
 
@@ -105,10 +105,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
-  updateTask: (id, updates) => {
+  updateTask: (id, updates, options) => {
     const { tasks } = get();
     const newTasks = tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
-    get().setTasks(newTasks, undefined, { recordHistory: true });
+    get().setTasks(newTasks, undefined, { recordHistory: options?.recordHistory ?? true });
   },
 
   deleteTask: (id) => {

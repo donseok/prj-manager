@@ -181,7 +181,8 @@ export function calculateTimeline(startDate: string, endDate: string): TimelineD
   const now = new Date();
   const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   const elapsedDays = Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  const remainingDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const clampedElapsed = Math.max(0, elapsedDays);
+  const remainingDays = totalDays - clampedElapsed;
   const elapsedPercent = Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100));
   return { start, end, totalDays, elapsedDays, remainingDays, elapsedPercent };
 }
