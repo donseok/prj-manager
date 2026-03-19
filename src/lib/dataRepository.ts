@@ -249,18 +249,18 @@ function canUseSupabase() {
 }
 
 function ensureLocalSampleWorkspace() {
-  let projects = storage.get<Project[]>('projects', []);
+  const storedProjects = storage.get<Project[]>('projects', []);
+  const sampleProjectIds = new Set(sampleWorkspaces.map((ws) => ws.project.id));
+  const userProjects = storedProjects.filter((project) => !sampleProjectIds.has(project.id));
+  const mergedProjects = [...sampleWorkspaces.map((ws) => ws.project), ...userProjects];
 
-  if (projects.length === 0) {
-    projects = sampleWorkspaces.map((ws) => ws.project);
-    storage.set('projects', projects);
-    for (const ws of sampleWorkspaces) {
-      storage.set(`members-${ws.project.id}`, ws.members);
-      storage.set(`tasks-${ws.project.id}`, ws.tasks);
-    }
+  storage.set('projects', mergedProjects);
+  for (const ws of sampleWorkspaces) {
+    storage.set(`members-${ws.project.id}`, ws.members);
+    storage.set(`tasks-${ws.project.id}`, ws.tasks);
   }
 
-  return projects;
+  return mergedProjects;
 }
 
 function mapProjectRow(row: ProjectRow): Project {
