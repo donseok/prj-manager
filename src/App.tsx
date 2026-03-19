@@ -64,12 +64,6 @@ function App() {
         if (isCancelled) return;
         setProjects(projects);
       } else {
-        // No Supabase session — if user is persisted in localStorage, load projects
-        if (useAuthStore.getState().isAuthenticated) {
-          const projects = await loadInitialProjects();
-          if (isCancelled) return;
-          setProjects(projects);
-        }
         setLoading(false);
       }
 

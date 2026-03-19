@@ -1,6 +1,5 @@
 import type { Project, ProjectMember, Task } from '../types';
-import { supabase, isSupabaseConfigured } from './supabase';
-import { sampleWorkspaces } from '../data/sampleData';
+import { supabase } from './supabase';
 
 // ─── Row interfaces (DB snake_case) ─────────────────────────
 
@@ -53,35 +52,6 @@ interface TaskRow {
   updated_at: string;
 }
 
-// ─── localStorage fallback ──────────────────────────────────
-
-const LS_PROJECTS = 'dkflow-projects';
-const LS_MEMBERS = 'dkflow-members-';
-const LS_TASKS = 'dkflow-tasks-';
-
-function ensureLocalSeed() {
-  if (localStorage.getItem(LS_PROJECTS)) return;
-  const projects = sampleWorkspaces.map((w) => w.project);
-  localStorage.setItem(LS_PROJECTS, JSON.stringify(projects));
-  for (const ws of sampleWorkspaces) {
-    localStorage.setItem(LS_MEMBERS + ws.project.id, JSON.stringify(ws.members));
-    localStorage.setItem(LS_TASKS + ws.project.id, JSON.stringify(ws.tasks));
-  }
-}
-
-function lsGet<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function lsSet(key: string, value: unknown) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
 // ─── Projects ────────────────────────────────────────────────
 
 export async function loadInitialProjects(): Promise<Project[]> {
@@ -89,12 +59,6 @@ export async function loadInitialProjects(): Promise<Project[]> {
 }
 
 export async function loadProjects(): Promise<Project[]> {
-  if (!isSupabaseConfigured) {
-    ensureLocalSeed();
-    const projects = lsGet<Project[]>(LS_PROJECTS, []);
-    return projects.filter((p) => p.status !== 'deleted').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }
-
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -110,19 +74,6 @@ export async function loadProjects(): Promise<Project[]> {
 }
 
 export async function upsertProject(project: Project): Promise<Project> {
-  if (!isSupabaseConfigured) {
-    ensureLocalSeed();
-    const projects = lsGet<Project[]>(LS_PROJECTS, []);
-    const idx = projects.findIndex((p) => p.id === project.id);
-    if (idx >= 0) {
-      projects[idx] = project;
-    } else {
-      projects.unshift(project);
-    }
-    lsSet(LS_PROJECTS, projects);
-    return project;
-  }
-
   const row = toProjectRow(project);
   console.log('[dataRepository] upsertProject row:', JSON.stringify(row));
 
@@ -141,15 +92,6 @@ export async function upsertProject(project: Project): Promise<Project> {
 }
 
 export async function deleteProjectById(projectId: string) {
-  if (!isSupabaseConfigured) {
-    ensureLocalSeed();
-    const projects = lsGet<Project[]>(LS_PROJECTS, []);
-    lsSet(LS_PROJECTS, projects.filter((p) => p.id !== projectId));
-    localStorage.removeItem(LS_MEMBERS + projectId);
-    localStorage.removeItem(LS_TASKS + projectId);
-    return;
-  }
-
   const { error } = await supabase.from('projects').delete().eq('id', projectId);
 
   if (error) {
@@ -161,12 +103,6 @@ export async function deleteProjectById(projectId: string) {
 // ─── Project Members ─────────────────────────────────────────
 
 export async function loadProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  if (!isSupabaseConfigured) {
-    ensureLocalSeed();
-    const members = lsGet<ProjectMember[]>(LS_MEMBERS + projectId, []);
-    return members.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  }
-
   const { data, error } = await supabase
     .from('project_members')
     .select('*')
@@ -182,11 +118,6 @@ export async function loadProjectMembers(projectId: string): Promise<ProjectMemb
 }
 
 export async function syncProjectMembers(projectId: string, members: ProjectMember[]) {
-  if (!isSupabaseConfigured) {
-    lsSet(LS_MEMBERS + projectId, members);
-    return;
-  }
-
   const rows = members.map(toProjectMemberRow);
   const currentIds = new Set(rows.map((row) => row.id));
 
@@ -232,12 +163,6 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
 // ─── Tasks ───────────────────────────────────────────────────
 
 export async function loadProjectTasks(projectId: string): Promise<Task[]> {
-  if (!isSupabaseConfigured) {
-    ensureLocalSeed();
-    const tasks = lsGet<Task[]>(LS_TASKS + projectId, []);
-    return tasks.sort((a, b) => a.level - b.level || a.orderIndex - b.orderIndex);
-  }
-
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -254,11 +179,6 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
 }
 
 export async function syncProjectTasks(projectId: string, tasks: Task[]) {
-  if (!isSupabaseConfigured) {
-    lsSet(LS_TASKS + projectId, tasks);
-    return;
-  }
-
   const rows = tasks
     .map(toTaskRow)
     .sort((a, b) => a.level - b.level || a.order_index - b.order_index);

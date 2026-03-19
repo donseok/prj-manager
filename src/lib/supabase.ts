@@ -2,19 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import type { SystemRole, User } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
-
-if (!isSupabaseConfigured) {
-  console.warn('Supabase 환경 변수 미설정 — localStorage 폴백 모드로 동작합니다.');
-}
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-);
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
 
 // ─── Auth ────────────────────────────────────────────────────
 
@@ -49,8 +40,6 @@ export async function signUpWithEmail(email: string, password: string, name: str
 }
 
 export async function ensureSupabaseSession(): Promise<User | null> {
-  if (!isSupabaseConfigured) return null;
-
   const {
     data: { session },
     error: sessionError,
@@ -69,8 +58,6 @@ export async function ensureSupabaseSession(): Promise<User | null> {
 }
 
 export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => void) {
-  if (!isSupabaseConfigured) return () => {};
-
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (_event, session) => {
