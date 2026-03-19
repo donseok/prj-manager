@@ -1,5 +1,5 @@
 import type { Project, ProjectMember, Task } from '../types';
-import { sampleProject, sampleMembers, sampleTasks } from '../data/sampleData';
+import { sampleWorkspaces } from '../data/sampleData';
 import { storage } from './utils';
 import { isSupabaseConfigured, supabase } from './supabase';
 
@@ -12,6 +12,7 @@ interface ProjectRow {
   end_date: string | null;
   base_date: string | null;
   status: Project['status'];
+  completed_at: string | null;
   settings: Project['settings'] | null;
   created_at: string;
   updated_at: string;
@@ -251,10 +252,12 @@ function ensureLocalSampleWorkspace() {
   let projects = storage.get<Project[]>('projects', []);
 
   if (projects.length === 0) {
-    projects = [sampleProject];
+    projects = sampleWorkspaces.map((ws) => ws.project);
     storage.set('projects', projects);
-    storage.set(`members-${sampleProject.id}`, sampleMembers);
-    storage.set(`tasks-${sampleProject.id}`, sampleTasks);
+    for (const ws of sampleWorkspaces) {
+      storage.set(`members-${ws.project.id}`, ws.members);
+      storage.set(`tasks-${ws.project.id}`, ws.tasks);
+    }
   }
 
   return projects;
@@ -270,6 +273,7 @@ function mapProjectRow(row: ProjectRow): Project {
     endDate: row.end_date || undefined,
     baseDate: row.base_date || undefined,
     status: row.status,
+    completedAt: row.completed_at || undefined,
     settings: row.settings || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -286,6 +290,7 @@ function toProjectRow(project: Project): ProjectRow {
     end_date: project.endDate || null,
     base_date: project.baseDate || null,
     status: project.status,
+    completed_at: project.completedAt || null,
     settings: project.settings || null,
     created_at: project.createdAt,
     updated_at: project.updatedAt,

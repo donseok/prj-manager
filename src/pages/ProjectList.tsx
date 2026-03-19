@@ -5,10 +5,12 @@ import {
   FolderOpen,
   MoreVertical,
   Trash2,
-  Archive,
   Search,
   ArrowRight,
   Sparkles,
+  Play,
+  CheckCircle2,
+  Clock3,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -17,7 +19,8 @@ import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
 import { createLocalFallbackUser } from '../lib/supabase';
 import { deleteProjectById, syncProjectMembers, upsertProject } from '../lib/dataRepository';
-import type { Project, ProjectMember } from '../types';
+import type { Project, ProjectMember, ProjectStatus } from '../types';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function ProjectList() {
   const navigate = useNavigate();
@@ -26,6 +29,7 @@ export default function ProjectList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -37,11 +41,13 @@ export default function ProjectList() {
   const filteredProjects = projects.filter(
     (project) =>
       project.status !== 'deleted' &&
+      (statusFilter === 'all' || project.status === statusFilter) &&
       project.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const preparingProjects = projects.filter((project) => project.status === 'preparing').length;
   const activeProjects = projects.filter((project) => project.status === 'active').length;
-  const archivedProjects = projects.filter((project) => project.status === 'archived').length;
+  const completedProjects = projects.filter((project) => project.status === 'completed').length;
 
   const handleCreateProject = async () => {
     if (!newProject.name.trim()) return;
@@ -55,7 +61,7 @@ export default function ProjectList() {
       description: newProject.description,
       startDate: newProject.startDate,
       endDate: newProject.endDate,
-      status: 'active',
+      status: 'preparing',
       createdAt: now,
       updatedAt: now,
     };
@@ -85,18 +91,26 @@ export default function ProjectList() {
     setMenuOpenId(null);
   };
 
-  const handleArchiveProject = async (id: string) => {
+  const handleChangeStatus = async (id: string, newStatus: ProjectStatus) => {
     const project = projects.find((item) => item.id === id);
     if (!project) return;
 
-    const savedProject = await upsertProject({
-      ...project,
-      status: 'archived',
-      updatedAt: new Date().toISOString(),
-    });
+    const now = new Date().toISOString();
+    const updates: Partial<Project> = {
+      status: newStatus,
+      updatedAt: now,
+    };
 
+    if (newStatus === 'completed') {
+      updates.completedAt = now;
+    } else {
+      updates.completedAt = undefined;
+    }
+
+    const savedProject = await upsertProject({ ...project, ...updates } as Project);
     updateProject(id, {
       status: savedProject.status,
+      completedAt: savedProject.completedAt,
       updatedAt: savedProject.updatedAt,
     });
     setMenuOpenId(null);
@@ -138,25 +152,25 @@ export default function ProjectList() {
 
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
           <div className="metric-card p-6">
-            <p className="eyebrow-stat">Total</p>
+            <p className="eyebrow-stat">Preparing</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {projects.length}
+              {preparingProjects}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">전체 프로젝트 수</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">준비중 프로젝트</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Active</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {activeProjects}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">현재 운영 중</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">진행중 프로젝트</p>
           </div>
           <div className="metric-card p-6">
-            <p className="eyebrow-stat">Archived</p>
+            <p className="eyebrow-stat">Completed</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {archivedProjects}
+              {completedProjects}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">보관된 프로젝트</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">완료된 프로젝트</p>
           </div>
         </div>
       </section>
@@ -175,7 +189,36 @@ export default function ProjectList() {
           </Button>
         </div>
 
-        <div className="mt-5 relative">
+        <div className="mt-5 flex flex-wrap gap-2">
+          {([
+            { key: 'all' as const, label: '전체', count: projects.filter((p) => p.status !== 'deleted').length },
+            { key: 'preparing' as const, label: '준비', count: preparingProjects, icon: <Clock3 className="h-3.5 w-3.5" /> },
+            { key: 'active' as const, label: '진행', count: activeProjects, icon: <Play className="h-3.5 w-3.5" /> },
+            { key: 'completed' as const, label: '완료', count: completedProjects, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                statusFilter === tab.key
+                  ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.1)] text-[color:var(--accent-primary)]'
+                  : 'border-[var(--border-color)] bg-white/50 text-[color:var(--text-secondary)] hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/8'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-xs ${
+                statusFilter === tab.key
+                  ? 'bg-[rgba(15,118,110,0.15)] text-[color:var(--accent-primary)]'
+                  : 'bg-black/5 text-[color:var(--text-muted)] dark:bg-white/8'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--text-muted)]" />
           <input
             type="text"
@@ -226,14 +269,35 @@ export default function ProjectList() {
                     </button>
 
                     {menuOpenId === project.id && (
-                      <div className="absolute right-0 top-full z-10 mt-2 w-40 overflow-hidden rounded-[20px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-1.5 shadow-[0_26px_64px_-38px_rgba(0,0,0,0.48)] backdrop-blur-2xl dark:bg-[image:var(--gradient-dark)]">
-                        <button
-                          onClick={() => handleArchiveProject(project.id)}
-                          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
-                        >
-                          <Archive className="w-4 h-4" />
-                          보관
-                        </button>
+                      <div className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-[20px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-1.5 shadow-[0_26px_64px_-38px_rgba(0,0,0,0.48)] backdrop-blur-2xl dark:bg-[image:var(--gradient-dark)]">
+                        {project.status !== 'preparing' && (
+                          <button
+                            onClick={() => handleChangeStatus(project.id, 'preparing')}
+                            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                          >
+                            <Clock3 className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.preparing }} />
+                            준비로 변경
+                          </button>
+                        )}
+                        {project.status !== 'active' && (
+                          <button
+                            onClick={() => handleChangeStatus(project.id, 'active')}
+                            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                          >
+                            <Play className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.active }} />
+                            진행으로 변경
+                          </button>
+                        )}
+                        {project.status !== 'completed' && (
+                          <button
+                            onClick={() => handleChangeStatus(project.id, 'completed')}
+                            className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                          >
+                            <CheckCircle2 className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.completed }} />
+                            완료 처리
+                          </button>
+                        )}
+                        <div className="my-1 border-t border-[var(--border-color)]" />
                         <button
                           onClick={() => handleDeleteProject(project.id)}
                           className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
@@ -253,16 +317,21 @@ export default function ProjectList() {
                         {project.startDate || '시작일 미정'}
                       </span>
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          project.status === 'active'
-                            ? 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]'
-                            : 'bg-black/5 text-[color:var(--text-secondary)] dark:bg-white/8'
-                        }`}
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                        style={{
+                          backgroundColor: `${PROJECT_STATUS_COLORS[project.status]}18`,
+                          color: PROJECT_STATUS_COLORS[project.status],
+                        }}
                       >
-                        {project.status === 'active' ? '진행중' : '보관됨'}
+                        {PROJECT_STATUS_LABELS[project.status]}
                       </span>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
+                    {project.completedAt && (
+                      <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                        완료일: {new Date(project.completedAt).toLocaleDateString('ko-KR')}
+                      </p>
+                    )}
+                    <div className="mt-3 flex items-center justify-between">
                       <p className="text-sm font-medium text-[color:var(--text-primary)]">프로젝트 열기</p>
                       <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)] transition-transform duration-200 group-hover:translate-x-1" />
                     </div>

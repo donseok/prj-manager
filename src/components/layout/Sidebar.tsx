@@ -182,7 +182,7 @@ export default function Sidebar() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{project.name}</p>
                     <p className="mt-0.5 text-xs text-white/45">
-                      {project.status === 'active' ? '진행중' : '보관됨'}
+                      {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : '준비'}
                     </p>
                   </div>
                   <ChevronRight className={cn(

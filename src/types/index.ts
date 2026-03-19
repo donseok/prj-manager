@@ -10,6 +10,23 @@ export interface User {
   createdAt: string;
 }
 
+// 프로젝트 상태 타입
+export type ProjectStatus = 'preparing' | 'active' | 'completed' | 'deleted';
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  preparing: '준비',
+  active: '진행',
+  completed: '완료',
+  deleted: '삭제',
+};
+
+export const PROJECT_STATUS_COLORS: Record<ProjectStatus, string> = {
+  preparing: '#d88b44',
+  active: '#0f766e',
+  completed: '#2fa67c',
+  deleted: '#cb4b5f',
+};
+
 // 프로젝트 타입
 export interface Project {
   id: string;
@@ -19,7 +36,8 @@ export interface Project {
   startDate?: string;
   endDate?: string;
   baseDate?: string; // 진척기준일
-  status: 'active' | 'archived' | 'deleted';
+  status: ProjectStatus;
+  completedAt?: string; // 완료일시
   settings?: ProjectSettings;
   createdAt: string;
   updatedAt: string;

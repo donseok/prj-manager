@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save,
   Trash2,
-  Archive,
   Download,
   Upload,
   AlertTriangle,
   Sparkles,
   CalendarDays,
+  Clock3,
+  Play,
+  CheckCircle2,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useTaskStore } from '../store/taskStore';
@@ -16,6 +18,8 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { deleteProjectById, syncProjectTasks, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
+import type { ProjectStatus } from '../types';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function Settings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -70,20 +74,29 @@ export default function Settings() {
     navigate('/projects');
   };
 
-  const handleArchive = async () => {
+  const handleChangeStatus = async (newStatus: ProjectStatus) => {
     if (!projectId || !currentProject) return;
+
+    const now = new Date().toISOString();
+    const updates: Partial<typeof currentProject> = {
+      status: newStatus,
+      updatedAt: now,
+    };
+
+    if (newStatus === 'completed') {
+      updates.completedAt = now;
+    } else {
+      updates.completedAt = undefined;
+    }
 
     const savedProject = await upsertProject({
       ...currentProject,
-      id: projectId,
-      ownerId: currentProject.ownerId,
-      status: 'archived',
-      updatedAt: new Date().toISOString(),
-    });
+      ...updates,
+    } as typeof currentProject);
 
     updateProject(projectId, savedProject);
 
-    alert('프로젝트가 보관되었습니다.');
+    alert(`프로젝트 상태가 "${PROJECT_STATUS_LABELS[newStatus]}"(으)로 변경되었습니다.`);
   };
 
   const handleExportExcel = () => {
@@ -140,15 +153,19 @@ export default function Settings() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
               프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button onClick={handleSave} isLoading={isSaving}>
                 <Save className="w-4 h-4" />
                 저장
               </Button>
-              <Button variant="outline" className="border-white/10 bg-white/[0.06] text-white hover:bg-white/[0.1]" onClick={handleArchive}>
-                <Archive className="w-4 h-4" />
-                보관
-              </Button>
+              {currentProject && (
+                <span
+                  className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold"
+                  style={{ color: PROJECT_STATUS_COLORS[currentProject.status] }}
+                >
+                  {PROJECT_STATUS_LABELS[currentProject.status]}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -261,6 +278,62 @@ export default function Settings() {
         <div className="space-y-6">
           <div className="app-panel p-6">
             <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+              프로젝트 상태 관리
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              프로젝트의 진행 상태를 변경합니다. 완료 처리 시 완료일이 자동 기록됩니다.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {([
+                { status: 'preparing' as ProjectStatus, icon: <Clock3 className="w-4 h-4" />, desc: '프로젝트 준비 단계입니다.' },
+                { status: 'active' as ProjectStatus, icon: <Play className="w-4 h-4" />, desc: '프로젝트가 진행 중입니다.' },
+                { status: 'completed' as ProjectStatus, icon: <CheckCircle2 className="w-4 h-4" />, desc: '프로젝트가 완료되었습니다.' },
+              ]).map((item) => {
+                const isCurrent = currentProject?.status === item.status;
+                return (
+                  <button
+                    key={item.status}
+                    onClick={() => !isCurrent && handleChangeStatus(item.status)}
+                    disabled={isCurrent}
+                    className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
+                      isCurrent
+                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                        : 'border-[var(--border-color)] bg-white/50 hover:bg-white/80 dark:bg-white/[0.04] dark:hover:bg-white/8'
+                    }`}
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: `${PROJECT_STATUS_COLORS[item.status]}18`,
+                        color: PROJECT_STATUS_COLORS[item.status],
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-[color:var(--text-primary)]">
+                        {PROJECT_STATUS_LABELS[item.status]}
+                        {isCurrent && (
+                          <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 상태</span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">{item.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {currentProject?.completedAt && (
+              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
+                완료일: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
+              </p>
+            )}
+          </div>
+
+          <div className="app-panel p-6">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
               데이터 관리
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
@@ -292,20 +365,7 @@ export default function Settings() {
               위험 영역
             </h2>
 
-            <div className="mt-5 space-y-4">
-              <div className="rounded-[22px] border border-[rgba(203,75,95,0.14)] bg-white/70 p-4 dark:bg-white/[0.04]">
-                <p className="font-medium text-[color:var(--text-primary)]">프로젝트 보관</p>
-                <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
-                  프로젝트를 보관 처리합니다. 필요할 때 다시 복원할 수 있습니다.
-                </p>
-                <div className="mt-4">
-                  <Button variant="outline" onClick={handleArchive}>
-                    <Archive className="w-4 h-4" />
-                    보관
-                  </Button>
-                </div>
-              </div>
-
+            <div className="mt-5">
               <div className="rounded-[22px] border border-[rgba(203,75,95,0.14)] bg-white/70 p-4 dark:bg-white/[0.04]">
                 <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
                 <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">

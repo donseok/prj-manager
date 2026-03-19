@@ -17,7 +17,7 @@ export default function Home() {
 
   const recentProjects = projects.slice(0, 4);
   const activeProjects = projects.filter((project) => project.status === 'active').length;
-  const archivedProjects = projects.filter((project) => project.status === 'archived').length;
+  const completedProjects = projects.filter((project) => project.status === 'completed').length;
 
   return (
     <div className="space-y-8">
@@ -60,7 +60,7 @@ export default function Home() {
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">전체 프로젝트</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{projects.length}</p>
-                <p className="mt-1 text-sm text-white/54">진행과 보관 프로젝트를 포함한 전체 수</p>
+                <p className="mt-1 text-sm text-white/54">준비·진행·완료 프로젝트 전체 수</p>
               </div>
               <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/42">진행중</p>
@@ -97,17 +97,17 @@ export default function Home() {
           <div className="app-panel p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="eyebrow-stat">Archive</p>
+                <p className="eyebrow-stat">Completed</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                  {archivedProjects}
+                  {completedProjects}
                 </h2>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_42px_-24px_rgba(203,109,55,0.68)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2fa67c,#34c997)] text-white shadow-[0_20px_42px_-24px_rgba(47,166,124,0.68)]">
                 <Layers3 className="h-5 w-5" />
               </div>
             </div>
             <p className="mt-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-              보관 프로젝트도 같은 레이아웃 안에서 자연스럽게 관리할 수 있게 분리했습니다.
+              완료된 프로젝트의 실적을 언제든 다시 조회할 수 있습니다.
             </p>
           </div>
 
@@ -212,7 +212,7 @@ export default function Home() {
                     </p>
                   </div>
                   <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold text-[color:var(--text-secondary)]">
-                    {project.status === 'active' ? '진행중' : '보관됨'}
+                    {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : project.status === 'preparing' ? '준비' : '삭제'}
                   </span>
                 </div>
               </Link>
