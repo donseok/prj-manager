@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
-import { signInWithEmail, signUpWithEmail, isSupabaseConfigured, createLocalFallbackUser } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, isSupabaseConfigured } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
+import type { User as UserType } from '../types';
 
 export default function Login() {
   const { isAuthenticated, setUser } = useAuthStore();
@@ -22,46 +23,72 @@ export default function Login() {
     return <Navigate to="/" replace />;
   }
 
+  const loginAsAdmin = async (adminUser: UserType) => {
+    setLoading(true);
+    try {
+      setUser(adminUser);
+      const projects = await loadInitialProjects();
+      setProjects(projects);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestLogin = () => {
+    const testUser: UserType = {
+      id: 'admin-test',
+      email: 'admin@dkflow.com',
+      name: '관리자',
+      systemRole: 'admin',
+      createdAt: new Date().toISOString(),
+    };
+    void loginAsAdmin(testUser);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      if (!isSupabaseConfigured) {
-        const localUser = createLocalFallbackUser();
-        setUser(localUser);
-        const projects = await loadInitialProjects();
-        setProjects(projects);
-        return;
-      }
-
-      if (mode === 'login') {
-        const result = await signInWithEmail(email, password);
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-        if (result.user) {
-          setUser(result.user);
-          const projects = await loadInitialProjects();
-          setProjects(projects);
+      if (isSupabaseConfigured) {
+        if (mode === 'login') {
+          const result = await signInWithEmail(email, password);
+          if (result.error) {
+            setError(result.error);
+            return;
+          }
+          if (result.user) {
+            setUser(result.user);
+            const projects = await loadInitialProjects();
+            setProjects(projects);
+          }
+        } else {
+          if (!name.trim()) {
+            setError('이름을 입력해주세요.');
+            return;
+          }
+          const result = await signUpWithEmail(email, password, name.trim());
+          if (result.error) {
+            setError(result.error);
+            return;
+          }
+          if (result.user) {
+            setUser(result.user);
+            const projects = await loadInitialProjects();
+            setProjects(projects);
+          }
         }
       } else {
-        if (!name.trim()) {
-          setError('이름을 입력해주세요.');
-          return;
-        }
-        const result = await signUpWithEmail(email, password, name.trim());
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-        if (result.user) {
-          setUser(result.user);
-          const projects = await loadInitialProjects();
-          setProjects(projects);
-        }
+        // Supabase 미설정 시 아무 값이나 입력하면 관리자로 로그인
+        const inputUser: UserType = {
+          id: `user-${Date.now()}`,
+          email: email || 'admin@dkflow.com',
+          name: mode === 'signup' && name.trim() ? name.trim() : email.split('@')[0] || '관리자',
+          systemRole: 'admin',
+          createdAt: new Date().toISOString(),
+        };
+        await loginAsAdmin(inputUser);
       }
     } finally {
       setLoading(false);
@@ -189,7 +216,7 @@ export default function Login() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="홍길동"
-                      className="field-input pl-10"
+                      className="field-input !pl-10"
                     />
                   </div>
                 </div>
@@ -204,8 +231,7 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="user@example.com"
-                    required
-                    className="field-input pl-10"
+                    className="field-input !pl-10"
                   />
                 </div>
               </div>
@@ -219,9 +245,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    required
-                    minLength={6}
-                    className="field-input pl-10 pr-11"
+                    className="field-input !pl-10 !pr-11"
                   />
                   <button
                     type="button"
@@ -261,11 +285,20 @@ export default function Login() {
               </button>
             </form>
 
-            {!isSupabaseConfigured && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-400">
-                Supabase가 설정되지 않았습니다. 로컬 모드로 접속합니다.
-              </div>
-            )}
+            <div className="relative my-5 flex items-center">
+              <div className="flex-1 border-t border-[var(--border-color)]" />
+              <span className="px-3 text-xs text-[color:var(--text-muted)]">또는</span>
+              <div className="flex-1 border-t border-[var(--border-color)]" />
+            </div>
+
+            <button
+              onClick={handleTestLogin}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3.5 text-sm font-semibold text-[color:var(--text-primary)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)] hover:shadow-md disabled:opacity-60 disabled:hover:translate-y-0"
+            >
+              <Zap className="h-4 w-4 text-amber-500" />
+              테스트 로그인 (관리자)
+            </button>
           </div>
 
           <p className="mt-6 text-center text-xs text-[color:var(--text-muted)] lg:hidden">

@@ -296,7 +296,7 @@ export default function Gantt() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="작업명, 산출물, 담당자로 검색"
-              className="field-input pl-12"
+              className="field-input !pl-12"
             />
           </div>
 

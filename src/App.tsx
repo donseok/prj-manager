@@ -102,7 +102,9 @@ function App() {
         <Route
           path="/"
           element={
-            <Layout />
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
           }
         >
           <Route index element={<Home />} />

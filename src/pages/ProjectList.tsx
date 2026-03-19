@@ -234,7 +234,7 @@ export default function ProjectList() {
             placeholder="프로젝트 이름으로 검색"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="field-input pl-12"
+            className="field-input !pl-12"
           />
         </div>
       </section>

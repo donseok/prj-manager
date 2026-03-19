@@ -521,7 +521,7 @@ export default function UserManual() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="섹션 검색..."
-                className="field-input py-2.5 pl-9 text-sm"
+                className="field-input !pl-9 py-2.5 text-sm"
               />
             </div>
           </div>

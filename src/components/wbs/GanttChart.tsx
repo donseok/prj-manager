@@ -236,7 +236,7 @@ export default function GanttChart({
               {months.map((month) => (
                 <div
                   key={month.month}
-                  className="flex items-center justify-center border-r border-[var(--border-color)] text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]"
+                  className="flex items-center justify-center border-r border-[var(--border-color)] text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-secondary)]"
                   style={{ width: month.days * dayWidth }}
                 >
                   {format(parseISO(`${month.month}-01`), 'yyyy년 M월', { locale: ko })}
@@ -257,12 +257,19 @@ export default function GanttChart({
                       highlightWeekends &&
                         isWeekend &&
                         !isToday &&
-                        'bg-[color:var(--bg-tertiary)] text-[color:var(--text-secondary)]'
+                        'bg-[rgba(127,111,97,0.06)] dark:bg-[rgba(255,255,255,0.04)]'
                     )}
                     style={{ width: dayWidth }}
                   >
-                    <span className="text-[color:var(--text-primary)]">{format(date, 'd')}</span>
-                    <span className="text-[10px] text-[color:var(--text-secondary)]">
+                    <span className={cn(
+                      isToday ? 'text-[color:var(--accent-primary)]' : 'text-[color:var(--text-primary)]',
+                      isWeekend && !isToday && 'text-[color:var(--text-secondary)]'
+                    )}>{format(date, 'd')}</span>
+                    <span className={cn(
+                      'text-[10px]',
+                      isToday ? 'text-[color:var(--accent-primary)]' : 'text-[color:var(--text-secondary)]',
+                      isWeekend && !isToday && 'text-[color:var(--text-muted)]'
+                    )}>
                       {format(date, 'E', { locale: ko })}
                     </span>
                   </div>
