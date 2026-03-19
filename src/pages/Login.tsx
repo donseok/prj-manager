@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Zap } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
 import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
-import type { User as UserType } from '../types';
 
 export default function Login() {
   const { isAuthenticated, setUser } = useAuthStore();
@@ -22,28 +21,6 @@ export default function Login() {
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-
-  const loginAsAdmin = async (adminUser: UserType) => {
-    setLoading(true);
-    try {
-      setUser(adminUser);
-      const projects = await loadInitialProjects();
-      setProjects(projects);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTestLogin = () => {
-    const testUser: UserType = {
-      id: 'admin-test',
-      email: 'admin@dkflow.com',
-      name: '관리자',
-      systemRole: 'admin',
-      createdAt: new Date().toISOString(),
-    };
-    void loginAsAdmin(testUser);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -273,20 +250,6 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="relative my-5 flex items-center">
-              <div className="flex-1 border-t border-[var(--border-color)]" />
-              <span className="px-3 text-xs text-[color:var(--text-muted)]">또는</span>
-              <div className="flex-1 border-t border-[var(--border-color)]" />
-            </div>
-
-            <button
-              onClick={handleTestLogin}
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3.5 text-sm font-semibold text-[color:var(--text-primary)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)] hover:shadow-md disabled:opacity-60 disabled:hover:translate-y-0"
-            >
-              <Zap className="h-4 w-4 text-amber-500" />
-              테스트 로그인 (관리자)
-            </button>
           </div>
 
           <p className="mt-6 text-center text-xs text-[color:var(--text-muted)] lg:hidden">
