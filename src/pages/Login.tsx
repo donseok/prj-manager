@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
@@ -10,6 +11,7 @@ import { useProjectStore } from '../store/projectStore';
 export default function Login() {
   const { isAuthenticated, setUser } = useAuthStore();
   const { setProjects } = useProjectStore();
+  const { isDark, toggleTheme } = useThemeStore();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,6 +120,15 @@ export default function Login() {
 
       {/* 오른쪽: 로그인 폼 */}
       <div className="relative flex flex-1 items-center justify-center px-6 py-12">
+        {/* 테마 토글 버튼 */}
+        <button
+          onClick={toggleTheme}
+          className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
+          title={isDark ? '라이트 모드' : '다크 모드'}
+        >
+          {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
+
         <div className="w-full max-w-md">
           {/* 모바일 로고 */}
           <div className="mb-10 flex flex-col items-center gap-3 lg:hidden">
