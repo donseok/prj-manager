@@ -252,7 +252,7 @@ function toProjectRow(project: Project): ProjectRow {
     base_date: project.baseDate || null,
     status: project.status,
     completed_at: project.completedAt || null,
-    settings: project.settings || null,
+    settings: project.settings ?? {},
     created_at: project.createdAt,
     updated_at: project.updatedAt,
   };

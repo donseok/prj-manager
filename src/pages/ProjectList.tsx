@@ -164,6 +164,7 @@ export default function ProjectList() {
       navigate(`/projects/${savedProject.id}`);
     } catch (error) {
       console.error('Failed to create project:', error);
+      setShowCreateModal(false);
       showFeedback({
         tone: 'error',
         title: '프로젝트 생성 실패',
