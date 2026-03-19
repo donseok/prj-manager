@@ -11,6 +11,7 @@ import {
   Play,
   CheckCircle2,
   Clock3,
+  Loader2,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -51,6 +52,7 @@ export default function ProjectList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
@@ -91,72 +93,85 @@ export default function ProjectList() {
 
   const handleCreateProject = async () => {
     if (!newProject.name.trim()) return;
-
     if (!user) return;
-    const owner = user;
-    const now = new Date().toISOString();
-    const project: Project = {
-      id: generateId(),
-      ownerId: owner.id,
-      name: newProject.name,
-      description: newProject.description,
-      startDate: newProject.startDate,
-      endDate: newProject.endDate,
-      status: 'preparing',
-      createdAt: now,
-      updatedAt: now,
-    };
+    if (isCreating) return;
 
-    const savedProject = await upsertProject(project);
-    if (newProject.creationMode === 'clone' && newProject.sourceProjectId) {
-      const [sourceMembers, sourceTasks] = await Promise.all([
-        loadProjectMembers(newProject.sourceProjectId),
-        loadProjectTasks(newProject.sourceProjectId),
-      ]);
-
-      const { members: clonedMembers, memberIdMap } = cloneProjectMembers({
-        sourceMembers,
-        targetProjectId: savedProject.id,
-        ownerUserId: owner.id,
-        ownerName: owner.name,
-      });
-      const hasOwner = clonedMembers.some((member) => member.userId === owner.id);
-      const ownerMember: ProjectMember = {
+    setIsCreating(true);
+    try {
+      const owner = user;
+      const now = new Date().toISOString();
+      const project: Project = {
         id: generateId(),
-        projectId: savedProject.id,
-        userId: owner.id,
-        name: owner.name,
-        role: 'owner',
+        ownerId: owner.id,
+        name: newProject.name,
+        description: newProject.description,
+        startDate: newProject.startDate,
+        endDate: newProject.endDate,
+        status: 'preparing',
         createdAt: now,
+        updatedAt: now,
       };
 
-      const nextMembers = hasOwner ? clonedMembers : [ownerMember, ...clonedMembers];
-      await syncProjectMembers(savedProject.id, nextMembers);
-      await syncProjectTasks(
-        savedProject.id,
-        cloneProjectTasks({
-          sourceTasks,
+      const savedProject = await upsertProject(project);
+      if (newProject.creationMode === 'clone' && newProject.sourceProjectId) {
+        const [sourceMembers, sourceTasks] = await Promise.all([
+          loadProjectMembers(newProject.sourceProjectId),
+          loadProjectTasks(newProject.sourceProjectId),
+        ]);
+
+        const { members: clonedMembers, memberIdMap } = cloneProjectMembers({
+          sourceMembers,
           targetProjectId: savedProject.id,
-          memberIdMap,
-        })
-      );
-    } else {
-      const ownerMember: ProjectMember = {
-        id: generateId(),
-        projectId: savedProject.id,
-        userId: owner.id,
-        name: owner.name,
-        role: 'owner',
-        createdAt: now,
-      };
+          ownerUserId: owner.id,
+          ownerName: owner.name,
+        });
+        const hasOwner = clonedMembers.some((member) => member.userId === owner.id);
+        const ownerMember: ProjectMember = {
+          id: generateId(),
+          projectId: savedProject.id,
+          userId: owner.id,
+          name: owner.name,
+          role: 'owner',
+          createdAt: now,
+        };
 
-      await syncProjectMembers(savedProject.id, [ownerMember]);
+        const nextMembers = hasOwner ? clonedMembers : [ownerMember, ...clonedMembers];
+        await syncProjectMembers(savedProject.id, nextMembers);
+        await syncProjectTasks(
+          savedProject.id,
+          cloneProjectTasks({
+            sourceTasks,
+            targetProjectId: savedProject.id,
+            memberIdMap,
+          })
+        );
+      } else {
+        const ownerMember: ProjectMember = {
+          id: generateId(),
+          projectId: savedProject.id,
+          userId: owner.id,
+          name: owner.name,
+          role: 'owner',
+          createdAt: now,
+        };
+
+        await syncProjectMembers(savedProject.id, [ownerMember]);
+      }
+
+      addProject(savedProject);
+      setShowCreateModal(false);
+      setNewProject({ name: '', description: '', startDate: '', endDate: '', creationMode: 'blank', sourceProjectId: '' });
+      navigate(`/projects/${savedProject.id}`);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      showFeedback({
+        tone: 'error',
+        title: '프로젝트 생성 실패',
+        message: error instanceof Error ? error.message : '프로젝트를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
+    } finally {
+      setIsCreating(false);
     }
-
-    addProject(savedProject);
-    setShowCreateModal(false);
-    setNewProject({ name: '', description: '', startDate: '', endDate: '', creationMode: 'blank', sourceProjectId: '' });
-    navigate(`/projects/${savedProject.id}`);
   };
 
   const handleDeleteProject = (project: Project) => {
@@ -612,8 +627,8 @@ export default function ProjectList() {
               취소
             </Button>
             <Button
-              onClick={handleCreateProject}
-              disabled={!newProject.name.trim() || (newProject.creationMode === 'clone' && !newProject.sourceProjectId)}
+              onClick={() => void handleCreateProject()}
+              disabled={isCreating || !newProject.name.trim() || (newProject.creationMode === 'clone' && !newProject.sourceProjectId)}
               data-testid="projects-create-submit"
               title={
                 !newProject.name.trim()
@@ -623,7 +638,7 @@ export default function ProjectList() {
                     : undefined
               }
             >
-              생성
+              {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> 생성 중...</> : '생성'}
             </Button>
           </div>
         </div>
