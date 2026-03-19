@@ -1,7 +1,7 @@
 import { TASK_STATUS_LABELS, LEVEL_LABELS, PROJECT_STATUS_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
 import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './taskAnalytics';
-import { isSupabaseConfigured, supabase } from './supabase';
+import { supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 
 // ─── Public types ────────────────────────────────────────────
@@ -707,7 +707,7 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
 // ─── Fallback: Supabase DB search ────────────────────────────
 
 async function searchSupabaseForAnswer(question: string): Promise<string | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
+  if (!supabase) return null;
 
   const keyword = question.trim();
   if (keyword.length < 2) return null;

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
-import { signInWithEmail, signUpWithEmail, isSupabaseConfigured } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
 import type { User as UserType } from '../types';
@@ -51,44 +51,32 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isSupabaseConfigured) {
-        if (mode === 'login') {
-          const result = await signInWithEmail(email, password);
-          if (result.error) {
-            setError(result.error);
-            return;
-          }
-          if (result.user) {
-            setUser(result.user);
-            const projects = await loadInitialProjects();
-            setProjects(projects);
-          }
-        } else {
-          if (!name.trim()) {
-            setError('이름을 입력해주세요.');
-            return;
-          }
-          const result = await signUpWithEmail(email, password, name.trim());
-          if (result.error) {
-            setError(result.error);
-            return;
-          }
-          if (result.user) {
-            setUser(result.user);
-            const projects = await loadInitialProjects();
-            setProjects(projects);
-          }
+      if (mode === 'login') {
+        const result = await signInWithEmail(email, password);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        if (result.user) {
+          setUser(result.user);
+          const projects = await loadInitialProjects();
+          setProjects(projects);
         }
       } else {
-        // Supabase 미설정 시 아무 값이나 입력하면 관리자로 로그인
-        const inputUser: UserType = {
-          id: `user-${Date.now()}`,
-          email: email || 'admin@dkflow.com',
-          name: mode === 'signup' && name.trim() ? name.trim() : email.split('@')[0] || '관리자',
-          systemRole: 'admin',
-          createdAt: new Date().toISOString(),
-        };
-        await loginAsAdmin(inputUser);
+        if (!name.trim()) {
+          setError('이름을 입력해주세요.');
+          return;
+        }
+        const result = await signUpWithEmail(email, password, name.trim());
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        if (result.user) {
+          setUser(result.user);
+          const projects = await loadInitialProjects();
+          setProjects(projects);
+        }
       }
     } finally {
       setLoading(false);

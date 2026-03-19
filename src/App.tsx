@@ -14,10 +14,10 @@ import UserManual from './pages/UserManual';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
-import { isSupabaseConfigured, ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
+import { ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
 import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
 
-// 인증 라우트 가드 (현재 비활성화, 추후 로그인 연동 시 사용)
+// 인증 라우트 가드
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
@@ -55,14 +55,6 @@ function App() {
     let unsubscribe = () => {};
 
     const initializeApp = async () => {
-      if (!isSupabaseConfigured) {
-        const projects = await loadInitialProjects();
-        if (isCancelled) return;
-        setProjects(projects);
-        setLoading(false);
-        return;
-      }
-
       const sessionUser = await ensureSupabaseSession();
       if (isCancelled) return;
 

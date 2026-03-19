@@ -1,27 +1,19 @@
-import { createClient, type User as SupabaseAuthUser } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import type { SystemRole, User } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey!)
-  : null;
-
-export function createLocalFallbackUser(): User {
-  return {
-    id: 'local-user',
-    email: 'user@local.dev',
-    name: '로컬 사용자',
-    systemRole: 'admin',
-    createdAt: new Date().toISOString(),
-  };
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('VITE_SUPABASE_URL 및 VITE_SUPABASE_ANON_KEY 환경 변수가 필요합니다.');
 }
 
-export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
-  if (!supabase) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
 
+// ─── Auth ────────────────────────────────────────────────────
+
+export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -35,8 +27,6 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 export async function signUpWithEmail(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {
-  if (!supabase) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
-
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -54,8 +44,6 @@ export async function signUpWithEmail(email: string, password: string, name: str
 }
 
 export async function ensureSupabaseSession(): Promise<User | null> {
-  if (!supabase) return null;
-
   const {
     data: { session },
     error: sessionError,
@@ -70,15 +58,10 @@ export async function ensureSupabaseSession(): Promise<User | null> {
     return toAppUser(session.user);
   }
 
-  // 세션이 없으면 로그인 필요
   return null;
 }
 
 export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => void) {
-  if (!supabase) {
-    return () => {};
-  }
-
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -94,17 +77,15 @@ export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => 
 }
 
 export async function signOutSupabase() {
-  if (!supabase) return;
-
   const { error } = await supabase.auth.signOut();
   if (error) {
     console.error('Failed to sign out from Supabase:', error);
   }
 }
 
-export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; createdAt: string }>> {
-  if (!supabase) return [];
+// ─── Profiles ────────────────────────────────────────────────
 
+export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; createdAt: string }>> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, name, system_role, created_at')
@@ -125,8 +106,6 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
 }
 
 export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
-  if (!supabase) return { error: 'Supabase가 설정되지 않았습니다.' };
-
   const { error } = await supabase
     .from('profiles')
     .update({ system_role: role })
@@ -140,19 +119,19 @@ export async function updateUserSystemRole(userId: string, role: SystemRole): Pr
   return { error: null };
 }
 
+// ─── Helpers ─────────────────────────────────────────────────
+
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {
   let systemRole: SystemRole = 'user';
 
-  if (supabase) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('system_role')
-      .eq('id', user.id)
-      .single();
+  const { data } = await supabase
+    .from('profiles')
+    .select('system_role')
+    .eq('id', user.id)
+    .single();
 
-    if (data?.system_role) {
-      systemRole = data.system_role as SystemRole;
-    }
+  if (data?.system_role) {
+    systemRole = data.system_role as SystemRole;
   }
 
   return {
@@ -174,24 +153,4 @@ function getAuthErrorMessage(message: string): string {
   if (message.includes('Unable to validate email')) return '유효한 이메일 주소를 입력해주세요.';
   if (message.includes('Email rate limit exceeded')) return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
   return message;
-}
-
-// 타입 변환 유틸리티 (snake_case -> camelCase)
-export function toCamelCase<T>(obj: Record<string, unknown>): T {
-  const result: Record<string, unknown> = {};
-  for (const key in obj) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    result[camelKey] = obj[key];
-  }
-  return result as T;
-}
-
-// 타입 변환 유틸리티 (camelCase -> snake_case)
-export function toSnakeCase<T>(obj: Record<string, unknown>): T {
-  const result: Record<string, unknown> = {};
-  for (const key in obj) {
-    const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-    result[snakeKey] = obj[key];
-  }
-  return result as T;
 }

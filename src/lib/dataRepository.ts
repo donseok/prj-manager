@@ -1,7 +1,7 @@
 import type { Project, ProjectMember, Task } from '../types';
-import { sampleWorkspaces } from '../data/sampleData';
-import { storage } from './utils';
-import { isSupabaseConfigured, supabase } from './supabase';
+import { supabase } from './supabase';
+
+// ─── Row interfaces (DB snake_case) ─────────────────────────
 
 interface ProjectRow {
   id: string;
@@ -49,246 +49,177 @@ interface TaskRow {
   updated_at: string;
 }
 
-const sampleWorkspaceMap = new Map(sampleWorkspaces.map((workspace) => [workspace.project.id, workspace]));
+// ─── Projects ────────────────────────────────────────────────
 
-export async function loadInitialProjects() {
-  ensureLocalSampleWorkspace();
-
-  if (canUseSupabase()) {
-    // RLS가 admin/user 권한에 따라 자동으로 필터링
-    const remoteProjects = await loadProjects();
-    return mergeProjectsWithSamples(remoteProjects);
-  }
-
-  return ensureLocalSampleWorkspace();
+export async function loadInitialProjects(): Promise<Project[]> {
+  return loadProjects();
 }
 
 export async function loadProjects(): Promise<Project[]> {
-  if (canUseSupabase() && supabase) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('updated_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .neq('status', 'deleted')
+    .order('updated_at', { ascending: false });
 
-    if (!error) {
-      return (data as ProjectRow[]).map(mapProjectRow);
-    }
-
-    console.error('Failed to load projects from Supabase:', error);
+  if (error) {
+    console.error('Failed to load projects:', error);
+    return [];
   }
 
-  return storage.get<Project[]>('projects', []);
+  return (data as ProjectRow[]).map(mapProjectRow);
 }
 
 export async function upsertProject(project: Project): Promise<Project> {
-  if (canUseSupabase() && supabase) {
-    const row = toProjectRow(project);
+  const row = toProjectRow(project);
 
-    const { data, error } = await supabase
-      .from('projects')
-      .upsert(row, { onConflict: 'id' })
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from('projects')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
 
-    if (!error) {
-      return mapProjectRow(data as ProjectRow);
-    }
-
-    console.error('Failed to save project to Supabase:', error);
+  if (error) {
+    console.error('Failed to save project:', error);
+    throw new Error(`프로젝트 저장 실패: ${error.message}`);
   }
 
-  const projects = storage.get<Project[]>('projects', []);
-  const nextProjects = upsertById(projects, project);
-  storage.set('projects', nextProjects);
-  return project;
+  return mapProjectRow(data as ProjectRow);
 }
 
 export async function deleteProjectById(projectId: string) {
-  if (canUseSupabase() && supabase) {
-    const { error } = await supabase.from('projects').delete().eq('id', projectId);
-    if (!error) return;
+  const { error } = await supabase.from('projects').delete().eq('id', projectId);
 
-    console.error('Failed to delete project from Supabase:', error);
+  if (error) {
+    console.error('Failed to delete project:', error);
+    throw new Error(`프로젝트 삭제 실패: ${error.message}`);
   }
-
-  const projects = storage.get<Project[]>('projects', []);
-  storage.set(
-    'projects',
-    projects.filter((project) => project.id !== projectId)
-  );
-  storage.remove(`members-${projectId}`);
-  storage.remove(`tasks-${projectId}`);
 }
 
+// ─── Project Members ─────────────────────────────────────────
+
 export async function loadProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  const sampleWorkspace = sampleWorkspaceMap.get(projectId);
-  if (sampleWorkspace) {
-    return storage.get<ProjectMember[]>(`members-${projectId}`, sampleWorkspace.members);
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load members:', error);
+    return [];
   }
 
-  if (canUseSupabase() && supabase) {
-    const { data, error } = await supabase
-      .from('project_members')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: true });
-
-    if (!error) {
-      return (data as ProjectMemberRow[]).map(mapProjectMemberRow);
-    }
-
-    console.error('Failed to load members from Supabase:', error);
-  }
-
-  return storage.get<ProjectMember[]>(`members-${projectId}`, []);
+  return (data as ProjectMemberRow[]).map(mapProjectMemberRow);
 }
 
 export async function syncProjectMembers(projectId: string, members: ProjectMember[]) {
-  if (canUseSupabase() && supabase) {
-    const rows = members.map(toProjectMemberRow);
-    const currentIds = new Set(rows.map((row) => row.id));
+  const rows = members.map(toProjectMemberRow);
+  const currentIds = new Set(rows.map((row) => row.id));
 
-    if (rows.length > 0) {
-      const { error: upsertError } = await supabase
-        .from('project_members')
-        .upsert(rows, { onConflict: 'id' });
+  if (rows.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('project_members')
+      .upsert(rows, { onConflict: 'id' });
 
-      if (upsertError) {
-        console.error('Failed to upsert members into Supabase:', upsertError);
-      } else {
-        const { data: existingRows, error: selectError } = await supabase
-          .from('project_members')
-          .select('id')
-          .eq('project_id', projectId);
+    if (upsertError) {
+      console.error('Failed to upsert members:', upsertError);
+      throw new Error(`멤버 저장 실패: ${upsertError.message}`);
+    }
 
-        if (selectError) {
-          console.error('Failed to load remote members for cleanup:', selectError);
-          return;
-        }
+    // 삭제된 멤버 정리
+    const { data: existingRows, error: selectError } = await supabase
+      .from('project_members')
+      .select('id')
+      .eq('project_id', projectId);
 
-        const idsToDelete = (existingRows || [])
-          .map((row) => String((row as { id: string }).id))
-          .filter((id) => !currentIds.has(id));
+    if (selectError) {
+      console.error('Failed to load remote members for cleanup:', selectError);
+      return;
+    }
 
-        if (idsToDelete.length > 0) {
-          const { error: deleteError } = await supabase.from('project_members').delete().in('id', idsToDelete);
-          if (deleteError) {
-            console.error('Failed to delete removed members from Supabase:', deleteError);
-          }
-        }
-        return;
+    const idsToDelete = (existingRows || [])
+      .map((row) => String((row as { id: string }).id))
+      .filter((id) => !currentIds.has(id));
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase.from('project_members').delete().in('id', idsToDelete);
+      if (deleteError) {
+        console.error('Failed to delete removed members:', deleteError);
       }
-    } else {
-      const { error } = await supabase.from('project_members').delete().eq('project_id', projectId);
-      if (!error) return;
-      console.error('Failed to clear members from Supabase:', error);
+    }
+  } else {
+    const { error } = await supabase.from('project_members').delete().eq('project_id', projectId);
+    if (error) {
+      console.error('Failed to clear members:', error);
     }
   }
-
-  storage.set(`members-${projectId}`, members);
 }
 
+// ─── Tasks ───────────────────────────────────────────────────
+
 export async function loadProjectTasks(projectId: string): Promise<Task[]> {
-  const sampleWorkspace = sampleWorkspaceMap.get(projectId);
-  if (sampleWorkspace) {
-    return storage.get<Task[]>(`tasks-${projectId}`, sampleWorkspace.tasks);
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('level', { ascending: true })
+    .order('order_index', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load tasks:', error);
+    return [];
   }
 
-  if (canUseSupabase() && supabase) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('level', { ascending: true })
-      .order('order_index', { ascending: true });
-
-    if (!error) {
-      return (data as TaskRow[]).map(mapTaskRow);
-    }
-
-    console.error('Failed to load tasks from Supabase:', error);
-  }
-
-  return storage.get<Task[]>(`tasks-${projectId}`, []);
+  return (data as TaskRow[]).map(mapTaskRow);
 }
 
 export async function syncProjectTasks(projectId: string, tasks: Task[]) {
-  if (canUseSupabase() && supabase) {
-    const rows = tasks
-      .map(toTaskRow)
-      .sort((a, b) => a.level - b.level || a.order_index - b.order_index);
-    const currentIds = new Set(rows.map((row) => row.id));
+  const rows = tasks
+    .map(toTaskRow)
+    .sort((a, b) => a.level - b.level || a.order_index - b.order_index);
+  const currentIds = new Set(rows.map((row) => row.id));
 
-    if (rows.length > 0) {
-      const { error: upsertError } = await supabase
-        .from('tasks')
-        .upsert(rows, { onConflict: 'id' });
+  if (rows.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('tasks')
+      .upsert(rows, { onConflict: 'id' });
 
-      if (upsertError) {
-        console.error('Failed to upsert tasks into Supabase:', upsertError);
-      } else {
-        const { data: existingRows, error: selectError } = await supabase
-          .from('tasks')
-          .select('id')
-          .eq('project_id', projectId);
+    if (upsertError) {
+      console.error('Failed to upsert tasks:', upsertError);
+      throw new Error(`작업 저장 실패: ${upsertError.message}`);
+    }
 
-        if (selectError) {
-          console.error('Failed to load remote tasks for cleanup:', selectError);
-          return;
-        }
+    // 삭제된 작업 정리
+    const { data: existingRows, error: selectError } = await supabase
+      .from('tasks')
+      .select('id')
+      .eq('project_id', projectId);
 
-        const idsToDelete = (existingRows || [])
-          .map((row) => String((row as { id: string }).id))
-          .filter((id) => !currentIds.has(id));
+    if (selectError) {
+      console.error('Failed to load remote tasks for cleanup:', selectError);
+      return;
+    }
 
-        if (idsToDelete.length > 0) {
-          const { error: deleteError } = await supabase.from('tasks').delete().in('id', idsToDelete);
-          if (deleteError) {
-            console.error('Failed to delete removed tasks from Supabase:', deleteError);
-          }
-        }
-        return;
+    const idsToDelete = (existingRows || [])
+      .map((row) => String((row as { id: string }).id))
+      .filter((id) => !currentIds.has(id));
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase.from('tasks').delete().in('id', idsToDelete);
+      if (deleteError) {
+        console.error('Failed to delete removed tasks:', deleteError);
       }
-    } else {
-      const { error } = await supabase.from('tasks').delete().eq('project_id', projectId);
-      if (!error) return;
-      console.error('Failed to clear tasks from Supabase:', error);
+    }
+  } else {
+    const { error } = await supabase.from('tasks').delete().eq('project_id', projectId);
+    if (error) {
+      console.error('Failed to clear tasks:', error);
     }
   }
-
-  storage.set(`tasks-${projectId}`, tasks);
 }
 
-function canUseSupabase() {
-  return isSupabaseConfigured && !!supabase;
-}
-
-function ensureLocalSampleWorkspace() {
-  const storedProjects = storage.get<Project[]>('projects', []);
-  const mergedProjects = mergeProjectsWithSamples(storedProjects);
-
-  storage.set('projects', mergedProjects);
-  for (const ws of sampleWorkspaces) {
-    if (!storage.has(`members-${ws.project.id}`)) {
-      storage.set(`members-${ws.project.id}`, ws.members);
-    }
-    if (!storage.has(`tasks-${ws.project.id}`)) {
-      storage.set(`tasks-${ws.project.id}`, ws.tasks);
-    }
-  }
-
-  return mergedProjects;
-}
-
-function mergeProjectsWithSamples(projects: Project[]) {
-  const sampleProjectIds = new Set(sampleWorkspaces.map((workspace) => workspace.project.id));
-  const storedProjectMap = new Map(projects.map((project) => [project.id, project]));
-  const userProjects = projects.filter((project) => !sampleProjectIds.has(project.id));
-  return [
-    ...sampleWorkspaces.map((workspace) => storedProjectMap.get(workspace.project.id) ?? workspace.project),
-    ...userProjects,
-  ];
-}
+// ─── Row Mappers (snake_case → camelCase) ────────────────────
 
 function mapProjectRow(row: ProjectRow): Project {
   return {
@@ -392,15 +323,4 @@ function toTaskRow(task: Task): TaskRow {
     created_at: task.createdAt,
     updated_at: task.updatedAt,
   };
-}
-
-function upsertById<T extends { id: string }>(items: T[], nextItem: T) {
-  const existingIndex = items.findIndex((item) => item.id === nextItem.id);
-  if (existingIndex < 0) {
-    return [nextItem, ...items];
-  }
-
-  const nextItems = [...items];
-  nextItems[existingIndex] = nextItem;
-  return nextItems;
 }

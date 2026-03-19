@@ -20,7 +20,6 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
-import { createLocalFallbackUser } from '../lib/supabase';
 import { deleteProjectById, syncProjectMembers, upsertProject } from '../lib/dataRepository';
 import {
   getProjectCardBackground,
@@ -89,7 +88,8 @@ export default function ProjectList() {
   const handleCreateProject = async () => {
     if (!newProject.name.trim()) return;
 
-    const owner = user || createLocalFallbackUser();
+    if (!user) return;
+    const owner = user;
     const now = new Date().toISOString();
     const project: Project = {
       id: generateId(),
