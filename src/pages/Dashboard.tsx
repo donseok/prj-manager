@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
+import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
 import { generateProjectReport } from '../lib/exportReport';
 import { getProjectVisualTone } from '../lib/projectVisuals';
@@ -40,14 +41,48 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from 'recharts';
 
 export default function Dashboard() {
   const { projectId } = useParams<{ projectId: string }>();
+  const isDark = useThemeStore((state) => state.isDark);
   const { tasks } = useTaskStore();
   const { currentProject, members } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
+  const heroPanelClassName = isDark
+    ? 'app-panel-dark relative overflow-hidden p-6 md:p-8'
+    : 'app-panel relative overflow-hidden p-6 md:p-8';
+  const heroPanelStyle = isDark
+    ? {
+        backgroundImage: `radial-gradient(circle at 86% 16%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+      }
+    : {
+        backgroundImage:
+          'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,243,238,0.94))',
+      };
+  const heroBadgeClassName = isDark
+    ? 'surface-badge border-white/12 bg-white/[0.14] text-white/90'
+    : 'surface-badge border-[rgba(15,118,110,0.08)] bg-white/80 text-[color:var(--text-secondary)]';
+  const heroOutlineButtonClassName = isDark
+    ? 'border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]'
+    : 'border-[var(--border-color)] bg-[rgba(255,255,255,0.78)] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-secondary-solid)]';
+  const heroMetricClassName = isDark
+    ? 'rounded-[24px] border border-white/12 bg-white/[0.12] p-4'
+    : 'rounded-[24px] border border-[var(--border-color)] bg-[rgba(255,255,255,0.72)] p-4';
+  const quietSectionIconClassName =
+    'flex h-12 w-12 items-center justify-center rounded-[20px] border border-[var(--border-color)] bg-[rgba(255,255,255,0.78)] text-[color:var(--text-primary)] shadow-[0_18px_36px_-26px_rgba(17,24,39,0.16)]';
+  const progressSectionIconLargeClassName =
+    'flex h-14 w-14 items-center justify-center rounded-[22px] border border-[rgba(15,118,110,0.14)] bg-[rgba(15,118,110,0.08)] text-[color:var(--accent-primary)] shadow-[0_18px_36px_-26px_rgba(15,118,110,0.18)]';
+  const progressSectionIconClassName =
+    'flex h-12 w-12 items-center justify-center rounded-[20px] border border-[rgba(15,118,110,0.14)] bg-[rgba(15,118,110,0.08)] text-[color:var(--accent-primary)] shadow-[0_18px_36px_-26px_rgba(15,118,110,0.18)]';
+  const inProgressMetricClassName = isDark
+    ? 'metric-card p-5'
+    : 'metric-card border-[rgba(15,118,110,0.14)] bg-[linear-gradient(180deg,rgba(242,250,247,0.98),rgba(255,255,255,0.98))] p-5 shadow-[0_24px_48px_-36px_rgba(15,118,110,0.16)]';
+  const neutralMetricClassName = isDark
+    ? 'metric-card p-5'
+    : 'metric-card bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,245,241,0.92))] p-5 shadow-[0_24px_48px_-38px_rgba(17,24,39,0.12)]';
 
   const stats = useMemo(() => {
     const leafTasks = tasks.filter((task) => !tasks.some((child) => child.parentId === task.id));
@@ -81,10 +116,10 @@ export default function Dashboard() {
     const leafTasks = tasks.filter((task) => !tasks.some((child) => child.parentId === task.id));
 
     return [
-      { name: '대기', value: leafTasks.filter((task) => task.status === 'pending').length, color: '#b8aaa0' },
-      { name: '진행중', value: leafTasks.filter((task) => task.status === 'in_progress').length, color: '#1b8f86' },
-      { name: '완료', value: leafTasks.filter((task) => task.status === 'completed').length, color: '#2fa67c' },
-      { name: '보류', value: leafTasks.filter((task) => task.status === 'on_hold').length, color: '#d88b44' },
+      { name: '대기', value: leafTasks.filter((task) => task.status === 'pending').length, color: '#8B95A5' },
+      { name: '진행중', value: leafTasks.filter((task) => task.status === 'in_progress').length, color: '#2BAAA0' },
+      { name: '완료', value: leafTasks.filter((task) => task.status === 'completed').length, color: '#34C997' },
+      { name: '보류', value: leafTasks.filter((task) => task.status === 'on_hold').length, color: '#F0A167' },
     ].filter((item) => item.value > 0);
   }, [tasks]);
 
@@ -144,7 +179,7 @@ export default function Dashboard() {
   }, [currentProject]);
 
   // 가중치 분포 데이터
-  const WEIGHT_COLORS = ['#0f766e', '#1b8f86', '#2fa67c', '#d88b44', '#cb6d37', '#8b5e3c'];
+  const WEIGHT_COLORS = ['#2BAAA0', '#5B8DEF', '#F0A167', '#34C997', '#E87C8A', '#A78BFA'];
   const weightData = useMemo(() => {
     const phases = tasks
       .filter((t) => t.level === 1)
@@ -190,28 +225,33 @@ export default function Dashboard() {
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div
-          className="app-panel-dark relative overflow-hidden p-6 md:p-8"
-          style={{
-            backgroundImage: `radial-gradient(circle at 86% 16%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
-          }}
+          className={heroPanelClassName}
+          style={heroPanelStyle}
         >
-          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}26, transparent 70%)` }} />
-          <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}16, transparent 72%)` }} />
+          {isDark && (
+            <>
+              <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}26, transparent 70%)` }} />
+              <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}16, transparent 72%)` }} />
+            </>
+          )}
 
           <div className="relative">
-            <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
+            <div className={heroBadgeClassName}>
               {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <Zap className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
               {projectTone?.label || 'Project Dashboard'}
             </div>
-            <h1 className="mt-6 text-[clamp(2rem,4vw,3.9rem)] font-semibold tracking-[-0.06em] text-white">
+            <h1 className={`mt-6 text-[clamp(2rem,4vw,3.9rem)] font-semibold tracking-[-0.06em] ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>
               {currentProject?.name || '프로젝트'} 운영 현황
             </h1>
             {projectTone && (
-              <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+              <p
+                className={`mt-3 text-sm ${isDark ? 'font-semibold tracking-[0.18em] uppercase' : 'leading-6 text-[color:var(--text-secondary)]'}`}
+                style={isDark ? { color: projectTone.accent } : undefined}
+              >
                 {projectTone.note}
               </p>
             )}
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
+            <p className={`mt-4 max-w-2xl text-sm leading-7 md:text-base ${isDark ? 'text-white/90' : 'text-[color:var(--text-secondary)]'}`}>
               {currentProject?.description || '프로젝트 진행 현황을 한눈에 확인하고, 이번 주와 다음 주의 흐름까지 빠르게 파악할 수 있도록 대시보드를 재구성했습니다.'}
             </p>
 
@@ -223,14 +263,14 @@ export default function Dashboard() {
                 </Button>
               </Link>
               <Link to={`/projects/${projectId}/gantt`}>
-                <Button variant="outline" className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]">
+                <Button variant="outline" className={heroOutlineButtonClassName}>
                   <Calendar className="w-4 h-4" />
                   간트 차트
                 </Button>
               </Link>
               <Button
                 variant="outline"
-                className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]"
+                className={heroOutlineButtonClassName}
                 onClick={handleExport}
                 disabled={isExporting}
               >
@@ -240,24 +280,24 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 작업</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{stats.totalTasks}</p>
+              <div className={heroMetricClassName}>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>전체 작업</p>
+                <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{stats.totalTasks}</p>
               </div>
-              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">멤버</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{members.length}</p>
+              <div className={heroMetricClassName}>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>멤버</p>
+                <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{members.length}</p>
               </div>
-              <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{stats.delayedTasks}</p>
+              <div className={heroMetricClassName}>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>지연</p>
+                <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{stats.delayedTasks}</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="grid gap-5">
-          <div className="metric-card p-6">
+          <div className={isDark ? 'metric-card p-6' : 'metric-card bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,245,241,0.92))] p-6 shadow-[0_24px_48px_-38px_rgba(17,24,39,0.12)]'}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="eyebrow-stat">Actual Progress</p>
@@ -265,7 +305,7 @@ export default function Dashboard() {
                   {formatPercent(stats.overallProgress)}
                 </p>
               </div>
-              <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-28px_rgba(15,118,110,0.78)]">
+              <div className={isDark ? 'flex h-14 w-14 items-center justify-center rounded-[22px] bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-28px_rgba(15,118,110,0.78)]' : progressSectionIconLargeClassName}>
                 <Target className="h-6 w-6" />
               </div>
             </div>
@@ -282,8 +322,8 @@ export default function Dashboard() {
           </div>
 
           <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-1">
-            <div className="metric-card p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_40px_-26px_rgba(203,109,55,0.7)]">
+            <div className={inProgressMetricClassName}>
+              <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_40px_-26px_rgba(203,109,55,0.7)]' : progressSectionIconClassName}>
                 <Clock3 className="h-5 w-5" />
               </div>
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">진행중 작업</p>
@@ -292,8 +332,8 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className="metric-card p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#1fa37a,#34c997)] text-white shadow-[0_20px_40px_-26px_rgba(31,163,122,0.62)]">
+            <div className={neutralMetricClassName}>
+              <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#1fa37a,#34c997)] text-white shadow-[0_20px_40px_-26px_rgba(31,163,122,0.62)]' : quietSectionIconClassName}>
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">완료 작업</p>
@@ -302,8 +342,8 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className="metric-card p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#cb4b5f,#ff738a)] text-white shadow-[0_20px_40px_-26px_rgba(203,75,95,0.62)]">
+            <div className={neutralMetricClassName}>
+              <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#cb4b5f,#ff738a)] text-white shadow-[0_20px_40px_-26px_rgba(203,75,95,0.62)]' : quietSectionIconClassName}>
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">리스크 작업</p>
@@ -324,7 +364,7 @@ export default function Dashboard() {
                 상태별 분포
               </h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]">
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]' : quietSectionIconClassName}>
               <Zap className="h-5 w-5" />
             </div>
           </div>
@@ -392,7 +432,7 @@ export default function Dashboard() {
                 담당자별 진행률
               </h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#123d64,#23547b)] text-white shadow-[0_20px_40px_-24px_rgba(18,61,100,0.72)]">
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#123d64,#23547b)] text-white shadow-[0_20px_40px_-24px_rgba(18,61,100,0.72)]' : quietSectionIconClassName}>
               <Users className="h-5 w-5" />
             </div>
           </div>
@@ -401,7 +441,7 @@ export default function Dashboard() {
             <div className="mt-6 h-[270px]" id="chart-assignee">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={assigneeData} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="4 6" stroke="rgba(127,111,97,0.14)" horizontal={false} />
+                  <CartesianGrid strokeDasharray="4 6" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(127,111,97,0.14)'} horizontal={false} />
                   <XAxis type="number" stroke="var(--text-muted)" axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" width={82} stroke="var(--text-muted)" axisLine={false} tickLine={false} />
                   <Tooltip
@@ -410,10 +450,20 @@ export default function Dashboard() {
                       borderColor: 'var(--border-color)',
                       borderRadius: '18px',
                       boxShadow: '0 24px 56px -28px rgba(17, 24, 39, 0.28)',
+                      color: 'var(--text-primary)',
                     }}
+                    labelStyle={{ color: 'var(--text-primary)' }}
+                    itemStyle={{ color: 'var(--text-secondary)' }}
                   />
-                  <Bar dataKey="completed" stackId="a" fill="#1b8f86" radius={[0, 10, 10, 0]} name="완료" barSize={16} />
-                  <Bar dataKey="remaining" stackId="a" fill="rgba(127,111,97,0.18)" radius={[0, 10, 10, 0]} name="남음" barSize={16} />
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)', paddingBottom: '8px' }}
+                  />
+                  <Bar dataKey="completed" stackId="a" fill="#2BAAA0" radius={[0, 10, 10, 0]} name="완료" barSize={16} />
+                  <Bar dataKey="remaining" stackId="a" fill={isDark ? 'rgba(255,255,255,0.15)' : 'rgba(127,111,97,0.22)'} radius={[0, 10, 10, 0]} name="남음" barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -518,7 +568,7 @@ export default function Dashboard() {
                 Phase별 진행률
               </h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#0f766e,#2fa67c)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]">
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#0f766e,#2fa67c)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]' : quietSectionIconClassName}>
               <TrendingUp className="h-5 w-5" />
             </div>
           </div>
@@ -527,7 +577,7 @@ export default function Dashboard() {
             <div className="mt-6 h-[300px]" id="chart-phase-progress">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={phaseData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="4 6" stroke="rgba(127,111,97,0.14)" />
+                  <CartesianGrid strokeDasharray="4 6" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(127,111,97,0.14)'} />
                   <XAxis dataKey="name" stroke="var(--text-muted)" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                   <YAxis stroke="var(--text-muted)" axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                   <Tooltip
@@ -537,10 +587,20 @@ export default function Dashboard() {
                       borderColor: 'var(--border-color)',
                       borderRadius: '18px',
                       boxShadow: '0 24px 56px -28px rgba(17, 24, 39, 0.28)',
+                      color: 'var(--text-primary)',
                     }}
+                    labelStyle={{ color: 'var(--text-primary)' }}
+                    itemStyle={{ color: 'var(--text-secondary)' }}
                   />
-                  <Bar dataKey="계획" fill="rgba(127,111,97,0.22)" radius={[8, 8, 0, 0]} barSize={20} />
-                  <Bar dataKey="실적" fill="#0f766e" radius={[8, 8, 0, 0]} barSize={20} />
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)', paddingBottom: '8px' }}
+                  />
+                  <Bar dataKey="계획" fill={isDark ? 'rgba(255,255,255,0.2)' : '#B0BEC5'} radius={[8, 8, 0, 0]} barSize={20} />
+                  <Bar dataKey="실적" fill="#2BAAA0" radius={[8, 8, 0, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -559,7 +619,7 @@ export default function Dashboard() {
                 프로젝트 일정 요약
               </h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#6d28d9,#a78bfa)] text-white shadow-[0_20px_40px_-24px_rgba(109,40,217,0.72)]">
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#6d28d9,#a78bfa)] text-white shadow-[0_20px_40px_-24px_rgba(109,40,217,0.72)]' : quietSectionIconClassName}>
               <CalendarClock className="h-5 w-5" />
             </div>
           </div>
@@ -582,9 +642,9 @@ export default function Dashboard() {
                   <span className="text-[color:var(--text-secondary)]">일정 경과율</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{Math.round(timeline.elapsedPercent)}%</span>
                 </div>
-                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(109,40,217,0.08)]">
+                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(91,141,239,0.12)]">
                   <div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,#6d28d9,#a78bfa)]"
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#5B8DEF,#A78BFA)]"
                     style={{ width: `${timeline.elapsedPercent}%` }}
                   />
                 </div>
@@ -631,7 +691,7 @@ export default function Dashboard() {
                 Phase 가중치 분포
               </h2>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#d88b44,#cb6d37)] text-white shadow-[0_20px_40px_-24px_rgba(203,109,55,0.72)]">
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#d88b44,#cb6d37)] text-white shadow-[0_20px_40px_-24px_rgba(203,109,55,0.72)]' : quietSectionIconClassName}>
               <PieChartIcon className="h-5 w-5" />
             </div>
           </div>
@@ -662,7 +722,10 @@ export default function Dashboard() {
                         borderColor: 'var(--border-color)',
                         borderRadius: '18px',
                         boxShadow: '0 24px 56px -28px rgba(17, 24, 39, 0.28)',
+                        color: 'var(--text-primary)',
                       }}
+                      labelStyle={{ color: 'var(--text-primary)' }}
+                      itemStyle={{ color: 'var(--text-secondary)' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
