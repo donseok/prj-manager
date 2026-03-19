@@ -421,7 +421,7 @@ export default function Members() {
                         }
                       }}
                       className="field-input flex-1 py-2.5"
-                      placeholder={`멤버 ${idx + 1} 이름`}
+                      placeholder="멤버 이름을 입력하세요"
                       autoFocus={idx === 0}
                     />
                     <select

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Sun, Moon, FlaskConical } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, isSupabaseConfigured } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
+import type { User as AppUser } from '../types';
 
 export default function Login() {
   const { isAuthenticated, setUser } = useAuthStore();
@@ -19,6 +20,19 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleTestLogin = async () => {
+    const mockUser: AppUser = {
+      id: 'user-smart-pm-01',
+      email: 'admin@test.local',
+      name: 'PM 한지훈',
+      systemRole: 'admin',
+      createdAt: new Date().toISOString(),
+    };
+    setUser(mockUser);
+    const projects = await loadInitialProjects();
+    setProjects(projects);
+  };
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -262,6 +276,18 @@ export default function Login() {
             </form>
 
           </div>
+
+          {!isSupabaseConfigured && (
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={() => void handleTestLogin()}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all hover:bg-[color:var(--bg-tertiary)]"
+              >
+                <FlaskConical className="h-4 w-4" />
+                테스트 로그인 (관리자)
+              </button>
+            </div>
+          )}
 
           <p className="mt-6 text-center text-xs text-[color:var(--text-muted)] lg:hidden">
             &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
