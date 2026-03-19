@@ -355,9 +355,9 @@ export function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBa
   ws.autoFilter = { from: { row: headerRowNum, column: 1 }, to: { row: headerRowNum + orderedRows.length, column: headers.length } };
 
   // ── Sheet 2: WBS 데이터 ──
-  const dsHeaders = ['WBS코드', '상위WBS코드', '구분', '작업명', '산출물', '담당자', '담당자ID', '가중치', '계획시작', '계획종료', '계획공정율', '실적시작', '실적종료', '실적공정율', '상태', '상태코드'];
+  const dsHeaders = ['WBS코드', '상위WBS코드', '구분', '작업명', '산출물', '담당자', '담당자ID', '가중치', '기간일수', '선행작업', '작업출처', '계획시작', '계획종료', '계획공정율', '실적시작', '실적종료', '실적공정율', '상태', '상태코드'];
   const ds = wb.addWorksheet(safeSheetName(WBS_DATA_SHEET_NAME));
-  const dsColWidths = [10, 12, 10, 30, 20, 12, 18, 9, 12, 12, 11, 12, 12, 11, 10, 12];
+  const dsColWidths = [10, 12, 10, 30, 20, 12, 18, 9, 10, 18, 12, 12, 12, 11, 12, 12, 11, 10, 12];
   dsColWidths.forEach((w, i) => { ds.getColumn(i + 1).width = w; });
 
   const dsHeaderRow = ds.addRow(dsHeaders);
@@ -376,6 +376,9 @@ export function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBa
       task.name, task.output || '',
       getAssigneeLabel(task, memberMap), task.assigneeId || '',
       Number(task.weight.toFixed(3)),
+      task.durationDays ?? '',
+      (task.predecessorIds || []).join(','),
+      task.taskSource || 'manual',
       formatDate(task.planStart) || '', formatDate(task.planEnd) || '', task.planProgress,
       formatDate(task.actualStart) || '', formatDate(task.actualEnd) || '', task.actualProgress,
       TASK_STATUS_LABELS[task.status], task.status,
@@ -524,9 +527,9 @@ export function exportGanttWorkbook({
   ws.autoFilter = { from: { row: headerRowNum, column: 1 }, to: { row: headerRowNum + orderedRows.length, column: fixedHeaders.length } };
 
   // ── Sheet 2: 간트 데이터 ──
-  const dsHeaders = ['WBS코드', '상위WBS코드', '구분', '작업명', '담당자', '담당자ID', '계획시작', '계획종료', '계획기간일수', '실적시작', '실적종료', '실적기간일수', '계획공정율', '실적공정율', '지연일수', '상태', '상태코드', '산출물'];
+  const dsHeaders = ['WBS코드', '상위WBS코드', '구분', '작업명', '담당자', '담당자ID', '계획시작', '계획종료', '계획기간일수', '실적시작', '실적종료', '실적기간일수', '선행작업', '작업출처', '계획공정율', '실적공정율', '지연일수', '상태', '상태코드', '산출물'];
   const ds = wb.addWorksheet(safeSheetName(GANTT_DATA_SHEET_NAME));
-  const dsWidths = [10, 12, 10, 30, 12, 18, 12, 12, 11, 12, 12, 11, 11, 11, 9, 10, 12, 20];
+  const dsWidths = [10, 12, 10, 30, 12, 18, 12, 12, 11, 12, 12, 11, 18, 12, 11, 11, 9, 10, 12, 20];
   dsWidths.forEach((w, i) => { ds.getColumn(i + 1).width = w; });
 
   const dsHRow = ds.addRow(dsHeaders);
@@ -545,6 +548,7 @@ export function exportGanttWorkbook({
       task.name, getAssigneeLabel(task, memberMap), task.assigneeId || '',
       formatDate(task.planStart) || '', formatDate(task.planEnd) || '', getDurationDays(task.planStart, task.planEnd),
       formatDate(task.actualStart) || '', formatDate(task.actualEnd) || '', getDurationDays(task.actualStart, task.actualEnd),
+      (task.predecessorIds || []).join(','), task.taskSource || 'manual',
       task.planProgress, task.actualProgress, getDelayDays(task),
       TASK_STATUS_LABELS[task.status], task.status, task.output || '',
     ]);
@@ -597,6 +601,12 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
       output: getOptionalStringValue(row, ['산출물', 'Output']) || undefined,
       assigneeId: getOptionalStringValue(row, ['담당자ID', 'Assignee ID', 'assigneeId']),
       weight: parseNumberValue(row['가중치']),
+      durationDays: parseNumberValue(row['기간일수']) || parseNumberValue(row['계획기간일수']) || null,
+      predecessorIds: getStringValue(row, ['선행작업', '선행 작업', 'predecessorIds'])
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+      taskSource: (getOptionalStringValue(row, ['작업출처', 'taskSource']) as Task['taskSource'] | null) || 'imported',
       planStart: normalizeExcelDate(row['계획시작']),
       planEnd: normalizeExcelDate(row['계획종료']),
       planProgress: parseNumberValue(row['계획공정율']),

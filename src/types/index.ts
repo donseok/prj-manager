@@ -80,6 +80,9 @@ export interface Task {
 
   // 가중치/공정율
   weight: number;
+  durationDays?: number | null;
+  predecessorIds?: string[];
+  taskSource?: 'manual' | 'template' | 'quick_draft' | 'imported' | 'cloned';
 
   // 계획
   planStart?: string | null;

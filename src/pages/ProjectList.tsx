@@ -20,7 +20,8 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
-import { deleteProjectById, syncProjectMembers, upsertProject } from '../lib/dataRepository';
+import { deleteProjectById, loadProjectMembers, loadProjectTasks, syncProjectMembers, syncProjectTasks, upsertProject } from '../lib/dataRepository';
+import { cloneProjectMembers, cloneProjectTasks } from '../lib/projectClone';
 import {
   getProjectCardBackground,
   getProjectSummary,
@@ -72,6 +73,8 @@ export default function ProjectList() {
     description: '',
     startDate: '',
     endDate: '',
+    creationMode: 'blank',
+    sourceProjectId: '',
   });
 
   const filteredProjects = projects.filter(
@@ -80,6 +83,7 @@ export default function ProjectList() {
       (statusFilter === 'all' || project.status === statusFilter) &&
       project.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const reusableProjects = projects.filter((project) => project.status !== 'deleted');
 
   const preparingProjects = projects.filter((project) => project.status === 'preparing').length;
   const activeProjects = projects.filter((project) => project.status === 'active').length;
@@ -104,19 +108,54 @@ export default function ProjectList() {
     };
 
     const savedProject = await upsertProject(project);
-    const ownerMember: ProjectMember = {
-      id: generateId(),
-      projectId: savedProject.id,
-      userId: owner.id,
-      name: owner.name,
-      role: 'owner',
-      createdAt: now,
-    };
+    if (newProject.creationMode === 'clone' && newProject.sourceProjectId) {
+      const [sourceMembers, sourceTasks] = await Promise.all([
+        loadProjectMembers(newProject.sourceProjectId),
+        loadProjectTasks(newProject.sourceProjectId),
+      ]);
 
-    await syncProjectMembers(savedProject.id, [ownerMember]);
+      const { members: clonedMembers, memberIdMap } = cloneProjectMembers({
+        sourceMembers,
+        targetProjectId: savedProject.id,
+        ownerUserId: owner.id,
+        ownerName: owner.name,
+      });
+      const hasOwner = clonedMembers.some((member) => member.userId === owner.id);
+      const ownerMember: ProjectMember = {
+        id: generateId(),
+        projectId: savedProject.id,
+        userId: owner.id,
+        name: owner.name,
+        role: 'owner',
+        createdAt: now,
+      };
+
+      const nextMembers = hasOwner ? clonedMembers : [ownerMember, ...clonedMembers];
+      await syncProjectMembers(savedProject.id, nextMembers);
+      await syncProjectTasks(
+        savedProject.id,
+        cloneProjectTasks({
+          sourceTasks,
+          targetProjectId: savedProject.id,
+          memberIdMap,
+        })
+      );
+    } else {
+      const ownerMember: ProjectMember = {
+        id: generateId(),
+        projectId: savedProject.id,
+        userId: owner.id,
+        name: owner.name,
+        role: 'owner',
+        createdAt: now,
+      };
+
+      await syncProjectMembers(savedProject.id, [ownerMember]);
+    }
+
     addProject(savedProject);
     setShowCreateModal(false);
-    setNewProject({ name: '', description: '', startDate: '', endDate: '' });
+    setNewProject({ name: '', description: '', startDate: '', endDate: '', creationMode: 'blank', sourceProjectId: '' });
     navigate(`/projects/${savedProject.id}`);
   };
 
@@ -510,6 +549,43 @@ export default function ProjectList() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
+              <label className="field-label">시작 방식</label>
+              <select
+                value={newProject.creationMode}
+                onChange={(event) =>
+                  setNewProject({
+                    ...newProject,
+                    creationMode: event.target.value,
+                    sourceProjectId: event.target.value === 'clone' ? newProject.sourceProjectId : '',
+                  })
+                }
+                className="field-input"
+              >
+                <option value="blank">빈 프로젝트</option>
+                <option value="clone">기존 프로젝트 복제</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="field-label">복제 원본</label>
+              <select
+                value={newProject.sourceProjectId}
+                onChange={(event) => setNewProject({ ...newProject, sourceProjectId: event.target.value })}
+                className="field-input"
+                disabled={newProject.creationMode !== 'clone'}
+              >
+                <option value="">원본 프로젝트 선택</option>
+                {reusableProjects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
               <label className="field-label">시작일</label>
               <input
                 type="date"
@@ -529,11 +605,28 @@ export default function ProjectList() {
             </div>
           </div>
 
+          {newProject.creationMode === 'clone' && (
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
+              복제를 선택하면 기존 WBS와 멤버 구성을 새 프로젝트로 복사하고, 진행 상태와 실적은 초기화합니다.
+            </p>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
               취소
             </Button>
-            <Button onClick={handleCreateProject} disabled={!newProject.name.trim()} data-testid="projects-create-submit" title={!newProject.name.trim() ? '프로젝트명을 입력해주세요' : undefined}>
+            <Button
+              onClick={handleCreateProject}
+              disabled={!newProject.name.trim() || (newProject.creationMode === 'clone' && !newProject.sourceProjectId)}
+              data-testid="projects-create-submit"
+              title={
+                !newProject.name.trim()
+                  ? '프로젝트명을 입력해주세요'
+                  : newProject.creationMode === 'clone' && !newProject.sourceProjectId
+                    ? '복제할 원본 프로젝트를 선택해주세요'
+                    : undefined
+              }
+            >
               생성
             </Button>
           </div>

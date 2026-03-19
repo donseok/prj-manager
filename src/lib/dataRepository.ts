@@ -38,6 +38,9 @@ interface TaskRow {
   output: string | null;
   assignee_id: string | null;
   weight: number;
+  duration_days?: number | null;
+  predecessor_ids?: string[] | null;
+  task_source?: Task['taskSource'] | null;
   plan_start: string | null;
   plan_end: string | null;
   plan_progress: number;
@@ -289,6 +292,9 @@ function mapTaskRow(row: TaskRow): Task {
     output: row.output || undefined,
     assigneeId: row.assignee_id,
     weight: Number(row.weight),
+    durationDays: row.duration_days ?? undefined,
+    predecessorIds: row.predecessor_ids ?? undefined,
+    taskSource: row.task_source ?? undefined,
     planStart: row.plan_start,
     planEnd: row.plan_end,
     planProgress: Number(row.plan_progress),
@@ -313,6 +319,9 @@ function toTaskRow(task: Task): TaskRow {
     output: task.output || null,
     assignee_id: task.assigneeId || null,
     weight: task.weight,
+    duration_days: task.durationDays ?? null,
+    predecessor_ids: task.predecessorIds ?? null,
+    task_source: task.taskSource ?? null,
     plan_start: task.planStart || null,
     plan_end: task.planEnd || null,
     plan_progress: task.planProgress,

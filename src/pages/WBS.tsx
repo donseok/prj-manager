@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Maximize2,
+  Sparkles,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -32,6 +33,9 @@ import {
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { syncProjectMembers } from '../lib/dataRepository';
+import { autoScheduleTasks, buildSequentialDependencies } from '../lib/taskScheduler';
+import { generateTasksFromPrompt, type TaskDraftResult } from '../lib/taskDraft';
+import { generateTasksFromTemplate, getTaskTemplate, listTaskTemplates } from '../lib/taskTemplates';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { Task, TaskStatus, ProjectMember } from '../types';
@@ -46,6 +50,7 @@ export default function WBS() {
     tasks,
     flatTasks,
     loadedProjectId,
+    setTasks,
     addTask,
     updateTask,
     deleteTask,
@@ -67,8 +72,14 @@ export default function WBS() {
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'child' | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('web-launch');
+  const [draftPrompt, setDraftPrompt] = useState('');
+  const [draftResult, setDraftResult] = useState<TaskDraftResult | null>(null);
   const dragOverCounterRef = useRef(0);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const templates = listTaskTemplates();
+  const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDragTaskId(taskId);
@@ -206,6 +217,9 @@ export default function WBS() {
       orderIndex: maxOrder + 1,
       name: '',
       weight: 0,
+      durationDays: level >= 3 ? 2 : null,
+      predecessorIds: [],
+      taskSource: 'manual',
       planProgress: 0,
       actualProgress: 0,
       status: 'pending',
@@ -227,6 +241,102 @@ export default function WBS() {
   };
 
   // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
+  const handleApplyTemplate = () => {
+    if (!projectId || !selectedTemplate) return;
+
+    const generatedTasks = generateTasksFromTemplate({
+      templateId: selectedTemplate.id,
+      projectId,
+      projectStartDate: currentProject?.startDate,
+    });
+
+    setTasks(generatedTasks, undefined, { recordHistory: true });
+    setIsTemplateModalOpen(false);
+    showFeedback({
+      tone: 'success',
+      title: '템플릿 적용 완료',
+      message: `${selectedTemplate.name} 템플릿으로 ${generatedTasks.length}개 작업 초안을 생성했습니다.`,
+    });
+  };
+
+  const handleGenerateDraft = () => {
+    if (!projectId) return;
+
+    const trimmedPrompt = draftPrompt.trim();
+    if (!trimmedPrompt) {
+      showFeedback({
+        tone: 'info',
+        title: '설명 입력 필요',
+        message: '프로젝트 설명을 한 줄로 입력하면 빠른 초안을 생성할 수 있습니다.',
+      });
+      return;
+    }
+
+    const result = generateTasksFromPrompt({
+      prompt: trimmedPrompt,
+      projectId,
+      projectStartDate: currentProject?.startDate,
+    });
+
+    setSelectedTemplateId(result.templateId);
+    setDraftResult(result);
+    showFeedback({
+      tone: 'success',
+      title: '빠른 초안 생성 완료',
+      message: `${result.templateName} 기반으로 ${result.tasks.length}개 작업 초안을 준비했습니다.`,
+    });
+  };
+
+  const handleApplyDraft = () => {
+    if (!draftResult) return;
+
+    setTasks(draftResult.tasks, undefined, { recordHistory: true });
+    setIsTemplateModalOpen(false);
+    showFeedback({
+      tone: 'success',
+      title: '빠른 초안 반영 완료',
+      message: `${draftResult.templateName} 기반 초안을 WBS에 반영했습니다.`,
+    });
+  };
+
+  const handleAutoSchedule = () => {
+    if (tasks.length === 0) {
+      showFeedback({
+        tone: 'info',
+        title: '계산할 작업 없음',
+        message: '자동 일정 계산을 하려면 먼저 작업을 추가하거나 템플릿을 적용하세요.',
+      });
+      return;
+    }
+
+    const scheduledTasks = autoScheduleTasks(tasks, currentProject?.startDate);
+    setTasks(scheduledTasks, undefined, { recordHistory: true });
+    showFeedback({
+      tone: 'success',
+      title: '일정 자동 계산 완료',
+      message: '작업 순서와 기존 기간을 기준으로 계획 일정을 다시 계산했습니다.',
+    });
+  };
+
+  const handleBuildDependencies = () => {
+    if (tasks.length === 0) {
+      showFeedback({
+        tone: 'info',
+        title: '연결할 작업 없음',
+        message: '선후행 연결을 만들려면 먼저 작업을 준비하세요.',
+      });
+      return;
+    }
+
+    const dependencyTasks = buildSequentialDependencies(tasks);
+    setTasks(dependencyTasks, undefined, { recordHistory: true });
+    showFeedback({
+      tone: 'success',
+      title: '선후행 연결 생성 완료',
+      message: '같은 계층의 leaf task 기준으로 기본 선후행 관계를 생성했습니다.',
+    });
+  };
+
   const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
     updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
   };
@@ -518,6 +628,19 @@ export default function WBS() {
                 <Plus className="w-4 h-4" />
                 Phase 추가
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
+                빠른 초안 생성
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
+                <Sparkles className="w-4 h-4" />
+                템플릿 적용
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleAutoSchedule} disabled={tasks.length === 0}>
+                일정 자동 계산
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBuildDependencies} disabled={tasks.length === 0}>
+                선후행 연결
+              </Button>
               <Button variant="outline" size="sm" onClick={expandAll}>
                 <ExpandIcon className="w-4 h-4" />
                 전체 펼침
@@ -753,6 +876,173 @@ export default function WBS() {
               ))}
             </tbody>
           </table>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        title="템플릿으로 WBS 시작"
+        size="xl"
+      >
+        <div className="p-6">
+          <div className="mb-6 rounded-[28px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="page-kicker">Quick Draft</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  한 줄 설명으로 WBS 초안 만들기
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                  프로젝트 설명을 입력하면 키워드 기반으로 템플릿을 추론하고 필요한 작업을 추가합니다.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setDraftPrompt('쇼핑몰 리뉴얼 / 6월 오픈 / 디자인, 프론트, 백엔드, QA 필요')}>
+                  예시 채우기
+                </Button>
+                <Button onClick={handleGenerateDraft}>
+                  빠른 초안 생성
+                </Button>
+              </div>
+            </div>
+
+            <textarea
+              value={draftPrompt}
+              onChange={(event) => setDraftPrompt(event.target.value)}
+              placeholder="예: 쇼핑몰 리뉴얼 / 6월 오픈 / 디자인, 프론트, 백엔드, QA 필요"
+              className="mt-4 min-h-[110px] w-full rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+            />
+
+            {draftResult && (
+              <div className="mt-4 grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
+                <div className="rounded-[20px] border border-[rgba(15,118,110,0.2)] bg-[rgba(15,118,110,0.08)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-primary)]">
+                    추천 결과
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                    {draftResult.templateName}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                    {draftResult.reason}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--text-secondary)]">
+                    <span className="surface-badge">Tasks {draftResult.tasks.length}</span>
+                    {draftResult.matchedKeywords.map((keyword) => (
+                      <span key={keyword} className="surface-badge">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                    반영 방식
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                    생성된 초안이 현재 WBS를 교체합니다. 반영 후에는 기존 표 편집기로 바로 수정할 수 있습니다.
+                  </p>
+                  <Button className="mt-4 w-full" onClick={handleApplyDraft}>
+                    초안 바로 반영
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-3">
+              {templates.map((template) => {
+                const isSelected = template.id === selectedTemplate?.id;
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => setSelectedTemplateId(template.id)}
+                    className={cn(
+                      'w-full rounded-[24px] border p-5 text-left transition-all',
+                      isSelected
+                        ? 'border-[rgba(15,118,110,0.34)] bg-[rgba(15,118,110,0.08)] shadow-[0_24px_50px_-34px_rgba(15,118,110,0.5)]'
+                        : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                          {template.name}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                          {template.description}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <span className="rounded-full bg-[rgba(15,118,110,0.14)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-primary)]">
+                          선택됨
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--text-secondary)]">
+                      <span className="surface-badge">{template.audience}</span>
+                      <span className="surface-badge">Phase {template.phases}</span>
+                      <span className="surface-badge">Tasks {template.taskCount}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rounded-[28px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
+              <p className="page-kicker">Template Summary</p>
+              <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                {selectedTemplate?.name || '템플릿 선택'}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+                {selectedTemplate?.description || '적용할 템플릿을 선택하세요.'}
+              </p>
+
+              <div className="mt-5 grid gap-3">
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                    대상 프로젝트
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                    {currentProject?.name || '현재 프로젝트'}
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                    시작일 기준
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                    {currentProject?.startDate || '프로젝트 시작일 미설정'}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[color:var(--text-secondary)]">
+                    시작일이 있으면 leaf task에 계획 일정을 순차 배치합니다.
+                  </p>
+                </div>
+
+                <div className="rounded-[20px] border border-[rgba(216,139,68,0.22)] bg-[rgba(216,139,68,0.08)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-warning)]">
+                    적용 방식
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-primary)]">
+                    현재 WBS 작업을 템플릿 초안으로 교체합니다. 적용 후에는 기존 편집기에서 바로 수정할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
+                  취소
+                </Button>
+                <Button onClick={handleApplyTemplate} disabled={!selectedTemplate}>
+                  <Sparkles className="w-4 h-4" />
+                  템플릿 적용
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </Modal>
 
