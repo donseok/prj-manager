@@ -32,13 +32,12 @@ export default function Home() {
               2026 Workspace Edition
             </div>
             <h1 className="mt-6 max-w-3xl text-[clamp(2.5rem,6vw,4.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
-              세련된 흐름으로
+              한눈에 잡히는
               <br />
-              프로젝트를 운영하세요
+              프로젝트 운영
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/90 md:text-lg">
-              WBS, 일정, 멤버 관리 화면을 하나의 톤으로 다시 묶었습니다. 빠르게 훑어봐도
-              구조가 보이고, 오래 봐도 지루하지 않은 운영용 인터페이스를 목표로 했습니다.
+              WBS · 일정 · 멤버를 하나의 흐름으로. 계획부터 완료까지 선명하게 관리하세요.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -58,17 +57,17 @@ export default function Home() {
 
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/[0.1] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/74">전체 프로젝트</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 프로젝트</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{projects.length}</p>
                 <p className="mt-1 text-sm text-white/84">준비·진행·완료 프로젝트 전체 수</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.1] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/74">진행중</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">진행중</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeProjects}</p>
                 <p className="mt-1 text-sm text-white/84">현재 작업이 이어지고 있는 프로젝트</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.1] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/74">최근 기록</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">최근 기록</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{recentProjects.length}</p>
                 <p className="mt-1 text-sm text-white/84">빠르게 다시 열 수 있는 최근 워크스페이스</p>
               </div>
