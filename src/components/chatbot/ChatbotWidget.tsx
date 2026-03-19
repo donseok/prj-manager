@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, SendHorizonal, Sparkles, X, CornerDownLeft } from 'lucide-react';
+import { MessageCircle, SendHorizonal, Sparkles, X, CornerDownLeft, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useTaskStore } from '../../store/taskStore';
 import { CHATBOT_SUGGESTIONS, createChatbotGreeting, createChatbotReply } from '../../lib/chatbot';
@@ -109,25 +109,49 @@ export default function ChatbotWidget() {
               <div className="flex min-w-0 items-center gap-4">
                 <DKBotAvatar size={60} />
                 <div className="min-w-0">
-                  <div className="surface-badge border-white/12 bg-white/10 text-white/80">
+                  <div className="surface-badge border-white/12 bg-white/14 text-white/90">
                     <Sparkles className="h-3.5 w-3.5 text-[#ffd66b]" />
                     DK Bot
                   </div>
                   <h2 className="mt-3 text-lg font-semibold tracking-[-0.03em]">프로젝트 도우미 챗봇</h2>
-                  <p className="mt-1 text-sm leading-6 text-white/74">
+                  <p className="mt-1 text-sm leading-6 text-white/88">
                     {currentProject ? `${currentProject.name} 데이터를 기준으로 답변합니다.` : '프로젝트를 선택하면 더 정확한 답변을 드립니다.'}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/14 hover:text-white"
-                aria-label="챗봇 닫기"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (timerRef.current) {
+                      window.clearTimeout(timerRef.current);
+                      timerRef.current = null;
+                    }
+                    setMessages([{
+                      id: generateId(),
+                      role: 'assistant',
+                      text: createChatbotGreeting({ project: currentProject, members: [], tasks: [] }),
+                    }]);
+                    setDraft('');
+                    setIsThinking(false);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/12 text-white/80 transition hover:bg-white/18 hover:text-white"
+                  aria-label="대화 초기화"
+                  title="대화 초기화"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/12 text-white/80 transition hover:bg-white/18 hover:text-white"
+                  aria-label="챗봇 닫기"
+                  title="닫기"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -138,7 +162,7 @@ export default function ChatbotWidget() {
                   key={suggestion}
                   type="button"
                   onClick={() => submitQuestion(suggestion)}
-                  className="surface-badge cursor-pointer border-[rgba(15,118,110,0.14)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--text-secondary)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.24)] hover:text-[color:var(--text-primary)] dark:bg-white/[0.04]"
+                  className="surface-badge cursor-pointer border-[rgba(15,118,110,0.14)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--text-secondary)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.24)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                 >
                   {suggestion}
                 </button>
@@ -158,7 +182,7 @@ export default function ChatbotWidget() {
                     className={cn(
                       'max-w-[88%] whitespace-pre-wrap rounded-[22px] px-4 py-3 text-sm leading-6 shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]',
                       message.role === 'assistant'
-                        ? 'border border-[rgba(15,118,110,0.12)] bg-[rgba(255,255,255,0.9)] text-[color:var(--text-primary)] dark:bg-white/[0.06]'
+                        ? 'border border-[rgba(15,118,110,0.12)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
                         : 'bg-[image:var(--gradient-primary)] text-white'
                     )}
                   >
@@ -169,7 +193,7 @@ export default function ChatbotWidget() {
 
               {isThinking && (
                 <div className="flex justify-start">
-                  <div className="max-w-[88%] rounded-[22px] border border-[rgba(15,118,110,0.12)] bg-[rgba(255,255,255,0.9)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)] dark:bg-white/[0.06]">
+                  <div className="max-w-[88%] rounded-[22px] border border-[rgba(15,118,110,0.12)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]">
                     <div className="flex items-center gap-2">
                       <span className="flex gap-1">
                         <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)] [animation-delay:-0.18s]" />
@@ -189,7 +213,7 @@ export default function ChatbotWidget() {
                 event.preventDefault();
                 submitQuestion(draft);
               }}
-              className="rounded-[24px] border border-[var(--border-color)] bg-white/60 p-3 backdrop-blur-xl dark:bg-white/[0.04]"
+              className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-3 backdrop-blur-xl"
             >
               <label
                 htmlFor="dk-bot-input"
@@ -203,6 +227,12 @@ export default function ChatbotWidget() {
                   id="dk-bot-input"
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      submitQuestion(draft);
+                    }
+                  }}
                   placeholder="진행률, 지연 작업, 담당자 현황, 특정 작업 상태를 물어보세요."
                   rows={3}
                   className="field-input min-h-[88px] flex-1 resize-none rounded-[20px]"
