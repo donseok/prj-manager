@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays, ShieldCheck, Users } from 'lucide-react';
 import DKFlowLogo from '../common/DKFlowLogo';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
@@ -8,10 +8,11 @@ import { useState } from 'react';
 import { signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
-  const { user, logout } = useAuthStore();
+  const { user, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const navigate = useNavigate();
   const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
   const todayLabel = new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
@@ -22,6 +23,7 @@ export default function Header() {
     await signOutSupabase();
     logout();
     setShowUserMenu(false);
+    navigate('/login');
   };
 
   return (
@@ -78,7 +80,9 @@ export default function Header() {
                 <User className="w-4 h-4 text-white" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Operator</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                  {isAdmin ? 'Admin' : 'Operator'}
+                </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">{user?.name || '사용자'}</p>
               </div>
             </button>
@@ -86,10 +90,28 @@ export default function Header() {
             {showUserMenu && (
               <div className="absolute right-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-[24px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-2 shadow-[0_32px_80px_-42px_rgba(0,0,0,0.55)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
                 <div className="rounded-[20px] border border-white/10 bg-[image:var(--gradient-primary)] p-4 text-white shadow-[0_24px_52px_-28px_rgba(15,118,110,0.82)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/72">로그인 계정</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/72">로그인 계정</p>
+                    {isAdmin && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                        <ShieldCheck className="h-3 w-3" />
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-2 text-base font-semibold tracking-[-0.03em]">{user?.name || '사용자'}</p>
                   <p className="mt-1 truncate text-sm text-white/72">{user?.email || 'user@example.com'}</p>
                 </div>
+                {isAdmin && (
+                  <Link
+                    to="/admin/users"
+                    className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <Users className="w-4 h-4" />
+                    사용자 관리
+                  </Link>
+                )}
                 <Link
                   to={settingsLink}
                   className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"

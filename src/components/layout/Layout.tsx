@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import ChatbotWidget from '../chatbot/ChatbotWidget';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
@@ -19,6 +20,10 @@ export default function Layout() {
           </div>
         </main>
       </div>
+      <footer className="relative py-4 text-center text-xs text-[var(--text-tertiary)]">
+        © {new Date().getFullYear()} 동국시스템즈. All rights reserved.
+      </footer>
+      <ChatbotWidget />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { createClient, type User as SupabaseAuthUser } from '@supabase/supabase-js';
-import type { User } from '../types';
+import type { SystemRole, User } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -14,8 +14,43 @@ export function createLocalFallbackUser(): User {
     id: 'local-user',
     email: 'user@local.dev',
     name: '로컬 사용자',
+    systemRole: 'admin',
     createdAt: new Date().toISOString(),
   };
+}
+
+export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
+  if (!supabase) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    return { user: null, error: getAuthErrorMessage(error.message) };
+  }
+
+  if (!data.user) return { user: null, error: '로그인에 실패했습니다.' };
+
+  const appUser = await toAppUser(data.user);
+  return { user: appUser, error: null };
+}
+
+export async function signUpWithEmail(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {
+  if (!supabase) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { name } },
+  });
+
+  if (error) {
+    return { user: null, error: getAuthErrorMessage(error.message) };
+  }
+
+  if (!data.user) return { user: null, error: '회원가입에 실패했습니다.' };
+
+  const appUser = await toAppUser(data.user);
+  return { user: appUser, error: null };
 }
 
 export async function ensureSupabaseSession(): Promise<User | null> {
@@ -35,14 +70,8 @@ export async function ensureSupabaseSession(): Promise<User | null> {
     return toAppUser(session.user);
   }
 
-  const { data, error } = await supabase.auth.signInAnonymously();
-
-  if (error) {
-    console.error('Failed to create anonymous Supabase session:', error);
-    return null;
-  }
-
-  return data.user ? toAppUser(data.user) : null;
+  // 세션이 없으면 로그인 필요
+  return null;
 }
 
 export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => void) {
@@ -52,8 +81,13 @@ export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => 
 
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user ? toAppUser(session.user) : null);
+  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (session?.user) {
+      const appUser = await toAppUser(session.user);
+      callback(appUser);
+    } else {
+      callback(null);
+    }
   });
 
   return () => subscription.unsubscribe();
@@ -68,7 +102,59 @@ export async function signOutSupabase() {
   }
 }
 
-function toAppUser(user: SupabaseAuthUser): User {
+export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; createdAt: string }>> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, name, system_role, created_at')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to load profiles:', error);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    email: row.email || '',
+    name: row.name || '',
+    systemRole: row.system_role as SystemRole,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase가 설정되지 않았습니다.' };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ system_role: role })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Failed to update system role:', error);
+    return { error: '역할 변경에 실패했습니다.' };
+  }
+
+  return { error: null };
+}
+
+async function toAppUser(user: SupabaseAuthUser): Promise<User> {
+  let systemRole: SystemRole = 'user';
+
+  if (supabase) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('system_role')
+      .eq('id', user.id)
+      .single();
+
+    if (data?.system_role) {
+      systemRole = data.system_role as SystemRole;
+    }
+  }
+
   return {
     id: user.id,
     email: user.email || `${user.id}@anon.local`,
@@ -76,8 +162,18 @@ function toAppUser(user: SupabaseAuthUser): User {
       String(user.user_metadata?.name || user.user_metadata?.full_name || '').trim() ||
       (user.email ? user.email.split('@')[0] : '익명 사용자'),
     avatarUrl: typeof user.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : undefined,
+    systemRole,
     createdAt: user.created_at,
   };
+}
+
+function getAuthErrorMessage(message: string): string {
+  if (message.includes('Invalid login credentials')) return '이메일 또는 비밀번호가 올바르지 않습니다.';
+  if (message.includes('User already registered')) return '이미 등록된 이메일입니다.';
+  if (message.includes('Password should be at least')) return '비밀번호는 최소 6자 이상이어야 합니다.';
+  if (message.includes('Unable to validate email')) return '유효한 이메일 주소를 입력해주세요.';
+  if (message.includes('Email rate limit exceeded')) return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  return message;
 }
 
 // 타입 변환 유틸리티 (snake_case -> camelCase)

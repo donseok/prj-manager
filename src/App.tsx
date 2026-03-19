@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
@@ -8,40 +8,78 @@ import WBS from './pages/WBS';
 import Gantt from './pages/Gantt';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
+import Login from './pages/Login';
+import UserManagement from './pages/UserManagement';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
-import { createLocalFallbackUser, ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
+import { isSupabaseConfigured, ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
 import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-primary)]/30 border-t-[var(--accent-primary)]" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuthStore();
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
   const { setProjects } = useProjectStore();
-  const { setUser } = useAuthStore();
+  const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
     let isCancelled = false;
     let unsubscribe = () => {};
 
     const initializeApp = async () => {
-      const sessionUser = await ensureSupabaseSession();
-      const effectiveUser = sessionUser || createLocalFallbackUser();
-      const projects = await loadInitialProjects(effectiveUser);
+      if (!isSupabaseConfigured) {
+        // Supabase 미설정 시 로딩만 끝내고 로그인 페이지로
+        setLoading(false);
+        return;
+      }
 
+      const sessionUser = await ensureSupabaseSession();
       if (isCancelled) return;
 
-      setUser(effectiveUser);
-      setProjects(projects);
+      if (sessionUser) {
+        setUser(sessionUser);
+        const projects = await loadInitialProjects();
+        if (isCancelled) return;
+        setProjects(projects);
+      } else {
+        setLoading(false);
+      }
 
       unsubscribe = subscribeToSupabaseAuthChanges((nextUser) => {
-        const nextEffectiveUser = nextUser || createLocalFallbackUser();
-
-        void (async () => {
-          const nextProjects = await loadInitialProjects(nextEffectiveUser);
-          if (isCancelled) return;
-
-          setUser(nextEffectiveUser);
-          setProjects(nextProjects);
-        })();
+        if (nextUser) {
+          setUser(nextUser);
+          void loadInitialProjects().then((projects) => {
+            if (!isCancelled) setProjects(projects);
+          });
+        } else {
+          setUser(null);
+        }
       });
     };
 
@@ -51,12 +89,20 @@ function App() {
       isCancelled = true;
       unsubscribe();
     };
-  }, [setProjects, setUser]);
+  }, [setProjects, setUser, setLoading]);
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Home />} />
           <Route path="projects" element={<ProjectList />} />
           <Route path="projects/new" element={<ProjectList />} />
@@ -67,6 +113,14 @@ function App() {
             <Route path="members" element={<Members />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route
+            path="admin/users"
+            element={
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>

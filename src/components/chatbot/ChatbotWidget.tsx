@@ -1,0 +1,248 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MessageCircle, SendHorizonal, Sparkles, X, CornerDownLeft } from 'lucide-react';
+import { useProjectStore } from '../../store/projectStore';
+import { useTaskStore } from '../../store/taskStore';
+import { CHATBOT_SUGGESTIONS, createChatbotGreeting, createChatbotReply } from '../../lib/chatbot';
+import { cn, generateId } from '../../lib/utils';
+import DKBotAvatar from './DKBotAvatar';
+
+interface ChatMessage {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
+}
+
+export default function ChatbotWidget() {
+  const { currentProject, members } = useProjectStore();
+  const { tasks } = useTaskStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const timerRef = useRef<number | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const context = useMemo(
+    () => ({
+      project: currentProject,
+      members,
+      tasks,
+    }),
+    [currentProject, members, tasks]
+  );
+
+  useEffect(() => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setMessages([
+      {
+        id: generateId(),
+        role: 'assistant',
+        text: createChatbotGreeting({
+          project: currentProject,
+          members: [],
+          tasks: [],
+        }),
+      },
+    ]);
+    setDraft('');
+    setIsThinking(false);
+  }, [currentProject?.id, currentProject?.name]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isThinking, isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const submitQuestion = (input: string) => {
+    const question = input.trim();
+    if (!question || isThinking) return;
+
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        role: 'user',
+        text: question,
+      },
+    ]);
+    setDraft('');
+    setIsThinking(true);
+    setIsOpen(true);
+
+    timerRef.current = window.setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: 'assistant',
+          text: createChatbotReply(question, context),
+        },
+      ]);
+      setIsThinking(false);
+      timerRef.current = null;
+    }, 420);
+  };
+
+  return (
+    <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
+      {isOpen && (
+        <section className="pointer-events-auto flex w-[min(92vw,25rem)] flex-col overflow-hidden rounded-[30px] border border-white/15 bg-[image:var(--gradient-surface)] shadow-[0_38px_120px_-48px_rgba(8,17,32,0.65)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
+          <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_56%,rgba(27,143,134,0.92))] px-5 pb-5 pt-4 text-white">
+            <div className="pointer-events-none absolute right-[-3.5rem] top-[-2rem] h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_70%)] blur-2xl" />
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <DKBotAvatar size={60} />
+                <div className="min-w-0">
+                  <div className="surface-badge border-white/12 bg-white/10 text-white/80">
+                    <Sparkles className="h-3.5 w-3.5 text-[#ffd66b]" />
+                    DK Bot
+                  </div>
+                  <h2 className="mt-3 text-lg font-semibold tracking-[-0.03em]">프로젝트 도우미 챗봇</h2>
+                  <p className="mt-1 text-sm leading-6 text-white/74">
+                    {currentProject ? `${currentProject.name} 데이터를 기준으로 답변합니다.` : '프로젝트를 선택하면 더 정확한 답변을 드립니다.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80 transition hover:bg-white/14 hover:text-white"
+                aria-label="챗봇 닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="app-panel flex min-h-[30rem] flex-1 flex-col gap-4 p-4">
+            <div className="flex flex-wrap gap-2">
+              {CHATBOT_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => submitQuestion(suggestion)}
+                  className="surface-badge cursor-pointer border-[rgba(15,118,110,0.14)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--text-secondary)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.24)] hover:text-[color:var(--text-primary)] dark:bg-white/[0.04]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+
+            <div className="app-panel-strong flex-1 space-y-3 overflow-y-auto rounded-[24px] p-3">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'flex',
+                    message.role === 'assistant' ? 'justify-start' : 'justify-end'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[88%] whitespace-pre-wrap rounded-[22px] px-4 py-3 text-sm leading-6 shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]',
+                      message.role === 'assistant'
+                        ? 'border border-[rgba(15,118,110,0.12)] bg-[rgba(255,255,255,0.9)] text-[color:var(--text-primary)] dark:bg-white/[0.06]'
+                        : 'bg-[image:var(--gradient-primary)] text-white'
+                    )}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              ))}
+
+              {isThinking && (
+                <div className="flex justify-start">
+                  <div className="max-w-[88%] rounded-[22px] border border-[rgba(15,118,110,0.12)] bg-[rgba(255,255,255,0.9)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)] dark:bg-white/[0.06]">
+                    <div className="flex items-center gap-2">
+                      <span className="flex gap-1">
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)] [animation-delay:-0.18s]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)] [animation-delay:-0.09s]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)]" />
+                      </span>
+                      데이터를 정리하는 중입니다.
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitQuestion(draft);
+              }}
+              className="rounded-[24px] border border-[var(--border-color)] bg-white/60 p-3 backdrop-blur-xl dark:bg-white/[0.04]"
+            >
+              <label
+                htmlFor="dk-bot-input"
+                className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]"
+              >
+                <CornerDownLeft className="h-3.5 w-3.5" />
+                Ask DK Bot
+              </label>
+              <div className="flex items-end gap-2">
+                <textarea
+                  id="dk-bot-input"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="진행률, 지연 작업, 담당자 현황, 특정 작업 상태를 물어보세요."
+                  rows={3}
+                  className="field-input min-h-[88px] flex-1 resize-none rounded-[20px]"
+                />
+                <button
+                  type="submit"
+                  disabled={!draft.trim() || isThinking}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[image:var(--gradient-primary)] text-white shadow-[0_22px_44px_-26px_rgba(15,118,110,0.82)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none"
+                  aria-label="질문 보내기"
+                >
+                  <SendHorizonal className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      )}
+
+      <div className="pointer-events-auto flex items-center gap-3">
+        {!isOpen && (
+          <div className="hidden rounded-full border border-white/15 bg-[rgba(11,61,100,0.92)] px-4 py-2 text-sm font-medium text-white shadow-[0_28px_68px_-34px_rgba(11,61,100,0.82)] backdrop-blur-xl sm:block">
+            물어보면 바로 정리해 드릴게요
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="group relative flex h-[78px] w-[78px] items-center justify-center rounded-full border border-white/14 bg-[linear-gradient(165deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_58%,rgba(27,143,134,0.92))] shadow-[0_34px_84px_-36px_rgba(11,61,100,0.88)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
+          aria-label={isOpen ? '챗봇 닫기' : '챗봇 열기'}
+        >
+          <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.28),transparent_48%)]" />
+          <DKBotAvatar
+            size={52}
+            className="border-white/0 bg-transparent shadow-none transition duration-300 group-hover:scale-[1.04]"
+          />
+          {!isOpen && (
+            <span className="absolute -right-1 bottom-1 flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white text-[color:var(--accent-primary)] shadow-[0_12px_28px_-18px_rgba(15,118,110,0.72)]">
+              <MessageCircle className="h-4 w-4" />
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}

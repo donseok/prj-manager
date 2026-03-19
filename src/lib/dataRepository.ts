@@ -1,7 +1,7 @@
-import type { Project, ProjectMember, Task, User } from '../types';
-import { sampleMembers, sampleProject, sampleTasks } from '../data/sampleData';
+import type { Project, ProjectMember, Task } from '../types';
+import { sampleProject, sampleMembers, sampleTasks } from '../data/sampleData';
 import { storage } from './utils';
-import { ensureSupabaseSession, isSupabaseConfigured, supabase } from './supabase';
+import { isSupabaseConfigured, supabase } from './supabase';
 
 interface ProjectRow {
   id: string;
@@ -48,12 +48,9 @@ interface TaskRow {
   updated_at: string;
 }
 
-export async function loadInitialProjects(currentUser: User) {
+export async function loadInitialProjects() {
   if (canUseSupabase()) {
-    const projects = await loadProjects();
-    if (projects.length > 0) return projects;
-
-    await seedRemoteSampleWorkspace(currentUser);
+    // RLS가 admin/user 권한에 따라 자동으로 필터링
     return loadProjects();
   }
 
@@ -61,44 +58,37 @@ export async function loadInitialProjects(currentUser: User) {
 }
 
 export async function loadProjects(): Promise<Project[]> {
-  if (canUseSupabase()) {
-    const user = await ensureSupabaseSession();
-    if (user && supabase) {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('updated_at', { ascending: false });
+  if (canUseSupabase() && supabase) {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('updated_at', { ascending: false });
 
-      if (!error) {
-        return (data as ProjectRow[]).map(mapProjectRow);
-      }
-
-      console.error('Failed to load projects from Supabase:', error);
+    if (!error) {
+      return (data as ProjectRow[]).map(mapProjectRow);
     }
+
+    console.error('Failed to load projects from Supabase:', error);
   }
 
   return storage.get<Project[]>('projects', []);
 }
 
 export async function upsertProject(project: Project): Promise<Project> {
-  if (canUseSupabase()) {
-    const user = await ensureSupabaseSession();
-    if (user && supabase) {
-      const row = toProjectRow(project);
-      row.owner_id = user.id;
+  if (canUseSupabase() && supabase) {
+    const row = toProjectRow(project);
 
-      const { data, error } = await supabase
-        .from('projects')
-        .upsert(row, { onConflict: 'id' })
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('projects')
+      .upsert(row, { onConflict: 'id' })
+      .select()
+      .single();
 
-      if (!error) {
-        return mapProjectRow(data as ProjectRow);
-      }
-
-      console.error('Failed to save project to Supabase:', error);
+    if (!error) {
+      return mapProjectRow(data as ProjectRow);
     }
+
+    console.error('Failed to save project to Supabase:', error);
   }
 
   const projects = storage.get<Project[]>('projects', []);
@@ -109,13 +99,10 @@ export async function upsertProject(project: Project): Promise<Project> {
 
 export async function deleteProjectById(projectId: string) {
   if (canUseSupabase() && supabase) {
-    const user = await ensureSupabaseSession();
-    if (user) {
-      const { error } = await supabase.from('projects').delete().eq('id', projectId);
-      if (!error) return;
+    const { error } = await supabase.from('projects').delete().eq('id', projectId);
+    if (!error) return;
 
-      console.error('Failed to delete project from Supabase:', error);
-    }
+    console.error('Failed to delete project from Supabase:', error);
   }
 
   const projects = storage.get<Project[]>('projects', []);
@@ -129,20 +116,17 @@ export async function deleteProjectById(projectId: string) {
 
 export async function loadProjectMembers(projectId: string): Promise<ProjectMember[]> {
   if (canUseSupabase() && supabase) {
-    const user = await ensureSupabaseSession();
-    if (user) {
-      const { data, error } = await supabase
-        .from('project_members')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true });
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true });
 
-      if (!error) {
-        return (data as ProjectMemberRow[]).map(mapProjectMemberRow);
-      }
-
-      console.error('Failed to load members from Supabase:', error);
+    if (!error) {
+      return (data as ProjectMemberRow[]).map(mapProjectMemberRow);
     }
+
+    console.error('Failed to load members from Supabase:', error);
   }
 
   return storage.get<ProjectMember[]>(`members-${projectId}`, []);
@@ -150,46 +134,43 @@ export async function loadProjectMembers(projectId: string): Promise<ProjectMemb
 
 export async function syncProjectMembers(projectId: string, members: ProjectMember[]) {
   if (canUseSupabase() && supabase) {
-    const user = await ensureSupabaseSession();
-    if (user) {
-      const rows = members.map(toProjectMemberRow);
-      const currentIds = new Set(rows.map((row) => row.id));
+    const rows = members.map(toProjectMemberRow);
+    const currentIds = new Set(rows.map((row) => row.id));
 
-      if (rows.length > 0) {
-        const { error: upsertError } = await supabase
+    if (rows.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('project_members')
+        .upsert(rows, { onConflict: 'id' });
+
+      if (upsertError) {
+        console.error('Failed to upsert members into Supabase:', upsertError);
+      } else {
+        const { data: existingRows, error: selectError } = await supabase
           .from('project_members')
-          .upsert(rows, { onConflict: 'id' });
+          .select('id')
+          .eq('project_id', projectId);
 
-        if (upsertError) {
-          console.error('Failed to upsert members into Supabase:', upsertError);
-        } else {
-          const { data: existingRows, error: selectError } = await supabase
-            .from('project_members')
-            .select('id')
-            .eq('project_id', projectId);
-
-          if (selectError) {
-            console.error('Failed to load remote members for cleanup:', selectError);
-            return;
-          }
-
-          const idsToDelete = (existingRows || [])
-            .map((row) => String((row as { id: string }).id))
-            .filter((id) => !currentIds.has(id));
-
-          if (idsToDelete.length > 0) {
-            const { error: deleteError } = await supabase.from('project_members').delete().in('id', idsToDelete);
-            if (deleteError) {
-              console.error('Failed to delete removed members from Supabase:', deleteError);
-            }
-          }
+        if (selectError) {
+          console.error('Failed to load remote members for cleanup:', selectError);
           return;
         }
-      } else {
-        const { error } = await supabase.from('project_members').delete().eq('project_id', projectId);
-        if (!error) return;
-        console.error('Failed to clear members from Supabase:', error);
+
+        const idsToDelete = (existingRows || [])
+          .map((row) => String((row as { id: string }).id))
+          .filter((id) => !currentIds.has(id));
+
+        if (idsToDelete.length > 0) {
+          const { error: deleteError } = await supabase.from('project_members').delete().in('id', idsToDelete);
+          if (deleteError) {
+            console.error('Failed to delete removed members from Supabase:', deleteError);
+          }
+        }
+        return;
       }
+    } else {
+      const { error } = await supabase.from('project_members').delete().eq('project_id', projectId);
+      if (!error) return;
+      console.error('Failed to clear members from Supabase:', error);
     }
   }
 
@@ -198,21 +179,18 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
 
 export async function loadProjectTasks(projectId: string): Promise<Task[]> {
   if (canUseSupabase() && supabase) {
-    const user = await ensureSupabaseSession();
-    if (user) {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('level', { ascending: true })
-        .order('order_index', { ascending: true });
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('level', { ascending: true })
+      .order('order_index', { ascending: true });
 
-      if (!error) {
-        return (data as TaskRow[]).map(mapTaskRow);
-      }
-
-      console.error('Failed to load tasks from Supabase:', error);
+    if (!error) {
+      return (data as TaskRow[]).map(mapTaskRow);
     }
+
+    console.error('Failed to load tasks from Supabase:', error);
   }
 
   return storage.get<Task[]>(`tasks-${projectId}`, []);
@@ -220,48 +198,45 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
 
 export async function syncProjectTasks(projectId: string, tasks: Task[]) {
   if (canUseSupabase() && supabase) {
-    const user = await ensureSupabaseSession();
-    if (user) {
-      const rows = tasks
-        .map(toTaskRow)
-        .sort((a, b) => a.level - b.level || a.order_index - b.order_index);
-      const currentIds = new Set(rows.map((row) => row.id));
+    const rows = tasks
+      .map(toTaskRow)
+      .sort((a, b) => a.level - b.level || a.order_index - b.order_index);
+    const currentIds = new Set(rows.map((row) => row.id));
 
-      if (rows.length > 0) {
-        const { error: upsertError } = await supabase
+    if (rows.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('tasks')
+        .upsert(rows, { onConflict: 'id' });
+
+      if (upsertError) {
+        console.error('Failed to upsert tasks into Supabase:', upsertError);
+      } else {
+        const { data: existingRows, error: selectError } = await supabase
           .from('tasks')
-          .upsert(rows, { onConflict: 'id' });
+          .select('id')
+          .eq('project_id', projectId);
 
-        if (upsertError) {
-          console.error('Failed to upsert tasks into Supabase:', upsertError);
-        } else {
-          const { data: existingRows, error: selectError } = await supabase
-            .from('tasks')
-            .select('id')
-            .eq('project_id', projectId);
-
-          if (selectError) {
-            console.error('Failed to load remote tasks for cleanup:', selectError);
-            return;
-          }
-
-          const idsToDelete = (existingRows || [])
-            .map((row) => String((row as { id: string }).id))
-            .filter((id) => !currentIds.has(id));
-
-          if (idsToDelete.length > 0) {
-            const { error: deleteError } = await supabase.from('tasks').delete().in('id', idsToDelete);
-            if (deleteError) {
-              console.error('Failed to delete removed tasks from Supabase:', deleteError);
-            }
-          }
+        if (selectError) {
+          console.error('Failed to load remote tasks for cleanup:', selectError);
           return;
         }
-      } else {
-        const { error } = await supabase.from('tasks').delete().eq('project_id', projectId);
-        if (!error) return;
-        console.error('Failed to clear tasks from Supabase:', error);
+
+        const idsToDelete = (existingRows || [])
+          .map((row) => String((row as { id: string }).id))
+          .filter((id) => !currentIds.has(id));
+
+        if (idsToDelete.length > 0) {
+          const { error: deleteError } = await supabase.from('tasks').delete().in('id', idsToDelete);
+          if (deleteError) {
+            console.error('Failed to delete removed tasks from Supabase:', deleteError);
+          }
+        }
+        return;
       }
+    } else {
+      const { error } = await supabase.from('tasks').delete().eq('project_id', projectId);
+      if (!error) return;
+      console.error('Failed to clear tasks from Supabase:', error);
     }
   }
 
@@ -283,25 +258,6 @@ function ensureLocalSampleWorkspace() {
   }
 
   return projects;
-}
-
-async function seedRemoteSampleWorkspace(user: User) {
-  const seededProject: Project = {
-    ...sampleProject,
-    ownerId: user.id,
-  };
-
-  await upsertProject(seededProject);
-
-  const seededMembers: ProjectMember[] = sampleMembers.map((member, index) => ({
-    ...member,
-    userId: index === 0 ? user.id : undefined,
-    name: index === 0 ? user.name : member.name,
-    role: index === 0 ? 'owner' : member.role,
-  }));
-
-  await syncProjectMembers(seededProject.id, seededMembers);
-  await syncProjectTasks(seededProject.id, sampleTasks);
 }
 
 function mapProjectRow(row: ProjectRow): Project {

@@ -1,9 +1,12 @@
 // 사용자 타입
+export type SystemRole = 'admin' | 'user';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   avatarUrl?: string;
+  systemRole: SystemRole;
   createdAt: string;
 }
 

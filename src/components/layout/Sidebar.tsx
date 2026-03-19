@@ -1,12 +1,14 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
+import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
 
 export default function Sidebar() {
   const { projectId } = useParams();
   const { projects } = useProjectStore();
+  const { isAdmin } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const activeProjects = projects.filter((project) => project.status === 'active').length;
 
@@ -85,6 +87,11 @@ export default function Sidebar() {
                 <NavLink to="/projects" className={navLinkClass} title="전체 프로젝트">
                   <FolderOpen className="w-5 h-5" />
                 </NavLink>
+                {isAdmin && (
+                  <NavLink to="/admin/users" className={navLinkClass} title="사용자 관리">
+                    <ShieldCheck className="w-5 h-5" />
+                  </NavLink>
+                )}
               </nav>
             )}
 
@@ -238,6 +245,12 @@ export default function Sidebar() {
                   <FolderOpen className="w-5 h-5" />
                   전체 프로젝트
                 </NavLink>
+                {isAdmin && (
+                  <NavLink to="/admin/users" className={navLinkClass}>
+                    <ShieldCheck className="w-5 h-5" />
+                    사용자 관리
+                  </NavLink>
+                )}
               </nav>
             )}
           </div>

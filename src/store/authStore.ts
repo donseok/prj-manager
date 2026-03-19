@@ -7,6 +7,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
+  // Computed-like
+  isAdmin: boolean;
+
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
@@ -19,11 +22,13 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
+      isAdmin: false,
 
       setUser: (user) =>
         set({
           user,
           isAuthenticated: !!user,
+          isAdmin: user?.systemRole === 'admin',
           isLoading: false,
         }),
 
@@ -33,6 +38,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           isAuthenticated: false,
+          isAdmin: false,
           isLoading: false,
         }),
     }),
