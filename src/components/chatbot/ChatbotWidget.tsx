@@ -37,21 +37,23 @@ export default function ChatbotWidget() {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    setMessages([
-      {
-        id: generateId(),
-        role: 'assistant',
-        text: createChatbotGreeting({
-          project: currentProject,
-          members: [],
-          tasks: [],
-          allProjects: projects,
-        }),
-      },
-    ]);
-    setDraft('');
-    setIsThinking(false);
-  }, [currentProject?.id, currentProject?.name]);
+    const greeting: ChatMessage = {
+      id: generateId(),
+      role: 'assistant',
+      text: createChatbotGreeting({
+        project: currentProject,
+        members: [],
+        tasks: [],
+        allProjects: projects,
+      }),
+    };
+    // 타이머를 사용해 렌더 사이클 후 상태를 업데이트
+    timerRef.current = window.setTimeout(() => {
+      setMessages([greeting]);
+      setDraft('');
+      setIsThinking(false);
+    }, 0);
+  }, [currentProject, projects]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

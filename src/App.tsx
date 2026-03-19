@@ -17,7 +17,8 @@ import { useTaskStore } from './store/taskStore';
 import { isSupabaseConfigured, ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
 import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// 인증 라우트 가드 (현재 비활성화, 추후 로그인 연동 시 사용)
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
@@ -35,7 +36,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
+export function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuthStore();
 
   if (!isAdmin) {

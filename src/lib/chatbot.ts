@@ -1,5 +1,6 @@
 import { TASK_STATUS_LABELS, LEVEL_LABELS, PROJECT_STATUS_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
+import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './taskAnalytics';
 import { isSupabaseConfigured, supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 
@@ -151,40 +152,64 @@ function diceCoefficient(a: string, b: string): number {
   return total === 0 ? 0 : (2 * intersection) / total;
 }
 
-// ─── Fuzzy entity matching ───────────────────────────────────
+// ─── Generic fuzzy matcher ───────────────────────────────────
+
+interface FuzzyMatchOptions {
+  /** 최소 점수 임계값 */
+  threshold: number;
+  /** 토큰 기반 매칭 사용 여부 (짧은 이름은 false) */
+  useTokens?: boolean;
+  /** 포함 매칭 보너스 (기본 12) */
+  containsBonus?: number;
+  /** 역방향 포함 매칭 보너스 (기본 8) */
+  reverseContainsBonus?: number;
+}
+
+function fuzzyScore(
+  nq: string,
+  qTokens: string[],
+  targetName: string,
+  options: FuzzyMatchOptions
+): number {
+  const nt = normalizeText(targetName);
+  const containsBonus = options.containsBonus ?? 12;
+  const reverseBonus = options.reverseContainsBonus ?? 8;
+  let score = 0;
+
+  if (nt.length >= 2 && nq.includes(nt)) {
+    score += nt.length <= 2 ? Math.min(containsBonus, 8) : containsBonus;
+  }
+  if (nq.length >= 3 && nt.includes(nq)) score += reverseBonus;
+
+  if (options.useTokens !== false) {
+    const tTokens = tokenize(targetName);
+    if (tTokens.length > 0 && qTokens.length > 0) {
+      const overlap = tTokens.filter((tt) =>
+        qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
+      );
+      score += (overlap.length / tTokens.length) * 6;
+    }
+
+    for (const qt of qTokens) {
+      for (const tt of tokenize(targetName)) {
+        const dice = diceCoefficient(qt, tt);
+        if (dice >= 0.55) score += dice * 3;
+      }
+    }
+  }
+
+  const wholeDice = diceCoefficient(nq, nt);
+  if (wholeDice >= 0.4) score += wholeDice * 4;
+
+  return score;
+}
 
 function fuzzyMatchTask(question: string, tasks: Task[]): { task: Task; score: number } | null {
   const nq = normalizeText(question);
   const qTokens = tokenize(question);
 
   const scored = tasks
-    .map((task) => {
-      const nt = normalizeText(task.name);
-      const tTokens = tokenize(task.name);
-      let score = 0;
-
-      if (nt.length >= 2 && nq.includes(nt)) score += 12;
-      if (nq.length >= 3 && nt.includes(nq)) score += 8;
-
-      if (tTokens.length > 0) {
-        const overlap = tTokens.filter((tt) =>
-          qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
-        );
-        score += (overlap.length / tTokens.length) * 6;
-      }
-
-      for (const qt of qTokens) {
-        for (const tt of tTokens) {
-          const dice = diceCoefficient(qt, tt);
-          if (dice >= 0.55) score += dice * 3;
-        }
-      }
-
-      const wholeDice = diceCoefficient(nq, nt);
-      if (wholeDice >= 0.4) score += wholeDice * 4;
-
-      return { task, score };
-    })
+    .map((task) => ({ task, score: fuzzyScore(nq, qTokens, task.name, { threshold: 4 }) }))
     .filter((item) => item.score >= 4)
     .sort((a, b) => b.score - a.score || b.task.name.length - a.task.name.length);
 
@@ -195,19 +220,15 @@ function fuzzyMatchMember(question: string, members: ProjectMember[]): { member:
   const nq = normalizeText(question);
 
   const scored = members
-    .map((member) => {
-      const nm = normalizeText(member.name);
-      let score = 0;
-
-      if (nm.length >= 2 && nq.includes(nm)) {
-        score += nm.length <= 2 ? 8 : 10;
-      }
-
-      const dice = diceCoefficient(nq, nm);
-      if (dice >= 0.5 && nm.length >= 3) score += dice * 5;
-
-      return { member, score };
-    })
+    .map((member) => ({
+      member,
+      score: fuzzyScore(nq, [], member.name, {
+        threshold: 6,
+        useTokens: false,
+        containsBonus: 10,
+        reverseContainsBonus: 0,
+      }),
+    }))
     .filter((item) => item.score >= 6)
     .sort((a, b) => b.score - a.score || b.member.name.length - a.member.name.length);
 
@@ -220,26 +241,10 @@ function fuzzyMatchProject(question: string, projects: Project[]): { project: Pr
 
   const scored = projects
     .filter((p) => p.status !== 'deleted')
-    .map((project) => {
-      const np = normalizeText(project.name);
-      const pTokens = tokenize(project.name);
-      let score = 0;
-
-      if (np.length >= 2 && nq.includes(np)) score += 12;
-      if (nq.length >= 3 && np.includes(nq)) score += 6;
-
-      if (pTokens.length > 0) {
-        const overlap = pTokens.filter((pt) =>
-          qTokens.some((qt) => qt.includes(pt) || pt.includes(qt))
-        );
-        score += (overlap.length / pTokens.length) * 6;
-      }
-
-      const dice = diceCoefficient(nq, np);
-      if (dice >= 0.4) score += dice * 4;
-
-      return { project, score };
-    })
+    .map((project) => ({
+      project,
+      score: fuzzyScore(nq, qTokens, project.name, { threshold: 5, reverseContainsBonus: 6 }),
+    }))
     .filter((item) => item.score >= 5)
     .sort((a, b) => b.score - a.score);
 
@@ -315,15 +320,6 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
 
 const HELP_TEXT =
   '프로젝트명, 작업명, 담당자명, 또는 키워드로 질문하시면 데이터 기준으로 답변합니다.';
-
-function getLeafTasks(tasks: Task[]): Task[] {
-  const parentIds = new Set(tasks.map((t) => t.parentId).filter(Boolean));
-  return tasks.filter((t) => !parentIds.has(t.id));
-}
-
-function getAssigneeName(task: Task, members: ProjectMember[]): string {
-  return members.find((m) => m.id === task.assigneeId)?.name || '미지정';
-}
 
 function formatTaskPeriod(task: Task): string {
   if (!task.planStart && !task.planEnd) return '일정 미입력';
@@ -466,26 +462,12 @@ function buildWeeklyAnswer(rc: ResolvedContext, type: 'this' | 'next'): string {
 }
 
 function buildMemberSummaryAnswer(rc: ResolvedContext): string {
-  const leafTasks = getLeafTasks(rc.tasks);
   const baseDate = getBaseDate(rc.project);
-
-  const workloads = rc.members
-    .map((m) => {
-      const mt = leafTasks.filter((t) => t.assigneeId === m.id);
-      return {
-        name: m.name,
-        total: mt.length,
-        inProgress: mt.filter((t) => t.status === 'in_progress').length,
-        completed: mt.filter((t) => t.status === 'completed').length,
-        delayed: getDelayedTasks(mt, baseDate).length,
-      };
-    })
-    .filter((w) => w.total > 0)
-    .sort((a, b) => b.delayed - a.delayed || b.total - a.total);
+  const workloads = calculateAssigneeWorkloads(rc.tasks, rc.members, baseDate);
 
   if (workloads.length === 0) return `"${rc.project.name}"에 담당자 배정된 작업이 없습니다.`;
 
-  const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
+  const unassigned = getLeafTasks(rc.tasks).filter((t) => !t.assigneeId).length;
   return [
     `"${rc.project.name}" 멤버별 업무 현황`,
     ...workloads.slice(0, 6).map((w) =>

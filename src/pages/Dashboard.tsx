@@ -23,13 +23,21 @@ import Button from '../components/common/Button';
 import { generateProjectReport } from '../lib/exportReport';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
-  calculateOverallProgress,
   getDelayedTasks,
   getWeeklyTasks,
   formatDate,
   formatPercent,
   getDelayDays,
 } from '../lib/utils';
+import {
+  calculateProjectStats,
+  calculateStatusDistribution,
+  calculateAssigneeWorkloads,
+  calculatePhaseProgress,
+  calculateWeightDistribution,
+  calculateTimeline,
+  getRecentlyCompleted,
+} from '../lib/taskAnalytics';
 import {
   BarChart,
   Bar,
@@ -84,127 +92,25 @@ export default function Dashboard() {
     ? 'metric-card p-5'
     : 'metric-card bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,245,241,0.92))] p-5 shadow-[0_24px_48px_-38px_rgba(17,24,39,0.12)]';
 
-  const stats = useMemo(() => {
-    const leafTasks = tasks.filter((task) => !tasks.some((child) => child.parentId === task.id));
-    const completedTasks = leafTasks.filter((task) => task.status === 'completed');
-    const inProgressTasks = leafTasks.filter((task) => task.status === 'in_progress');
-    const delayedTasks = getDelayedTasks(leafTasks);
-    const overallProgress = calculateOverallProgress(tasks);
-
-    const totalPlanWeight = tasks
-      .filter((task) => task.level === 1)
-      .reduce((sum, task) => sum + task.weight, 0);
-
-    const planProgress =
-      totalPlanWeight > 0
-        ? tasks
-            .filter((task) => task.level === 1)
-            .reduce((sum, task) => sum + task.weight * task.planProgress, 0) / totalPlanWeight
-        : 0;
-
-    return {
-      totalTasks: leafTasks.length,
-      completedTasks: completedTasks.length,
-      inProgressTasks: inProgressTasks.length,
-      delayedTasks: delayedTasks.length,
-      overallProgress,
-      planProgress,
-    };
-  }, [tasks]);
-
-  const statusData = useMemo(() => {
-    const leafTasks = tasks.filter((task) => !tasks.some((child) => child.parentId === task.id));
-
-    return [
-      { name: '대기', value: leafTasks.filter((task) => task.status === 'pending').length, color: '#8B95A5' },
-      { name: '진행중', value: leafTasks.filter((task) => task.status === 'in_progress').length, color: '#2BAAA0' },
-      { name: '완료', value: leafTasks.filter((task) => task.status === 'completed').length, color: '#34C997' },
-      { name: '보류', value: leafTasks.filter((task) => task.status === 'on_hold').length, color: '#F0A167' },
-    ].filter((item) => item.value > 0);
-  }, [tasks]);
-
-  const assigneeData = useMemo(() => {
-    const leafTasks = tasks.filter(
-      (task) => !tasks.some((child) => child.parentId === task.id) && task.assigneeId
-    );
-
-    const grouped = leafTasks.reduce((acc, task) => {
-      const assignee = members.find((member) => member.id === task.assigneeId);
-      const name = assignee?.name || '미지정';
-      if (!acc[name]) {
-        acc[name] = { total: 0, completed: 0 };
-      }
-      acc[name].total++;
-      if (task.status === 'completed') {
-        acc[name].completed++;
-      }
-      return acc;
-    }, {} as Record<string, { total: number; completed: number }>);
-
-    return Object.entries(grouped).map(([name, data]) => ({
-      name,
-      total: data.total,
-      completed: data.completed,
-      remaining: data.total - data.completed,
-    }));
-  }, [tasks, members]);
+  const stats = useMemo(() => calculateProjectStats(tasks), [tasks]);
+  const statusData = useMemo(() => calculateStatusDistribution(tasks), [tasks]);
+  const assigneeData = useMemo(() => calculateAssigneeWorkloads(tasks, members), [tasks, members]);
 
   const thisWeekTasks = useMemo(() => getWeeklyTasks(tasks, 'this').slice(0, 5), [tasks]);
   const nextWeekTasks = useMemo(() => getWeeklyTasks(tasks, 'next').slice(0, 5), [tasks]);
   const delayedTasks = useMemo(() => getDelayedTasks(tasks).slice(0, 5), [tasks]);
 
-  // Phase별 진행률 데이터
-  const phaseData = useMemo(() => {
-    return tasks
-      .filter((t) => t.level === 1)
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((phase) => ({
-        name: phase.name.length > 8 ? phase.name.slice(0, 8) + '…' : phase.name,
-        계획: Math.round(phase.planProgress),
-        실적: Math.round(phase.actualProgress),
-      }));
-  }, [tasks]);
+  const phaseData = useMemo(() => calculatePhaseProgress(tasks), [tasks]);
 
-  // 프로젝트 일정 요약
   const timeline = useMemo(() => {
     if (!currentProject?.startDate || !currentProject?.endDate) return null;
-    const start = new Date(currentProject.startDate);
-    const end = new Date(currentProject.endDate);
-    const now = new Date();
-    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    const elapsedDays = Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const remainingDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    const elapsedPercent = Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100));
-    return { start, end, totalDays, elapsedDays, remainingDays, elapsedPercent };
+    return calculateTimeline(currentProject.startDate, currentProject.endDate);
   }, [currentProject]);
 
-  // 가중치 분포 데이터
   const WEIGHT_COLORS = ['#2BAAA0', '#5B8DEF', '#F0A167', '#34C997', '#E87C8A', '#A78BFA'];
-  const weightData = useMemo(() => {
-    const phases = tasks
-      .filter((t) => t.level === 1)
-      .sort((a, b) => a.orderIndex - b.orderIndex);
-    const totalWeight = phases.reduce((sum, p) => sum + p.weight, 0);
-    if (totalWeight === 0) return [];
-    return phases.map((phase) => ({
-      name: phase.name,
-      value: phase.weight,
-      percent: Math.round((phase.weight / totalWeight) * 100),
-    }));
-  }, [tasks]);
+  const weightData = useMemo(() => calculateWeightDistribution(tasks), [tasks]);
 
-  // 최근 완료 작업
-  const recentlyCompleted = useMemo(() => {
-    return tasks
-      .filter(
-        (t) =>
-          t.status === 'completed' &&
-          t.actualEnd &&
-          !tasks.some((child) => child.parentId === t.id)
-      )
-      .sort((a, b) => (b.actualEnd! > a.actualEnd! ? 1 : -1))
-      .slice(0, 5);
-  }, [tasks]);
+  const recentlyCompleted = useMemo(() => getRecentlyCompleted(tasks), [tasks]);
 
   // 보고서 다운로드
   const [isExporting, setIsExporting] = useState(false);

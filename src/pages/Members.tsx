@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
@@ -7,6 +7,7 @@ import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { generateId } from '../lib/utils';
 import { syncProjectMembers } from '../lib/dataRepository';
+import { useAutoSave } from '../hooks/useAutoSave';
 import type { ProjectMember } from '../types';
 
 export default function Members() {
@@ -22,15 +23,11 @@ export default function Members() {
     role: 'member',
   });
 
-  useEffect(() => {
-    if (!projectId || membersLoadedProjectId !== projectId) return;
-
-    const timeoutId = setTimeout(() => {
-      void syncProjectMembers(projectId, members);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [members, membersLoadedProjectId, projectId]);
+  const saveMembers = useCallback(
+    (data: ProjectMember[]) => syncProjectMembers(projectId!, data),
+    [projectId]
+  );
+  useAutoSave(members, saveMembers, { projectId, loadedProjectId: membersLoadedProjectId, delay: 500 });
 
   const handleAddMember = () => {
     if (!newMember.name.trim()) return;

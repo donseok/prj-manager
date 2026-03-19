@@ -19,7 +19,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: { id: 'default', email: 'admin@dkflow.com', name: '관리자', systemRole: 'admin' as const },
+      user: { id: 'default', email: 'admin@dkflow.com', name: '관리자', systemRole: 'admin' as const, createdAt: new Date().toISOString() },
       isAuthenticated: true,
       isLoading: false,
       isAdmin: true,

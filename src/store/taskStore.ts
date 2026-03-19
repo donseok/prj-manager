@@ -110,21 +110,48 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // 같은 부모 내에서 이동하는 경우
-    const siblings = tasks.filter((t) => t.parentId === newParentId && t.id !== taskId);
-    siblings.sort((a, b) => a.orderIndex - b.orderIndex);
+    const newParentLevel = newParentId
+      ? (tasks.find((p) => p.id === newParentId)?.level || 0)
+      : 0;
+    const newLevel = newParentLevel + 1;
+    const levelDiff = newLevel - task.level;
 
-    // orderIndex 재계산
+    // 자식 작업들의 레벨도 재귀적으로 조정
+    const descendantIds = new Set<string>();
+    const findDescendants = (pid: string) => {
+      tasks.filter((t) => t.parentId === pid).forEach((t) => {
+        descendantIds.add(t.id);
+        findDescendants(t.id);
+      });
+    };
+    findDescendants(taskId);
+
+    // 같은 부모 내 형제 (이동 대상 제외) 정렬
+    const siblings = tasks
+      .filter((t) => t.parentId === newParentId && t.id !== taskId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
     const newTasks = tasks.map((t) => {
       if (t.id === taskId) {
         return {
           ...t,
           parentId: newParentId,
           orderIndex: newIndex,
-          level: newParentId ? (tasks.find((p) => p.id === newParentId)?.level || 0) + 1 : 1,
+          level: newLevel,
+          updatedAt: new Date().toISOString(),
         };
       }
 
+      // 자식 작업 레벨 조정
+      if (descendantIds.has(t.id)) {
+        return {
+          ...t,
+          level: t.level + levelDiff,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      // 형제 작업의 orderIndex 재배열
       if (t.parentId === newParentId) {
         const currentIndex = siblings.findIndex((s) => s.id === t.id);
         if (currentIndex >= newIndex) {
@@ -149,15 +176,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       newExpanded.add(id);
     }
     set({ expandedIds: newExpanded });
-
-    // 트리 재구성
-    const tasksWithExpanded = tasks.map((t) => ({
-      ...t,
-      isExpanded: newExpanded.has(t.id),
-    }));
-    const tree = buildTaskTree(tasksWithExpanded);
-    const flat = flattenTaskTree(tree);
-    set({ tasks: tasksWithExpanded, taskTree: tree, flatTasks: flat });
+    get().setTasks(tasks);
   },
 
   expandAll: () => {

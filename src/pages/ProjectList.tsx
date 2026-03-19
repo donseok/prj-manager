@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -26,18 +26,33 @@ import {
   getProjectTimeline,
   getProjectVisualTone,
 } from '../lib/projectVisuals';
+import { useProjectStatus } from '../hooks/useProjectStatus';
 import type { Project, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function ProjectList() {
   const navigate = useNavigate();
-  const { projects, addProject, deleteProject, updateProject } = useProjectStore();
+  const { projects, addProject, deleteProject } = useProjectStore();
   const { user, isAdmin } = useAuthStore();
   const { isDark } = useThemeStore();
+  const { changeStatus } = useProjectStatus();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
+
+  // 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpenId]);
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -102,25 +117,7 @@ export default function ProjectList() {
   const handleChangeStatus = async (id: string, newStatus: ProjectStatus) => {
     const project = projects.find((item) => item.id === id);
     if (!project) return;
-
-    const now = new Date().toISOString();
-    const updates: Partial<Project> = {
-      status: newStatus,
-      updatedAt: now,
-    };
-
-    if (newStatus === 'completed') {
-      updates.completedAt = now;
-    } else {
-      updates.completedAt = undefined;
-    }
-
-    const savedProject = await upsertProject({ ...project, ...updates } as Project);
-    updateProject(id, {
-      status: savedProject.status,
-      completedAt: savedProject.completedAt,
-      updatedAt: savedProject.updatedAt,
-    });
+    await changeStatus(project, newStatus);
     setMenuOpenId(null);
   };
 
@@ -292,7 +289,7 @@ export default function ProjectList() {
                       </div>
                     </Link>
 
-                    <div className="relative">
+                    <div className="relative" ref={menuOpenId === project.id ? menuRef : undefined}>
                       <button
                         onClick={(event) => {
                           event.stopPropagation();

@@ -1,9 +1,66 @@
 import { NavLink, useParams } from 'react-router-dom';
 import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
+
+// ─── Nav item definitions ────────────────────────────────────
+
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  end?: boolean;
+  adminOnly?: boolean;
+}
+
+function getProjectNavItems(projectId: string): NavItem[] {
+  return [
+    { to: `/projects/${projectId}`, icon: LayoutDashboard, label: '대시보드', end: true },
+    { to: `/projects/${projectId}/wbs`, icon: ListTree, label: 'WBS' },
+    { to: `/projects/${projectId}/gantt`, icon: Calendar, label: '간트 차트' },
+    { to: `/projects/${projectId}/members`, icon: Users, label: '멤버' },
+    { to: `/projects/${projectId}/settings`, icon: Settings, label: '설정' },
+  ];
+}
+
+const GLOBAL_NAV_ITEMS: NavItem[] = [
+  { to: '/', icon: LayoutDashboard, label: '홈', end: true },
+  { to: '/projects', icon: FolderOpen, label: '전체 프로젝트' },
+  { to: '/admin/users', icon: ShieldCheck, label: '사용자 관리', adminOnly: true },
+  { to: '/manual', icon: BookOpen, label: '사용자 매뉴얼' },
+];
+
+// ─── Shared nav link renderer ────────────────────────────────
+
+function SidebarNav({
+  items,
+  collapsed,
+  isAdmin,
+  navLinkClass,
+}: {
+  items: NavItem[];
+  collapsed: boolean;
+  isAdmin: boolean;
+  navLinkClass: (props: { isActive: boolean }) => string;
+}) {
+  const visibleItems = items.filter((item) => !item.adminOnly || isAdmin);
+
+  return (
+    <nav className="space-y-2">
+      {visibleItems.map((item) => (
+        <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClass} title={collapsed ? item.label : undefined}>
+          <item.icon className="w-5 h-5" />
+          {!collapsed && item.label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
+// ─── Main Sidebar ────────────────────────────────────────────
 
 export default function Sidebar() {
   const { projectId } = useParams();
@@ -21,7 +78,8 @@ export default function Sidebar() {
         : 'text-white/84 hover:bg-white/10 hover:text-white'
     );
 
-  // 접힌 상태
+  const navItems = projectId ? getProjectNavItems(projectId) : GLOBAL_NAV_ITEMS;
+
   if (sidebarCollapsed) {
     return (
       <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[68px] lg:self-start transition-all duration-300">
@@ -37,7 +95,6 @@ export default function Sidebar() {
 
             <div className="w-full border-t border-white/10" />
 
-            {/* 프로젝트 아이콘들 */}
             <div className="space-y-2">
               {projects.map((project) => (
                 <NavLink
@@ -60,48 +117,11 @@ export default function Sidebar() {
 
             <div className="w-full border-t border-white/10" />
 
-            {/* 메뉴 아이콘들 */}
-            {projectId ? (
-              <nav className="space-y-2">
-                <NavLink to={`/projects/${projectId}`} end className={navLinkClass} title="대시보드">
-                  <LayoutDashboard className="w-5 h-5" />
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/wbs`} className={navLinkClass} title="WBS">
-                  <ListTree className="w-5 h-5" />
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/gantt`} className={navLinkClass} title="간트 차트">
-                  <Calendar className="w-5 h-5" />
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/members`} className={navLinkClass} title="멤버">
-                  <Users className="w-5 h-5" />
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/settings`} className={navLinkClass} title="설정">
-                  <Settings className="w-5 h-5" />
-                </NavLink>
-              </nav>
-            ) : (
-              <nav className="space-y-2">
-                <NavLink to="/" end className={navLinkClass} title="홈">
-                  <LayoutDashboard className="w-5 h-5" />
-                </NavLink>
-                <NavLink to="/projects" className={navLinkClass} title="전체 프로젝트">
-                  <FolderOpen className="w-5 h-5" />
-                </NavLink>
-                {isAdmin && (
-                  <NavLink to="/admin/users" className={navLinkClass} title="사용자 관리">
-                    <ShieldCheck className="w-5 h-5" />
-                  </NavLink>
-                )}
-                <NavLink to="/manual" className={navLinkClass} title="사용자 매뉴얼">
-                  <BookOpen className="w-5 h-5" />
-                </NavLink>
-              </nav>
-            )}
+            <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} />
 
             <NavLink
               to="/projects/new"
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
-              
               title="새 프로젝트"
             >
               <Plus className="w-4 h-4" />
@@ -112,7 +132,6 @@ export default function Sidebar() {
     );
   }
 
-  // 펼쳐진 상태 (기존)
   return (
     <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[310px] lg:self-start transition-all duration-300">
       <div className="app-panel-dark flex overflow-hidden">
@@ -216,51 +235,7 @@ export default function Sidebar() {
               </NavLink>
             </div>
 
-            {projectId ? (
-              <nav className="space-y-2">
-                <NavLink to={`/projects/${projectId}`} end className={navLinkClass}>
-                  <LayoutDashboard className="w-5 h-5" />
-                  대시보드
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/wbs`} className={navLinkClass}>
-                  <ListTree className="w-5 h-5" />
-                  WBS
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/gantt`} className={navLinkClass}>
-                  <Calendar className="w-5 h-5" />
-                  간트 차트
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/members`} className={navLinkClass}>
-                  <Users className="w-5 h-5" />
-                  멤버
-                </NavLink>
-                <NavLink to={`/projects/${projectId}/settings`} className={navLinkClass}>
-                  <Settings className="w-5 h-5" />
-                  설정
-                </NavLink>
-              </nav>
-            ) : (
-              <nav className="space-y-2">
-                <NavLink to="/" end className={navLinkClass}>
-                  <LayoutDashboard className="w-5 h-5" />
-                  홈
-                </NavLink>
-                <NavLink to="/projects" className={navLinkClass}>
-                  <FolderOpen className="w-5 h-5" />
-                  전체 프로젝트
-                </NavLink>
-                {isAdmin && (
-                  <NavLink to="/admin/users" className={navLinkClass}>
-                    <ShieldCheck className="w-5 h-5" />
-                    사용자 관리
-                  </NavLink>
-                )}
-                <NavLink to="/manual" className={navLinkClass}>
-                  <BookOpen className="w-5 h-5" />
-                  사용자 매뉴얼
-                </NavLink>
-              </nav>
-            )}
+            <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} />
           </div>
 
           <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">

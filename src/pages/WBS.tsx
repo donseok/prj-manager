@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Plus,
@@ -10,6 +10,7 @@ import {
   ExpandIcon,
   ShrinkIcon,
   Download,
+  GripVertical,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -21,6 +22,7 @@ import {
 } from '../lib/utils';
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectTasks } from '../lib/dataRepository';
+import { useAutoSave } from '../hooks/useAutoSave';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
@@ -41,33 +43,109 @@ export default function WBS() {
     collapseAll,
     editingCell,
     setEditingCell,
+    moveTask,
     undo,
     redo,
     history,
     historyIndex,
   } = useTaskStore();
 
-  const [selectedRows] = useState<Set<string>>(new Set());
+  // 드래그앤드롭 상태
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'child' | null>(null);
+  const dragOverCounterRef = useRef(0);
 
-  // 변경 시 자동 저장 (디바운스)
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setDragTaskId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', taskId);
+    // 드래그 이미지를 약간 투명하게
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
 
-  useEffect(() => {
-    if (projectId && loadedProjectId === projectId) {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        void syncProjectTasks(projectId, tasks);
-      }, 700);
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDragTaskId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
+    dragOverCounterRef.current = 0;
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetTask: Task) => {
+    e.preventDefault();
+    if (!dragTaskId || dragTaskId === targetTask.id) return;
+
+    // 자기 자신의 자식으로 이동 방지
+    const isDescendant = (parentId: string, childId: string): boolean => {
+      const children = tasks.filter((t) => t.parentId === parentId);
+      return children.some((c) => c.id === childId || isDescendant(c.id, childId));
+    };
+    if (isDescendant(dragTaskId, targetTask.id)) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+
+    // 상단 25% = before, 하단 25% = after, 중간 50% = child (하위 레벨이 4 미만일 때)
+    let pos: 'before' | 'after' | 'child';
+    if (y < height * 0.25) {
+      pos = 'before';
+    } else if (y > height * 0.75) {
+      pos = 'after';
+    } else {
+      pos = targetTask.level < 4 ? 'child' : 'after';
     }
 
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [loadedProjectId, projectId, tasks]);
+    setDropTargetId(targetTask.id);
+    setDropPosition(pos);
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetTask: Task) => {
+    e.preventDefault();
+    if (!dragTaskId || !dropPosition || dragTaskId === targetTask.id) return;
+
+    const draggedTask = tasks.find((t) => t.id === dragTaskId);
+    if (!draggedTask) return;
+
+    if (dropPosition === 'child') {
+      // 타겟 하위로 이동
+      const childCount = tasks.filter((t) => t.parentId === targetTask.id).length;
+      moveTask(dragTaskId, targetTask.id, childCount);
+    } else if (dropPosition === 'before') {
+      // 타겟 앞에 삽입
+      const parentId = targetTask.parentId ?? null;
+      const siblings = tasks
+        .filter((t) => t.parentId === parentId)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
+      const targetIndex = siblings.findIndex((s) => s.id === targetTask.id);
+      moveTask(dragTaskId, parentId, Math.max(0, targetIndex));
+    } else {
+      // 타겟 뒤에 삽입
+      const parentId = targetTask.parentId ?? null;
+      const siblings = tasks
+        .filter((t) => t.parentId === parentId)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
+      const targetIndex = siblings.findIndex((s) => s.id === targetTask.id);
+      moveTask(dragTaskId, parentId, targetIndex + 1);
+    }
+
+    setDragTaskId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
+  };
+
+  // 변경 시 자동 저장 (디바운스)
+  const saveTasks = useCallback(
+    (data: Task[]) => syncProjectTasks(projectId!, data),
+    [projectId]
+  );
+  useAutoSave(tasks, saveTasks, { projectId, loadedProjectId });
 
   // 키보드 단축키
   useEffect(() => {
@@ -467,13 +545,32 @@ export default function WBS() {
               {flatTasks.map((task) => (
                 <tr
                   key={task.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, task.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleDragOver(e, task)}
+                  onDragLeave={() => {
+                    if (dropTargetId === task.id) {
+                      setDropTargetId(null);
+                      setDropPosition(null);
+                    }
+                  }}
+                  onDrop={(e) => handleDrop(e, task)}
                   className={cn(
                     task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
-                    selectedRows.has(task.id) && 'bg-[rgba(15,118,110,0.08)]'
+                    dragTaskId === task.id && 'opacity-40',
+                    dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
+                    dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
+                    dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
                   )}
                 >
                   <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'expand')}
+                    <div className="flex items-center">
+                      <span className="cursor-grab active:cursor-grabbing text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] mr-0.5">
+                        <GripVertical className="w-3.5 h-3.5" />
+                      </span>
+                      {renderCell(task, 'expand')}
+                    </div>
                   </td>
                   <td className="border-r border-[var(--border-color)]">
                     {renderCell(task, 'level')}

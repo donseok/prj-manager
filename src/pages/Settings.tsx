@@ -20,6 +20,7 @@ import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { deleteProjectById, syncProjectTasks, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
+import { useProjectStatus } from '../hooks/useProjectStatus';
 import type { ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
@@ -30,6 +31,7 @@ export default function Settings() {
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
   const { isAdmin } = useAuthStore();
+  const { changeStatus } = useProjectStatus();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,27 +82,8 @@ export default function Settings() {
   };
 
   const handleChangeStatus = async (newStatus: ProjectStatus) => {
-    if (!projectId || !currentProject) return;
-
-    const now = new Date().toISOString();
-    const updates: Partial<typeof currentProject> = {
-      status: newStatus,
-      updatedAt: now,
-    };
-
-    if (newStatus === 'completed') {
-      updates.completedAt = now;
-    } else {
-      updates.completedAt = undefined;
-    }
-
-    const savedProject = await upsertProject({
-      ...currentProject,
-      ...updates,
-    } as typeof currentProject);
-
-    updateProject(projectId, savedProject);
-
+    if (!currentProject) return;
+    await changeStatus(currentProject, newStatus);
     alert(`프로젝트 상태가 "${PROJECT_STATUS_LABELS[newStatus]}"(으)로 변경되었습니다.`);
   };
 

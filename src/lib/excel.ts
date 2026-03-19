@@ -452,6 +452,7 @@ function getSafeSheetName(name: string) {
 }
 
 function sanitizeFileName(name: string) {
+  // eslint-disable-next-line no-control-regex
   return name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
