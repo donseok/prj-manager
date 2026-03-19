@@ -23,6 +23,7 @@ import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
 import Modal from '../components/common/Modal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
+import MemberSelect from '../components/wbs/MemberSelect';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   generateId,
@@ -30,14 +31,15 @@ import {
 } from '../lib/utils';
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
+import { syncProjectMembers } from '../lib/dataRepository';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
-import type { Task, TaskStatus } from '../types';
+import type { Task, TaskStatus, ProjectMember } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { members, currentProject, updateProject } = useProjectStore();
+  const { members, currentProject, updateProject, addMember } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
   const {
@@ -331,18 +333,24 @@ export default function WBS() {
 
       case 'assignee':
         return (
-          <select
-            value={task.assigneeId || ''}
-            onChange={(e) => handleCellChange(task.id, 'assigneeId', e.target.value || null, true)}
-            className="cell-select text-sm"
-          >
-            <option value="">-</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+          <MemberSelect
+            members={members}
+            value={task.assigneeId || null}
+            onChange={(memberId) => handleCellChange(task.id, 'assigneeId', memberId, true)}
+            onCreateMember={(name) => {
+              const member: ProjectMember = {
+                id: generateId(),
+                projectId: projectId!,
+                name,
+                role: 'member',
+                createdAt: new Date().toISOString(),
+              };
+              addMember(member);
+              const updatedMembers = [...useProjectStore.getState().members];
+              void syncProjectMembers(projectId!, updatedMembers);
+              return member.id;
+            }}
+          />
         );
 
       case 'weight':

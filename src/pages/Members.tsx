@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -22,10 +22,13 @@ export default function Members() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [pendingDeleteMember, setPendingDeleteMember] = useState<ProjectMember | null>(null);
-  const [newMember, setNewMember] = useState<{ name: string; role: ProjectMember['role'] }>({
-    name: '',
-    role: 'member',
-  });
+
+  // 일괄 등록 상태
+  const [bulkMode, setBulkMode] = useState<'rows' | 'paste'>('rows');
+  const [bulkRows, setBulkRows] = useState<{ name: string; role: ProjectMember['role'] }[]>([{ name: '', role: 'member' }]);
+  const [pasteText, setPasteText] = useState('');
+  const lastRowRef = useRef<HTMLInputElement>(null);
+
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const saveMembers = useCallback(
@@ -38,20 +41,44 @@ export default function Members() {
     delay: 500,
   });
 
-  const handleAddMember = () => {
-    if (!newMember.name.trim()) return;
+  const resetBulkForm = () => {
+    setBulkRows([{ name: '', role: 'member' }]);
+    setPasteText('');
+    setBulkMode('rows');
+  };
 
-    const member: ProjectMember = {
-      id: generateId(),
-      projectId: projectId!,
-      name: newMember.name,
-      role: newMember.role,
-      createdAt: new Date().toISOString(),
-    };
+  const getValidBulkMembers = (): { name: string; role: ProjectMember['role'] }[] => {
+    if (bulkMode === 'rows') {
+      return bulkRows.filter((r) => r.name.trim());
+    }
+    return pasteText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, role: 'member' as const }));
+  };
 
-    addMember(member);
+  const handleBulkAdd = () => {
+    const validMembers = getValidBulkMembers();
+    if (validMembers.length === 0) return;
+
+    for (const { name, role } of validMembers) {
+      addMember({
+        id: generateId(),
+        projectId: projectId!,
+        name,
+        role,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    showFeedback({
+      tone: 'success',
+      title: '멤버 추가 완료',
+      message: `${validMembers.length}명의 멤버를 추가했습니다.`,
+    });
     setShowAddModal(false);
-    setNewMember({ name: '', role: 'member' });
+    resetBulkForm();
   };
 
   const handleDeleteMember = (member: ProjectMember) => {
@@ -339,43 +366,130 @@ export default function Members() {
 
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => { setShowAddModal(false); resetBulkForm(); }}
         title="멤버 추가"
-        size="sm"
+        size="md"
       >
-        <div className="space-y-5 p-6">
-          <div>
-            <label className="field-label">이름 *</label>
-            <input
-              type="text"
-              value={newMember.name}
-              onChange={(event) => setNewMember({ ...newMember, name: event.target.value })}
-              className="field-input"
-              placeholder="멤버 이름을 입력하세요"
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="field-label">역할</label>
-            <select
-              value={newMember.role}
-              onChange={(event) => setNewMember({ ...newMember, role: event.target.value as ProjectMember['role'] })}
-              className="field-select"
+        <div className="p-6">
+          {/* 모드 전환 탭 */}
+          <div className="mb-5 flex rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-tertiary)] p-1">
+            <button
+              onClick={() => setBulkMode('rows')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                bulkMode === 'rows'
+                  ? 'bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-sm'
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+              )}
             >
-              <option value="member">멤버</option>
-              <option value="admin">관리자</option>
-              <option value="viewer">뷰어</option>
-            </select>
+              <ListPlus className="h-4 w-4" />
+              개별 입력
+            </button>
+            <button
+              onClick={() => setBulkMode('paste')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                bulkMode === 'paste'
+                  ? 'bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-sm'
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+              )}
+            >
+              <ClipboardPaste className="h-4 w-4" />
+              일괄 붙여넣기
+            </button>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowAddModal(false)}>
-              취소
-            </Button>
-            <Button onClick={handleAddMember} disabled={!newMember.name.trim()} data-testid="members-confirm-add-button">
-              추가
-            </Button>
+          {bulkMode === 'rows' ? (
+            <div className="space-y-3">
+              <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
+                {bulkRows.map((row, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      ref={idx === bulkRows.length - 1 ? lastRowRef : undefined}
+                      type="text"
+                      value={row.name}
+                      onChange={(e) => {
+                        const next = [...bulkRows];
+                        next[idx] = { ...next[idx], name: e.target.value };
+                        setBulkRows(next);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          setBulkRows([...bulkRows, { name: '', role: 'member' }]);
+                          requestAnimationFrame(() => lastRowRef.current?.focus());
+                        }
+                      }}
+                      className="field-input flex-1 py-2.5"
+                      placeholder={`멤버 ${idx + 1} 이름`}
+                      autoFocus={idx === 0}
+                    />
+                    <select
+                      value={row.role}
+                      onChange={(e) => {
+                        const next = [...bulkRows];
+                        next[idx] = { ...next[idx], role: e.target.value as ProjectMember['role'] };
+                        setBulkRows(next);
+                      }}
+                      className="field-select w-auto min-w-[6rem] py-2.5"
+                    >
+                      <option value="member">멤버</option>
+                      <option value="admin">관리자</option>
+                      <option value="viewer">뷰어</option>
+                    </select>
+                    {bulkRows.length > 1 && (
+                      <button
+                        onClick={() => setBulkRows(bulkRows.filter((_, i) => i !== idx))}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setBulkRows([...bulkRows, { name: '', role: 'member' }]);
+                  requestAnimationFrame(() => lastRowRef.current?.focus());
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] py-2.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)] hover:text-[color:var(--accent-primary)]"
+              >
+                <Plus className="h-4 w-4" />
+                행 추가
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-[color:var(--text-secondary)]">
+                한 줄에 한 명씩 이름을 입력하세요. 기본 역할은 '멤버'로 설정됩니다.
+              </p>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                className="field-input min-h-[180px] resize-y"
+                placeholder={"홍길동\n김철수\n이영희"}
+                autoFocus
+              />
+            </div>
+          )}
+
+          <div className="mt-5 flex items-center justify-between border-t border-[var(--border-color)] pt-5">
+            <span className="text-sm text-[color:var(--text-secondary)]">
+              {getValidBulkMembers().length > 0 && `${getValidBulkMembers().length}명`}
+            </span>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
+                취소
+              </Button>
+              <Button
+                onClick={handleBulkAdd}
+                disabled={getValidBulkMembers().length === 0}
+                data-testid="members-confirm-add-button"
+              >
+                {getValidBulkMembers().length > 0 ? `${getValidBulkMembers().length}명 추가` : '추가'}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
