@@ -10,6 +10,7 @@ import Members from './pages/Members';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import UserManagement from './pages/UserManagement';
+import UserManual from './pages/UserManual';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
@@ -115,6 +116,7 @@ function App() {
             <Route path="members" element={<Members />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route path="manual" element={<UserManual />} />
           <Route
             path="admin/users"
             element={

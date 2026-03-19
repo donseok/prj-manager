@@ -17,6 +17,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import { getProjectVisualTone } from '../lib/projectVisuals';
 import { deleteProjectById, syncProjectTasks, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
 import type { ProjectStatus } from '../types';
@@ -26,6 +27,8 @@ export default function Settings() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { currentProject, members, updateProject, deleteProject } = useProjectStore();
+  const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
+  const ToneIcon = projectTone?.icon;
   const { isAdmin } = useAuthStore();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -142,16 +145,26 @@ export default function Settings() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
-          <div className="pointer-events-none absolute right-[-5rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
+        <div
+          className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+          style={{
+            backgroundImage: `radial-gradient(circle at 84% 16%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}16, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+          }}
+        >
+          <div className="pointer-events-none absolute right-[-5rem] top-[-6rem] h-56 w-56 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)` }} />
           <div className="relative">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
-              <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-              Project Settings
+              {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
+              {projectTone?.label || 'Project Settings'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 설정
             </h1>
+            {projectTone && (
+              <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+                {projectTone.note}
+              </p>
+            )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
               프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
             </p>

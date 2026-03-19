@@ -87,7 +87,7 @@ export default function Login() {
             <div className="mx-auto mb-8 w-fit shadow-[0_32px_64px_-32px_rgba(15,118,110,0.9)] rounded-3xl">
               <DKFlowLogo size={80} />
             </div>
-            <div className="surface-badge mx-auto border-white/10 bg-white/[0.06] text-white/72">
+            <div className="surface-badge mx-auto border-white/12 bg-white/[0.14] text-white/90">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Project Management System
             </div>
@@ -96,29 +96,29 @@ export default function Login() {
               <br />
               설계하다
             </h1>
-            <p className="mx-auto mt-6 max-w-sm text-base leading-7 text-white/68">
+            <p className="mx-auto mt-6 max-w-sm text-base leading-7 text-white/88">
               WBS, 간트 차트, 팀 관리를 하나의 흐름으로.
               <br />
               프로젝트의 시작부터 완료까지 선명하게.
             </p>
 
             <div className="mx-auto mt-10 grid max-w-xs grid-cols-3 gap-4">
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.05] p-4 text-center">
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
                 <p className="text-2xl font-semibold text-white">WBS</p>
-                <p className="mt-1 text-[11px] text-white/50">작업분류체계</p>
+                <p className="mt-1 text-[11px] text-white/84">작업분류체계</p>
               </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.05] p-4 text-center">
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
                 <p className="text-2xl font-semibold text-white">Gantt</p>
-                <p className="mt-1 text-[11px] text-white/50">일정 관리</p>
+                <p className="mt-1 text-[11px] text-white/84">일정 관리</p>
               </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.05] p-4 text-center">
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
                 <p className="text-2xl font-semibold text-white">Team</p>
-                <p className="mt-1 text-[11px] text-white/50">팀 협업</p>
+                <p className="mt-1 text-[11px] text-white/84">팀 협업</p>
               </div>
             </div>
           </div>
 
-          <p className="absolute bottom-6 text-xs text-white/35">
+          <p className="absolute bottom-6 text-xs text-white/84">
             &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
           </p>
         </div>
@@ -153,12 +153,12 @@ export default function Login() {
           {/* 로그인/회원가입 카드 */}
           <div className="app-panel-strong rounded-[28px] p-6 sm:p-8">
             {/* 탭 */}
-            <div className="mb-6 flex rounded-2xl border border-[var(--border-color)] bg-black/[0.03] p-1 dark:bg-white/5">
+            <div className="mb-6 flex rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-1">
               <button
                 onClick={() => { setMode('login'); setError(null); }}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                   mode === 'login'
-                    ? 'bg-white shadow-sm text-[color:var(--text-primary)] dark:bg-white/10'
+                    ? 'bg-[color:var(--bg-secondary-solid)] shadow-sm text-[color:var(--text-primary)]'
                     : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
                 }`}
               >
@@ -169,7 +169,7 @@ export default function Login() {
                 onClick={() => { setMode('signup'); setError(null); }}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                   mode === 'signup'
-                    ? 'bg-white shadow-sm text-[color:var(--text-primary)] dark:bg-white/10'
+                    ? 'bg-[color:var(--bg-secondary-solid)] shadow-sm text-[color:var(--text-primary)]'
                     : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
                 }`}
               >

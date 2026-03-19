@@ -12,6 +12,7 @@ import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart from '../components/wbs/GanttChart';
+import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
 import { exportGanttWorkbook } from '../lib/excel';
@@ -37,6 +38,8 @@ const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
 export default function Gantt() {
   const { tasks, flatTasks, toggleExpand } = useTaskStore();
   const { currentProject, members } = useProjectStore();
+  const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
+  const ToneIcon = projectTone?.icon;
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,33 +155,43 @@ export default function Gantt() {
   return (
     <div className="flex h-full flex-col gap-6">
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
-          <div className="pointer-events-none absolute right-[-6rem] top-[-6rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.17),transparent_70%)] blur-3xl" />
+        <div
+          className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+          style={{
+            backgroundImage: `radial-gradient(circle at 86% 18%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+          }}
+        >
+          <div className="pointer-events-none absolute right-[-6rem] top-[-6rem] h-64 w-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)` }} />
           <div className="relative">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
-              <CalendarRange className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-              Timeline Control
+              {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <CalendarRange className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
+              {projectTone?.label || 'Timeline Control'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 일정 흐름
             </h1>
+            {projectTone && (
+              <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+                {projectTone.note}
+              </p>
+            )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
               검색, 상태 필터, 시야 범위, 선택된 작업 정보까지 한 화면에서 처리할 수 있게 간트 페이지 전체를 다시 구성했습니다.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">표시 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">표시 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{filteredFlatTasks.length}</p>
                 <p className="mt-1 text-sm text-white/88">현재 필터 기준 표시 개수</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">오픈 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">오픈 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeCount}</p>
                 <p className="mt-1 text-sm text-white/88">완료되지 않은 전체 작업</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">지연 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{delayedCount}</p>
                 <p className="mt-1 text-sm text-white/88">즉시 확인이 필요한 일정</p>
               </div>
@@ -274,7 +287,7 @@ export default function Gantt() {
         </div>
       </section>
 
-      <section className="app-panel p-5 md:p-6">
+      <section className="app-panel p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative max-w-xl flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--text-muted)]" />
@@ -320,7 +333,7 @@ export default function Gantt() {
                   'rounded-full px-3 py-1.5 text-sm font-semibold transition-colors',
                   weeksToShow === weeks
                     ? 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]'
-                    : 'text-[color:var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/8'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
                 )}
               >
                 {weeks}주
@@ -338,7 +351,7 @@ export default function Gantt() {
                   'rounded-full px-3 py-1.5 text-sm font-semibold transition-colors',
                   density === option.value
                     ? 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]'
-                    : 'text-[color:var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/8'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
                 )}
               >
                 {option.label}
@@ -363,7 +376,7 @@ export default function Gantt() {
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
           <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
             <div className="flex h-[64px] items-center justify-between border-b border-[var(--border-color)] px-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--text-muted)]">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">
                 작업 목록
               </span>
               <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
@@ -395,7 +408,7 @@ export default function Gantt() {
                           event.stopPropagation();
                           toggleExpand(task.id);
                         }}
-                        className="mr-1 flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/8"
+                        className="mr-1 flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
                       >
                         {task.isExpanded ? (
                           <ChevronDown className="w-4 h-4 text-[color:var(--text-secondary)]" />
@@ -407,15 +420,15 @@ export default function Gantt() {
                       <span className="w-7" />
                     )}
 
-                    <span className="mr-2 w-12 flex-shrink-0 text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+                    <span className="mr-2 w-12 flex-shrink-0 text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
                       {LEVEL_LABELS[task.level] || `L${task.level}`}
                     </span>
 
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-[color:var(--text-primary)]">
-                        {task.name || <span className="text-[color:var(--text-muted)]">이름 없음</span>}
+                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">
+                      <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">
                         {formatDate(task.planStart) || '-'} ~ {formatDate(task.planEnd) || '-'}
                       </p>
                     </div>

@@ -14,6 +14,7 @@ import {
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
+import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   generateId,
   cn,
@@ -26,6 +27,8 @@ import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
   const { members, currentProject } = useProjectStore();
+  const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
+  const ToneIcon = projectTone?.icon;
   const {
     tasks,
     flatTasks,
@@ -147,7 +150,7 @@ export default function WBS() {
         return hasChildren ? (
           <button
             onClick={() => toggleExpand(task.id)}
-            className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/8"
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-elevated)]"
           >
             {task.isExpanded ? (
               <ChevronDown className="w-4 h-4 text-[color:var(--text-secondary)]" />
@@ -162,7 +165,7 @@ export default function WBS() {
 
       case 'level':
         return (
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-secondary)]">
             {LEVEL_LABELS[task.level] || `L${task.level}`}
           </span>
         );
@@ -187,7 +190,7 @@ export default function WBS() {
             onClick={() => setEditingCell({ taskId: task.id, columnId })}
             style={{ paddingLeft: `${(task.depth || 0) * 20}px` }}
           >
-            {task.name || <span className="text-[color:var(--text-muted)]">작업명 입력</span>}
+            {task.name || <span className="text-[color:var(--text-secondary)]">작업명 입력</span>}
           </span>
         );
 
@@ -333,7 +336,7 @@ export default function WBS() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleAddTask(task.id, task.level + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition-colors hover:bg-black/5 hover:text-[color:var(--text-primary)] dark:hover:bg-white/8"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
               title="하위 작업 추가"
             >
               <Plus className="w-4 h-4" />
@@ -355,15 +358,26 @@ export default function WBS() {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <section className="app-panel p-5 md:p-6">
+      <section className="app-panel relative overflow-hidden p-6">
+        <div className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-80" style={{ backgroundColor: projectTone?.accent || 'var(--accent-primary)' }} />
+        <div
+          className="pointer-events-none absolute -right-8 top-[-2.5rem] h-24 w-24 rounded-full blur-3xl opacity-70"
+          style={{ backgroundColor: `${projectTone?.accent || '#18a79b'}14` }}
+        />
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="page-kicker">Structured Work Breakdown</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {currentProject?.name || '프로젝트'} WBS
             </h1>
+            {projectTone && (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ borderColor: `${projectTone.accent}22`, backgroundColor: `${projectTone.accent}10`, color: projectTone.accent }}>
+                {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" /> : null}
+                {projectTone.label}
+              </div>
+            )}
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              계층형 작업 구조를 유지하면서 입력 컨트롤과 표면 질감을 모두 정리해 더 또렷하게 읽히도록 구성했습니다.
+              {projectTone ? `${projectTone.note} 흐름을 반영해 계층형 작업 구조를 더 또렷하게 정리했습니다.` : '계층형 작업 구조를 유지하면서 입력 컨트롤과 표면 질감을 모두 정리해 더 또렷하게 읽히도록 구성했습니다.'}
             </p>
           </div>
 

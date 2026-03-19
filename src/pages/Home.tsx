@@ -12,21 +12,13 @@ import {
 import { useProjectStore } from '../store/projectStore';
 import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
-import { PROJECT_STATUS_COLORS, PROJECT_STATUS_LABELS, type Project } from '../types';
-
-const RECENT_CARD_GRADIENTS: Record<Project['status'], string> = {
-  preparing: 'linear-gradient(135deg, rgba(216,139,68,0.12), rgba(255,248,242,0.94) 44%, rgba(255,255,255,0.9))',
-  active: 'linear-gradient(135deg, rgba(15,118,110,0.14), rgba(244,252,250,0.94) 44%, rgba(255,255,255,0.9))',
-  completed: 'linear-gradient(135deg, rgba(47,166,124,0.14), rgba(245,253,249,0.94) 44%, rgba(255,255,255,0.9))',
-  deleted: 'linear-gradient(135deg, rgba(203,75,95,0.12), rgba(255,246,248,0.94) 44%, rgba(255,255,255,0.9))',
-};
-
-const RECENT_CARD_DARK_GRADIENTS: Record<Project['status'], string> = {
-  preparing: 'linear-gradient(135deg, rgba(216,139,68,0.18), rgba(35,30,25,0.96) 40%, rgba(24,29,36,0.94))',
-  active: 'linear-gradient(135deg, rgba(15,118,110,0.2), rgba(21,32,31,0.96) 40%, rgba(24,29,36,0.94))',
-  completed: 'linear-gradient(135deg, rgba(47,166,124,0.18), rgba(22,33,29,0.96) 40%, rgba(24,29,36,0.94))',
-  deleted: 'linear-gradient(135deg, rgba(203,75,95,0.18), rgba(33,24,28,0.96) 40%, rgba(24,29,36,0.94))',
-};
+import { PROJECT_STATUS_COLORS, PROJECT_STATUS_LABELS } from '../types';
+import {
+  getProjectCardBackground,
+  getProjectSummary,
+  getProjectTimeline,
+  getProjectVisualTone,
+} from '../lib/projectVisuals';
 
 export default function Home() {
   const { projects } = useProjectStore();
@@ -35,12 +27,6 @@ export default function Home() {
   const recentProjects = projects.slice(0, 4);
   const activeProjects = projects.filter((project) => project.status === 'active').length;
   const completedProjects = projects.filter((project) => project.status === 'completed').length;
-
-  const getRecentCardStyle = (project: Project) => ({
-    backgroundImage: isDark
-      ? RECENT_CARD_DARK_GRADIENTS[project.status]
-      : RECENT_CARD_GRADIENTS[project.status],
-  });
 
   return (
     <div className="space-y-8">
@@ -215,59 +201,111 @@ export default function Home() {
 
         {recentProjects.length > 0 ? (
           <div className="grid gap-4 p-6 md:grid-cols-2">
-            {recentProjects.map((project) => (
-              <Link
-                key={project.id}
-                to={`/projects/${project.id}`}
-                className="group relative overflow-hidden rounded-[24px] border border-[var(--border-color)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[0_28px_60px_-34px_rgba(17,24,39,0.26)]"
-                style={getRecentCardStyle(project)}
-              >
-                <div className="pointer-events-none absolute inset-x-5 top-0 h-px opacity-90" style={{ backgroundColor: PROJECT_STATUS_COLORS[project.status] }} />
-                <div
-                  className="pointer-events-none absolute -right-8 top-[-2.5rem] h-28 w-28 rounded-full blur-3xl opacity-80"
-                  style={{ backgroundColor: `${PROJECT_STATUS_COLORS[project.status]}22` }}
-                />
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="surface-badge border-[var(--border-strong)] bg-white/78 dark:bg-white/10">
-                      <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-                      최근 접근
+            {recentProjects.map((project) => {
+              const tone = getProjectVisualTone(project);
+              const ToneIcon = tone.icon;
+
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="group relative overflow-hidden rounded-[24px] border border-[var(--border-color)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[0_28px_60px_-34px_rgba(17,24,39,0.26)]"
+                  style={{ backgroundImage: getProjectCardBackground(project, isDark) }}
+                >
+                  <div className="pointer-events-none absolute inset-x-5 top-0 h-px opacity-90" style={{ backgroundColor: tone.accent }} />
+                  <div
+                    className="pointer-events-none absolute -right-8 top-[-2.5rem] h-28 w-28 rounded-full blur-3xl opacity-80"
+                    style={{ backgroundColor: `${tone.accent}22` }}
+                  />
+                  <div className="pointer-events-none absolute bottom-5 right-5 h-16 w-16 rounded-full border opacity-60" style={{ borderColor: `${tone.accent}26` }} />
+
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="surface-badge border-[var(--border-strong)] bg-white/78 dark:bg-white/10">
+                          <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+                          최근 접근
+                        </div>
+                        <div
+                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase"
+                          style={{
+                            borderColor: `${tone.accent}24`,
+                            backgroundColor: `${tone.accent}12`,
+                            color: tone.accent,
+                          }}
+                        >
+                          <ToneIcon className="h-3.5 w-3.5" />
+                          {tone.label}
+                        </div>
+                      </div>
+                      <h3 className="mt-4 truncate text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                        {project.name}
+                      </h3>
+                      <p className="mt-2 line-clamp-1 text-sm text-[color:var(--text-secondary)]">
+                        {getProjectSummary(project)}
+                      </p>
                     </div>
-                    <h3 className="mt-4 truncate text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-                      {project.name}
-                    </h3>
-                    <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-                      {project.startDate || '시작일 미정'} {project.endDate ? `~ ${project.endDate}` : '~ 진행중'}
-                    </p>
-                  </div>
-                  <span
-                    className="rounded-full border px-3 py-1 text-xs font-semibold"
-                    style={{
-                      borderColor: `${PROJECT_STATUS_COLORS[project.status]}2e`,
-                      backgroundColor: `${PROJECT_STATUS_COLORS[project.status]}14`,
-                      color: PROJECT_STATUS_COLORS[project.status],
-                    }}
-                  >
-                    {PROJECT_STATUS_LABELS[project.status]}
-                  </span>
-                </div>
-                <div className="mt-5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-[16px] shadow-[0_18px_34px_-24px_rgba(17,24,39,0.4)]"
+                    <span
+                      className="rounded-full border px-3 py-1 text-xs font-semibold"
                       style={{
-                        background: `linear-gradient(135deg, ${PROJECT_STATUS_COLORS[project.status]}22, ${PROJECT_STATUS_COLORS[project.status]}10)`,
+                        borderColor: `${PROJECT_STATUS_COLORS[project.status]}2e`,
+                        backgroundColor: `${PROJECT_STATUS_COLORS[project.status]}14`,
                         color: PROJECT_STATUS_COLORS[project.status],
                       }}
                     >
-                      <FolderOpen className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-medium text-[color:var(--text-secondary)]">워크스페이스 열기</span>
+                      {PROJECT_STATUS_LABELS[project.status]}
+                    </span>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-[color:var(--text-secondary)] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[color:var(--text-primary)]" />
-                </div>
-              </Link>
-            ))}
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                    <div
+                      className="rounded-[18px] border px-4 py-3"
+                      style={{
+                        borderColor: `${tone.accent}20`,
+                        backgroundColor: `${tone.accent}0d`,
+                      }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
+                        Schedule
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[color:var(--text-primary)]">
+                        {getProjectTimeline(project)}
+                      </p>
+                    </div>
+                    <div
+                      className="rounded-[18px] border px-4 py-3"
+                      style={{
+                        borderColor: `${tone.accent}18`,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.66)',
+                      }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
+                        Focus
+                      </p>
+                      <p className="mt-1 text-sm font-medium" style={{ color: tone.accent }}>
+                        {tone.note}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-[16px] shadow-[0_18px_34px_-24px_rgba(17,24,39,0.4)]"
+                        style={{
+                          background: `linear-gradient(135deg, ${tone.accent}22, ${tone.accent}10)`,
+                          color: tone.accent,
+                        }}
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium text-[color:var(--text-secondary)]">워크스페이스 열기</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-[color:var(--text-secondary)] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[color:var(--text-primary)]" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="empty-state px-6 py-12">

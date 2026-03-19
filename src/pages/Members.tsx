@@ -4,6 +4,7 @@ import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users } from 'l
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import { getProjectVisualTone } from '../lib/projectVisuals';
 import { generateId } from '../lib/utils';
 import { syncProjectMembers } from '../lib/dataRepository';
 import type { ProjectMember } from '../types';
@@ -11,6 +12,8 @@ import type { ProjectMember } from '../types';
 export default function Members() {
   const { projectId } = useParams<{ projectId: string }>();
   const { members, membersLoadedProjectId, addMember, updateMember, removeMember, currentProject } = useProjectStore();
+  const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
+  const ToneIcon = projectTone?.icon;
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -89,16 +92,26 @@ export default function Members() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
-          <div className="pointer-events-none absolute right-[-5rem] top-[-5rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
+        <div
+          className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+          style={{
+            backgroundImage: `radial-gradient(circle at 84% 18%, ${(projectTone?.accent || '#18a79b')}2c, transparent 26%), radial-gradient(circle at 20% 84%, ${(projectTone?.accent || '#18a79b')}16, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+          }}
+        >
+          <div className="pointer-events-none absolute right-[-5rem] top-[-5rem] h-56 w-56 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)` }} />
           <div className="relative">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
-              <Users className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-              Team Workspace
+              {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <Users className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
+              {projectTone?.label || 'Team Workspace'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 팀 구성
             </h1>
+            {projectTone && (
+              <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+                {projectTone.note}
+              </p>
+            )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
               참여자를 단순 목록이 아니라 역할과 편집 상태가 명확하게 보이는 팀 보드 형태로 정리했습니다.
             </p>

@@ -45,22 +45,22 @@ export default function UserManagement() {
   };
 
   return (
-    <div>
+    <section className="app-panel p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em]">사용자 관리</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-muted)]">
+          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
             시스템 사용자 목록 및 역할을 관리합니다.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-white/60 px-3 py-2 dark:bg-white/5">
-          <Search className="h-4 w-4 text-[color:var(--text-muted)]" />
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2">
+          <Search className="h-4 w-4 text-[color:var(--text-secondary)]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="이름 또는 이메일 검색..."
-            className="w-48 bg-transparent text-sm outline-none placeholder:text-[color:var(--text-muted)]"
+            className="w-48 bg-transparent text-sm outline-none placeholder:text-[color:var(--text-secondary)]"
           />
         </div>
       </div>
@@ -78,27 +78,27 @@ export default function UserManagement() {
         <div className="overflow-hidden rounded-2xl border border-[var(--border-color)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--border-color)] bg-black/[0.02] dark:bg-white/[0.02]">
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-muted)]">이름</th>
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-muted)]">이메일</th>
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-muted)]">가입일</th>
-                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-muted)]">역할</th>
+              <tr className="border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">이름</th>
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">이메일</th>
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">가입일</th>
+                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">역할</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((profile) => (
                 <tr
                   key={profile.id}
-                  className="border-b border-[var(--border-color)] last:border-b-0 transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                  className="border-b border-[var(--border-color)] last:border-b-0 transition-colors hover:bg-[color:var(--bg-elevated)]"
                 >
                   <td className="px-4 py-3 font-medium">
                     {profile.name}
                     {profile.id === user?.id && (
-                      <span className="ml-2 text-xs text-[color:var(--text-muted)]">(나)</span>
+                      <span className="ml-2 text-xs text-[color:var(--text-secondary)]">(나)</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-[color:var(--text-secondary)]">{profile.email}</td>
-                  <td className="px-4 py-3 text-[color:var(--text-muted)]">
+                  <td className="px-4 py-3 text-[color:var(--text-secondary)]">
                     {new Date(profile.createdAt).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-4 py-3">
@@ -141,6 +141,6 @@ export default function UserManagement() {
           </table>
         </div>
       )}
-    </div>
+    </section>
   );
 }

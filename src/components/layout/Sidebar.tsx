@@ -1,5 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -92,12 +92,15 @@ export default function Sidebar() {
                     <ShieldCheck className="w-5 h-5" />
                   </NavLink>
                 )}
+                <NavLink to="/manual" className={navLinkClass} title="사용자 매뉴얼">
+                  <BookOpen className="w-5 h-5" />
+                </NavLink>
               </nav>
             )}
 
             <NavLink
               to="/projects/new"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
               
               title="새 프로젝트"
             >
@@ -126,7 +129,7 @@ export default function Sidebar() {
           </div>
 
           <div className="rounded-[26px] border border-white/12 bg-white/[0.08] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/78">Workspace</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/86">Workspace</p>
             <h2 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
               Planning cockpit
             </h2>
@@ -135,11 +138,11 @@ export default function Sidebar() {
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Projects</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Projects</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{projects.length}</p>
               </div>
               <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Active</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Active</p>
                 <p className="mt-1 text-2xl font-semibold text-white">{activeProjects}</p>
               </div>
             </div>
@@ -147,7 +150,7 @@ export default function Sidebar() {
 
           <div className="mt-4 rounded-[24px] border border-white/12 bg-white/[0.06] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/78">프로젝트</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">프로젝트</h3>
               <NavLink
                 to="/projects"
                 className="text-xs font-medium text-white/80 transition-colors hover:text-white"
@@ -182,7 +185,7 @@ export default function Sidebar() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-0.5 text-xs text-white/74">
+                    <p className="mt-0.5 text-xs text-white/84">
                       {project.status === 'active' ? '진행중' : project.status === 'completed' ? '완료' : '준비'}
                     </p>
                   </div>
@@ -203,7 +206,7 @@ export default function Sidebar() {
 
           <div className="mt-4">
             <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/78">메뉴</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">메뉴</p>
               <NavLink
                 to="/projects/new"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
@@ -252,6 +255,10 @@ export default function Sidebar() {
                     사용자 관리
                   </NavLink>
                 )}
+                <NavLink to="/manual" className={navLinkClass}>
+                  <BookOpen className="w-5 h-5" />
+                  사용자 매뉴얼
+                </NavLink>
               </nav>
             )}
           </div>

@@ -38,13 +38,13 @@ export default function Header() {
               <span className="block truncate text-lg font-bold tracking-[-0.02em] text-[color:var(--text-primary)]">
                 DK Flow
               </span>
-              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">업무의 흐름을 설계하다</p>
+              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-secondary)]">업무의 흐름을 설계하다</p>
             </div>
           </Link>
 
           {currentProject && (
             <div className="hidden min-w-0 items-center gap-2 lg:flex">
-              <ChevronRight className="w-4 h-4 text-[color:var(--text-muted)]" />
+              <ChevronRight className="w-4 h-4 text-[color:var(--text-secondary)]" />
               <div className="surface-badge max-w-[24rem]">
                 <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
                 <span className="truncate">{currentProject.name}</span>
@@ -80,7 +80,7 @@ export default function Header() {
                 <User className="w-4 h-4 text-white" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
                   {isAdmin ? 'Admin' : 'Operator'}
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">{user?.name || '사용자'}</p>
@@ -105,7 +105,7 @@ export default function Header() {
                 {isAdmin && (
                   <Link
                     to="/admin/users"
-                    className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                    className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Users className="w-4 h-4" />
@@ -114,7 +114,7 @@ export default function Header() {
                 )}
                 <Link
                   to={settingsLink}
-                  className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-black/5 dark:hover:bg-white/6"
+                  className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                   onClick={() => setShowUserMenu(false)}
                 >
                   <Settings className="w-4 h-4" />

@@ -20,6 +20,7 @@ import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import { generateProjectReport } from '../lib/exportReport';
+import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   calculateOverallProgress,
   getDelayedTasks,
@@ -45,6 +46,8 @@ export default function Dashboard() {
   const { projectId } = useParams<{ projectId: string }>();
   const { tasks } = useTaskStore();
   const { currentProject, members } = useProjectStore();
+  const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
+  const ToneIcon = projectTone?.icon;
 
   const stats = useMemo(() => {
     const leafTasks = tasks.filter((task) => !tasks.some((child) => child.parentId === task.id));
@@ -186,18 +189,28 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-panel-dark relative overflow-hidden p-7 md:p-8">
-          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />
-          <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
+        <div
+          className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+          style={{
+            backgroundImage: `radial-gradient(circle at 86% 16%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+          }}
+        >
+          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}26, transparent 70%)` }} />
+          <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}16, transparent 72%)` }} />
 
           <div className="relative">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
-              <Zap className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-              Project Dashboard
+              {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <Zap className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
+              {projectTone?.label || 'Project Dashboard'}
             </div>
             <h1 className="mt-6 text-[clamp(2rem,4vw,3.9rem)] font-semibold tracking-[-0.06em] text-white">
               {currentProject?.name || '프로젝트'} 운영 현황
             </h1>
+            {projectTone && (
+              <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+                {projectTone.note}
+              </p>
+            )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
               {currentProject?.description || '프로젝트 진행 현황을 한눈에 확인하고, 이번 주와 다음 주의 흐름까지 빠르게 파악할 수 있도록 대시보드를 재구성했습니다.'}
             </p>
@@ -228,15 +241,15 @@ export default function Dashboard() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">전체 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{stats.totalTasks}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">멤버</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">멤버</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{members.length}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/76">지연</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{stats.delayedTasks}</p>
               </div>
             </div>
@@ -555,11 +568,11 @@ export default function Dashboard() {
             <div className="mt-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">시작일</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">시작일</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.startDate)}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">종료일</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">종료일</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.endDate)}</p>
                 </div>
               </div>
@@ -583,15 +596,15 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">총 일수</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">총 일수</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{timeline.totalDays}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">경과일</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">경과일</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{Math.max(0, timeline.elapsedDays)}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">
                     {timeline.remainingDays >= 0 ? '잔여일' : '초과일'}
                   </p>
                   <p className={`mt-2 text-2xl font-semibold ${timeline.remainingDays < 0 ? 'text-[color:var(--accent-danger)]' : 'text-[color:var(--text-primary)]'}`}>
