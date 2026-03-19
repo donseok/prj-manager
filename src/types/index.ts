@@ -47,6 +47,8 @@ export interface ProjectSettings {
   weekStartsOn?: 0 | 1; // 0: 일요일, 1: 월요일
   showWeekends?: boolean;
   defaultView?: 'week' | 'month';
+  statusMode?: 'auto' | 'manual';
+  manualStatus?: ProjectStatus;
 }
 
 // 프로젝트 멤버 타입

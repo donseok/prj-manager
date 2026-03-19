@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useParams, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
@@ -126,7 +126,9 @@ function App() {
               </AdminRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
@@ -178,6 +180,26 @@ function ProjectDetailWrapper() {
   }, [projectId, setMembers, setTasks, expandAll]);
 
   return <Outlet />;
+}
+
+function NotFound() {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+      <div className="text-7xl font-bold text-[color:var(--text-muted)]">404</div>
+      <h1 className="text-2xl font-semibold text-[color:var(--text-primary)]">
+        페이지를 찾을 수 없습니다
+      </h1>
+      <p className="max-w-md text-sm text-[color:var(--text-secondary)]">
+        요청하신 페이지가 존재하지 않거나 이동되었습니다.
+      </p>
+      <Link
+        to="/"
+        className="mt-2 rounded-full bg-[image:var(--gradient-primary)] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:brightness-105"
+      >
+        홈으로 돌아가기
+      </Link>
+    </div>
+  );
 }
 
 export default App;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -16,13 +16,15 @@ import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
-import Modal from '../components/common/Modal';
+import ConfirmModal from '../components/common/ConfirmModal';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { deleteProjectById, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useProjectStatus } from '../hooks/useProjectStatus';
-import type { ProjectStatus } from '../types';
+import { usePageFeedback } from '../hooks/usePageFeedback';
+import type { ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function Settings() {
@@ -35,7 +37,12 @@ export default function Settings() {
   const { changeStatus } = useProjectStatus();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImportReplaceModal, setShowImportReplaceModal] = useState(false);
+  const [pendingImportTasks, setPendingImportTasks] = useState<Task[] | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isStatusModeSaving, setIsStatusModeSaving] = useState(false);
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const [formData, setFormData] = useState<{
     name?: string;
@@ -52,45 +59,78 @@ export default function Settings() {
     endDate: formData.endDate ?? currentProject?.endDate ?? '',
     baseDate: formData.baseDate ?? currentProject?.baseDate ?? '',
   };
+  const statusMode = currentProject?.settings?.statusMode ?? 'auto';
+  const isManualStatus = statusMode === 'manual';
 
   const handleSave = async () => {
     if (!projectId || !currentProject) return;
     setIsSaving(true);
+    try {
+      const savedProject = await upsertProject({
+        ...currentProject,
+        id: projectId,
+        ownerId: currentProject.ownerId,
+        ...resolvedFormData,
+        updatedAt: new Date().toISOString(),
+      });
 
-    const savedProject = await upsertProject({
-      ...currentProject,
-      id: projectId,
-      ownerId: currentProject.ownerId,
-      ...resolvedFormData,
-      updatedAt: new Date().toISOString(),
-    });
-
-    updateProject(projectId, savedProject);
-
-    setTimeout(() => {
+      updateProject(projectId, savedProject);
+      showFeedback({
+        tone: 'success',
+        title: '설정 저장 완료',
+        message: '프로젝트 기본 정보와 기준일을 저장했습니다.',
+      });
+    } catch (error) {
+      console.error('Failed to save project settings:', error);
+      showFeedback({
+        tone: 'error',
+        title: '설정 저장 실패',
+        message: '프로젝트 설정을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
+    } finally {
       setIsSaving(false);
-      alert('저장되었습니다.');
-    }, 500);
+    }
   };
 
   const handleDelete = async () => {
     if (!projectId) return;
-
-    await deleteProjectById(projectId);
-    deleteProject(projectId);
-
-    navigate('/projects');
+    setIsDeleting(true);
+    try {
+      await deleteProjectById(projectId);
+      deleteProject(projectId);
+      navigate('/projects');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const handleChangeStatus = async (newStatus: ProjectStatus) => {
     if (!currentProject) return;
-    await changeStatus(currentProject, newStatus);
-    alert(`프로젝트 상태가 "${PROJECT_STATUS_LABELS[newStatus]}"(으)로 변경되었습니다.`);
+    try {
+      await changeStatus(currentProject, newStatus);
+      showFeedback({
+        tone: 'success',
+        title: '프로젝트 상태 변경',
+        message: `프로젝트 상태를 "${PROJECT_STATUS_LABELS[newStatus]}"로 고정했습니다.`,
+      });
+    } catch (error) {
+      console.error('Failed to change project status:', error);
+      showFeedback({
+        tone: 'error',
+        title: '상태 변경 실패',
+        message: '프로젝트 상태를 변경하지 못했습니다. 다시 시도해주세요.',
+      });
+    }
   };
 
   const handleExportExcel = () => {
     if (tasks.length === 0) {
-      alert('내보낼 작업이 없습니다.');
+      showFeedback({
+        tone: 'info',
+        title: '내보낼 작업 없음',
+        message: 'WBS에 작업을 추가한 뒤 다시 내보내기를 시도해주세요.',
+      });
       return;
     }
 
@@ -101,6 +141,34 @@ export default function Settings() {
     });
   };
 
+  const applyImportedTasks = useCallback(
+    async (importedTasks: Task[]) => {
+      if (!currentProject || !projectId) return;
+
+      try {
+        const { project, tasks: normalizedTasks } = await syncProjectWorkspace(currentProject, importedTasks);
+        setTasks(normalizedTasks, projectId);
+        updateProject(project.id, project);
+        showFeedback({
+          tone: 'success',
+          title: '엑셀 가져오기 완료',
+          message: `${normalizedTasks.length}개의 작업을 현재 프로젝트에 반영했습니다.`,
+        });
+      } catch (error) {
+        console.error('Import error:', error);
+        showFeedback({
+          tone: 'error',
+          title: '엑셀 가져오기 실패',
+          message: '엑셀 파일을 읽는 중 오류가 발생했습니다.',
+        });
+      } finally {
+        setPendingImportTasks(null);
+        setShowImportReplaceModal(false);
+      }
+    },
+    [currentProject, projectId, setTasks, showFeedback, updateProject]
+  );
+
   const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -110,28 +178,96 @@ export default function Settings() {
       try {
         const importedTasks = parseTasksFromWorkbook(loadEvent.target?.result as ArrayBuffer, projectId!);
 
-        if (tasks.length > 0 && !confirm('기존 작업을 덮어쓰시겠습니까?')) {
+        if (tasks.length > 0) {
+          setPendingImportTasks(importedTasks);
+          setShowImportReplaceModal(true);
           return;
         }
 
-        if (!currentProject) return;
-
-        void syncProjectWorkspace(currentProject, importedTasks).then(({ project, tasks: normalizedTasks }) => {
-          setTasks(normalizedTasks, projectId);
-          updateProject(project.id, project);
-          alert(`${normalizedTasks.length}개의 작업을 가져왔습니다.`);
-        });
+        void applyImportedTasks(importedTasks);
       } catch (error) {
         console.error('Import error:', error);
-        alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');
+        showFeedback({
+          tone: 'error',
+          title: '엑셀 가져오기 실패',
+          message: '엑셀 파일을 읽는 중 오류가 발생했습니다.',
+        });
       }
     };
     reader.readAsArrayBuffer(file);
     event.target.value = '';
   };
 
+  const handleStatusModeChange = async (mode: 'auto' | 'manual') => {
+    if (!currentProject || !isAdmin || statusMode === mode) return;
+
+    setIsStatusModeSaving(true);
+    try {
+      if (mode === 'auto') {
+        const { project } = await syncProjectWorkspace(
+          {
+            ...currentProject,
+            settings: {
+              ...currentProject.settings,
+              statusMode: 'auto',
+              manualStatus: undefined,
+            },
+          },
+          tasks
+        );
+        updateProject(project.id, project);
+        showFeedback({
+          tone: 'info',
+          title: '자동 상태 동기화 활성화',
+          message: '이제 WBS와 간트 변경 내용이 프로젝트 상태에 자동 반영됩니다.',
+        });
+        return;
+      }
+
+      const manualStatus = currentProject.settings?.manualStatus || currentProject.status;
+      const savedProject = await upsertProject({
+        ...currentProject,
+        status: manualStatus,
+        completedAt:
+          manualStatus === 'completed'
+            ? currentProject.completedAt || new Date().toISOString()
+            : undefined,
+        settings: {
+          ...currentProject.settings,
+          statusMode: 'manual',
+          manualStatus,
+        },
+        updatedAt: new Date().toISOString(),
+      });
+      updateProject(savedProject.id, savedProject);
+      showFeedback({
+        tone: 'success',
+        title: '수동 상태 고정 활성화',
+        message: '이제 프로젝트 상태를 직접 선택할 수 있고 작업 변경은 상태를 덮어쓰지 않습니다.',
+      });
+    } catch (error) {
+      console.error('Failed to update status mode:', error);
+      showFeedback({
+        tone: 'error',
+        title: '상태 정책 변경 실패',
+        message: '상태 동기화 방식을 변경하지 못했습니다.',
+      });
+    } finally {
+      setIsStatusModeSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div
           className="app-panel-dark relative overflow-hidden p-6 md:p-8"
@@ -284,8 +420,54 @@ export default function Settings() {
               프로젝트 상태 관리
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              프로젝트의 진행 상태를 변경합니다. 완료 처리 시 완료일이 자동 기록됩니다.
+              작업 기반 자동 동기화와 수동 상태 고정 중 하나를 선택할 수 있습니다. 상태 정책이 명확해야 WBS, 간트, 대시보드 지표가 서로 충돌하지 않습니다.
             </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {([
+                {
+                  key: 'auto' as const,
+                  title: '자동 상태 동기화',
+                  description: '작업 일정과 진행률에 따라 프로젝트 상태를 자동 계산합니다.',
+                },
+                {
+                  key: 'manual' as const,
+                  title: '수동 상태 고정',
+                  description: '관리자가 직접 프로젝트 상태를 고정합니다.',
+                },
+              ]).map((mode) => {
+                const isCurrentMode = statusMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => void handleStatusModeChange(mode.key)}
+                    disabled={!isAdmin || isCurrentMode || isStatusModeSaving}
+                    className={`rounded-[22px] border p-4 text-left transition-all duration-200 ${
+                      isCurrentMode
+                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                        : !isAdmin
+                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
+                    }`}
+                  >
+                    <p className="font-medium text-[color:var(--text-primary)]">
+                      {mode.title}
+                      {isCurrentMode && (
+                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 정책</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{mode.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {isManualStatus
+                ? '수동 상태 고정이 켜져 있습니다. 아래 상태 선택은 프로젝트 상태를 직접 고정하며, 이후 작업 저장은 상태를 자동 변경하지 않습니다.'
+                : '자동 상태 동기화가 켜져 있습니다. WBS와 간트에서 작업 상태를 저장하면 프로젝트 상태도 자동으로 다시 계산됩니다.'}
+            </div>
 
             <div className="mt-5 space-y-3">
               {([
@@ -297,12 +479,12 @@ export default function Settings() {
                 return (
                   <button
                     key={item.status}
-                    onClick={() => !isCurrent && isAdmin && handleChangeStatus(item.status)}
-                    disabled={isCurrent || !isAdmin}
+                    onClick={() => !isCurrent && isAdmin && isManualStatus && handleChangeStatus(item.status)}
+                    disabled={isCurrent || !isAdmin || !isManualStatus}
                     className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
                       isCurrent
                         ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
-                        : !isAdmin
+                        : !isAdmin || !isManualStatus
                           ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
                           : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
                     }`}
@@ -331,6 +513,9 @@ export default function Settings() {
             </div>
             {!isAdmin && (
               <p className="mt-3 text-xs text-[color:var(--text-muted)]">상태 변경은 관리자만 가능합니다.</p>
+            )}
+            {isAdmin && !isManualStatus && (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">수동 상태 고정을 켜면 아래 상태를 직접 선택할 수 있습니다.</p>
             )}
 
             {currentProject?.completedAt && (
@@ -393,27 +578,33 @@ export default function Settings() {
         </div>
       </section>
 
-      <Modal
+      <ConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => void handleDelete()}
         title="프로젝트 삭제"
-        size="sm"
-      >
-        <div className="space-y-5 p-6">
-          <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-            프로젝트와 모든 관련 데이터가 영구 삭제됩니다. 정말 진행하시겠습니까?
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>
-              취소
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              <Trash2 className="w-4 h-4" />
-              삭제
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        description="프로젝트와 모든 관련 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="프로젝트 삭제"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+      />
+
+      <ConfirmModal
+        isOpen={showImportReplaceModal}
+        onClose={() => {
+          setShowImportReplaceModal(false);
+          setPendingImportTasks(null);
+        }}
+        onConfirm={() => {
+          if (pendingImportTasks) {
+            void applyImportedTasks(pendingImportTasks);
+          }
+        }}
+        title="기존 작업 덮어쓰기"
+        description="현재 WBS 작업을 엑셀 파일 내용으로 교체합니다. 가져오기 후에는 새 작업 구조와 일정이 프로젝트 전체 지표에 반영됩니다."
+        confirmLabel="덮어쓰기 후 가져오기"
+        confirmVariant="primary"
+      />
     </div>
   );
 }

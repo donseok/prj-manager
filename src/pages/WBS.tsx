@@ -19,6 +19,8 @@ import {
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
+import ConfirmModal from '../components/common/ConfirmModal';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   generateId,
@@ -27,6 +29,7 @@ import {
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
@@ -58,7 +61,9 @@ export default function WBS() {
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'child' | null>(null);
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
   const dragOverCounterRef = useRef(0);
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDragTaskId(taskId);
@@ -210,8 +215,9 @@ export default function WBS() {
 
   // 작업 삭제
   const handleDeleteTask = (taskId: string) => {
-    if (confirm('이 작업과 하위 작업이 모두 삭제됩니다. 계속하시겠습니까?')) {
-      deleteTask(taskId);
+    const targetTask = tasks.find((task) => task.id === taskId);
+    if (targetTask) {
+      setPendingDeleteTask(targetTask);
     }
   };
 
@@ -222,7 +228,11 @@ export default function WBS() {
 
   const handleExportExcel = () => {
     if (tasks.length === 0) {
-      alert('내보낼 작업이 없습니다.');
+      showFeedback({
+        tone: 'info',
+        title: '내보낼 작업 없음',
+        message: 'WBS에 작업을 추가한 뒤 엑셀 다운로드를 진행해주세요.',
+      });
       return;
     }
 
@@ -451,6 +461,15 @@ export default function WBS() {
 
   return (
     <div className="flex h-full flex-col gap-6">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="app-panel relative overflow-hidden p-6">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-80" style={{ backgroundColor: projectTone?.accent || 'var(--accent-primary)' }} />
         <div
@@ -678,6 +697,29 @@ export default function WBS() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(pendingDeleteTask)}
+        onClose={() => setPendingDeleteTask(null)}
+        onConfirm={() => {
+          if (!pendingDeleteTask) return;
+          deleteTask(pendingDeleteTask.id);
+          showFeedback({
+            tone: 'warning',
+            title: '작업 삭제 완료',
+            message: `"${pendingDeleteTask.name || '이름 없는 작업'}"과 하위 작업을 제거했습니다.`,
+          });
+          setPendingDeleteTask(null);
+        }}
+        title="작업 삭제"
+        description={
+          pendingDeleteTask
+            ? `"${pendingDeleteTask.name || '이름 없는 작업'}"과 연결된 하위 작업도 함께 삭제됩니다. 변경 내용은 저장 시 일정과 지표에 반영됩니다.`
+            : ''
+        }
+        confirmLabel="작업 삭제"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

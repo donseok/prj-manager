@@ -20,6 +20,7 @@ import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import { generateProjectReport } from '../lib/exportReport';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
@@ -38,6 +39,7 @@ import {
   calculateTimeline,
   getRecentlyCompleted,
 } from '../lib/taskAnalytics';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import {
   BarChart,
   Bar,
@@ -59,6 +61,7 @@ export default function Dashboard() {
   const { currentProject, members } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const heroPanelClassName = isDark
     ? 'app-panel-dark relative overflow-hidden p-6 md:p-8'
     : 'app-panel relative overflow-hidden p-6 md:p-8';
@@ -119,9 +122,18 @@ export default function Dashboard() {
     setIsExporting(true);
     try {
       await generateProjectReport({ project: currentProject, tasks, members });
+      showFeedback({
+        tone: 'success',
+        title: '보고서 생성 완료',
+        message: '현재 프로젝트 기준으로 현황 보고서 다운로드를 시작했습니다.',
+      });
     } catch (e) {
       console.error('보고서 생성 실패:', e);
-      alert('보고서 생성에 실패했습니다.');
+      showFeedback({
+        tone: 'error',
+        title: '보고서 생성 실패',
+        message: '보고서 생성에 실패했습니다.',
+      });
     } finally {
       setIsExporting(false);
     }
@@ -129,6 +141,15 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div
           className={heroPanelClassName}

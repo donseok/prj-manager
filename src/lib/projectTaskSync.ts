@@ -141,6 +141,9 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
 
 function deriveProjectStatus(project: Project, tasks: Task[]): ProjectStatus {
   if (project.status === 'deleted') return 'deleted';
+  if (project.settings?.statusMode === 'manual' && project.settings.manualStatus) {
+    return project.settings.manualStatus;
+  }
 
   const leafTasks = getLeafTasks(tasks);
   if (leafTasks.length === 0) return 'preparing';
@@ -173,6 +176,13 @@ function buildDerivedProject(project: Project, tasks: Task[]) {
 
   return {
     ...project,
+    settings:
+      project.settings?.statusMode === 'manual'
+        ? {
+            ...project.settings,
+            manualStatus: derivedStatus,
+          }
+        : project.settings,
     startDate: formatDateOnly(startDate),
     endDate: formatDateOnly(endDate),
     status: derivedStatus,

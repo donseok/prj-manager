@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   format,
   startOfWeek,
@@ -13,6 +13,7 @@ import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, CalendarDays, ScanSearch } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
+import { useThemeStore } from '../../store/themeStore';
 import Button from '../common/Button';
 
 interface GanttChartProps {
@@ -24,11 +25,16 @@ interface GanttChartProps {
   rowHeight?: number;
   highlightWeekends?: boolean;
   onTaskClick?: (task: Task) => void;
+  onVerticalScroll?: (scrollTop: number) => void;
+  externalScrollTop?: number;
+  onToolbarHeightChange?: (height: number) => void;
 }
 
 const DEFAULT_DAY_WIDTH = 44;
 const DEFAULT_ROW_HEIGHT = 42;
 const HEADER_HEIGHT = 68;
+
+export { HEADER_HEIGHT };
 
 export default function GanttChart({
   tasks,
@@ -39,8 +45,14 @@ export default function GanttChart({
   rowHeight = DEFAULT_ROW_HEIGHT,
   highlightWeekends = true,
   onTaskClick,
+  onVerticalScroll,
+  externalScrollTop,
+  onToolbarHeightChange,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const isDark = useThemeStore((s) => s.isDark);
+  const isExternalScroll = useRef(false);
 
   const recommendedStartDate = useMemo(() => {
     if (propStartDate) return startOfWeek(propStartDate, { weekStartsOn: 1 });
@@ -172,6 +184,37 @@ export default function GanttChart({
     });
   }, [dayWidth, displayStartDate, rowHeight, selectedAnchorDate, selectedTask, tasks]);
 
+  // Measure toolbar height and report to parent
+  useEffect(() => {
+    if (!toolbarRef.current || !onToolbarHeightChange) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        onToolbarHeightChange(entry.contentRect.height + 24); // + border/padding
+      }
+    });
+    observer.observe(toolbarRef.current);
+    return () => observer.disconnect();
+  }, [onToolbarHeightChange]);
+
+  // Report vertical scroll to parent
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current || !onVerticalScroll) return;
+    if (isExternalScroll.current) {
+      isExternalScroll.current = false;
+      return;
+    }
+    onVerticalScroll(containerRef.current.scrollTop);
+  }, [onVerticalScroll]);
+
+  // Apply external scroll position
+  useEffect(() => {
+    if (externalScrollTop === undefined || !containerRef.current) return;
+    if (Math.abs(containerRef.current.scrollTop - externalScrollTop) > 1) {
+      isExternalScroll.current = true;
+      containerRef.current.scrollTop = externalScrollTop;
+    }
+  }, [externalScrollTop]);
+
   const handlePrevWeek = () => {
     setManualViewStartDate(addWeeks(displayStartDate, -Math.max(2, Math.floor(weeksToShow / 2))));
   };
@@ -190,7 +233,7 @@ export default function GanttChart({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-[var(--border-color)] px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
+      <div ref={toolbarRef} className="flex flex-col gap-3 border-b border-[var(--border-color)] px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handlePrevWeek}>
             <ChevronLeft className="w-4 h-4" />
@@ -221,7 +264,7 @@ export default function GanttChart({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto" ref={containerRef}>
+      <div className="flex-1 overflow-auto" ref={containerRef} onScroll={handleScroll}>
         <div
           style={{
             minWidth: dateRange.length * dayWidth,
@@ -229,15 +272,22 @@ export default function GanttChart({
           }}
         >
           <div
-            className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[rgba(255,248,241,0.95)] backdrop-blur-2xl dark:bg-[rgba(20,24,30,0.97)]"
-            style={{ height: HEADER_HEIGHT }}
+            className="sticky top-0 z-10 border-b border-[var(--border-color)] backdrop-blur-2xl"
+            style={{
+              height: HEADER_HEIGHT,
+              backgroundColor: isDark ? '#1b2340' : 'rgba(255,248,241,0.95)',
+            }}
           >
             <div className="flex h-1/2 border-b border-[var(--border-color)]">
               {months.map((month) => (
                 <div
                   key={month.month}
-                  className="flex items-center justify-center border-r border-[var(--border-color)] text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-secondary)]"
-                  style={{ width: month.days * dayWidth }}
+                  className="flex items-center justify-center border-r border-[var(--border-color)] text-xs font-semibold uppercase tracking-[0.16em]"
+                  style={{
+                    width: month.days * dayWidth,
+                    backgroundColor: isDark ? '#1e2750' : undefined,
+                    color: isDark ? '#ffffff' : 'var(--text-secondary)',
+                  }}
                 >
                   {format(parseISO(`${month.month}-01`), 'yyyy년 M월', { locale: ko })}
                 </div>
@@ -248,29 +298,54 @@ export default function GanttChart({
               {dateRange.map((date) => {
                 const isToday = isSameDay(date, today);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                let bgColor: string | undefined;
+                let numColor: string;
+                let dayColor: string;
+
+                if (isDark) {
+                  if (isToday) {
+                    bgColor = 'rgba(15,118,110,0.35)';
+                    numColor = '#5eead4';
+                    dayColor = '#5eead4';
+                  } else if (isWeekend) {
+                    bgColor = '#8b2030';
+                    numColor = '#ffffff';
+                    dayColor = '#ffffff';
+                  } else {
+                    bgColor = '#1b2340';
+                    numColor = '#ffffff';
+                    dayColor = '#cbd5e1';
+                  }
+                } else {
+                  if (isToday) {
+                    bgColor = 'rgba(15,118,110,0.15)';
+                    numColor = 'var(--accent-primary)';
+                    dayColor = 'var(--accent-primary)';
+                  } else if (isWeekend) {
+                    bgColor = 'rgba(127,111,97,0.08)';
+                    numColor = 'var(--text-secondary)';
+                    dayColor = 'var(--text-muted)';
+                  } else {
+                    bgColor = undefined;
+                    numColor = 'var(--text-primary)';
+                    dayColor = 'var(--text-secondary)';
+                  }
+                }
+
                 return (
                   <div
                     key={date.toISOString()}
                     className={cn(
                       'flex flex-col items-center justify-center border-r border-[var(--border-color)] text-xs',
-                      isToday && 'bg-[rgba(15,118,110,0.15)] font-semibold text-[color:var(--accent-primary)]',
-                      highlightWeekends &&
-                        isWeekend &&
-                        !isToday &&
-                        'bg-[rgba(127,111,97,0.08)] dark:bg-[rgba(255,255,255,0.06)]'
+                      isToday && 'font-semibold'
                     )}
-                    style={{ width: dayWidth }}
+                    style={{ width: dayWidth, backgroundColor: bgColor }}
                   >
-                    <span className={cn(
-                      'font-medium',
-                      isToday ? 'text-[color:var(--accent-primary)]' : 'text-[color:var(--text-primary)]',
-                      isWeekend && !isToday && 'text-[color:var(--text-secondary)]'
-                    )}>{format(date, 'd')}</span>
-                    <span className={cn(
-                      'text-[10px]',
-                      isToday ? 'text-[color:var(--accent-primary)]' : 'text-[color:var(--text-secondary)]',
-                      isWeekend && !isToday && 'text-[color:var(--text-muted)]'
-                    )}>
+                    <span className="font-medium" style={{ color: numColor }}>
+                      {format(date, 'd')}
+                    </span>
+                    <span className="text-[10px]" style={{ color: dayColor }}>
                       {format(date, 'E', { locale: ko })}
                     </span>
                   </div>

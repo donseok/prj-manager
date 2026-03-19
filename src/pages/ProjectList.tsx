@@ -16,6 +16,8 @@ import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
+import ConfirmModal from '../components/common/ConfirmModal';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
 import { createLocalFallbackUser } from '../lib/supabase';
@@ -27,6 +29,7 @@ import {
   getProjectVisualTone,
 } from '../lib/projectVisuals';
 import { useProjectStatus } from '../hooks/useProjectStatus';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { Project, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
@@ -39,8 +42,11 @@ export default function ProjectList() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   // 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -106,23 +112,68 @@ export default function ProjectList() {
     navigate(`/projects/${savedProject.id}`);
   };
 
-  const handleDeleteProject = async (id: string) => {
-    if (confirm('정말 삭제하시겠습니까?')) {
-      await deleteProjectById(id);
-      deleteProject(id);
-    }
+  const handleDeleteProject = (project: Project) => {
+    setPendingDeleteProject(project);
     setMenuOpenId(null);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!pendingDeleteProject) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProjectById(pendingDeleteProject.id);
+      deleteProject(pendingDeleteProject.id);
+      showFeedback({
+        tone: 'success',
+        title: '프로젝트 삭제 완료',
+        message: `"${pendingDeleteProject.name}" 프로젝트를 삭제했습니다.`,
+      });
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      showFeedback({
+        tone: 'error',
+        title: '프로젝트 삭제 실패',
+        message: '프로젝트를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setPendingDeleteProject(null);
+    }
   };
 
   const handleChangeStatus = async (id: string, newStatus: ProjectStatus) => {
     const project = projects.find((item) => item.id === id);
     if (!project) return;
-    await changeStatus(project, newStatus);
+    try {
+      await changeStatus(project, newStatus);
+      showFeedback({
+        tone: 'success',
+        title: '상태 고정 완료',
+        message: `"${project.name}" 프로젝트 상태를 "${PROJECT_STATUS_LABELS[newStatus]}"로 변경했습니다.`,
+      });
+    } catch (error) {
+      console.error('Failed to change project status:', error);
+      showFeedback({
+        tone: 'error',
+        title: '상태 변경 실패',
+        message: '프로젝트 상태를 변경하지 못했습니다.',
+      });
+    }
     setMenuOpenId(null);
   };
 
   return (
     <div className="space-y-8">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="app-panel-dark relative overflow-hidden p-6 md:p-8">
           <div className="pointer-events-none absolute right-[-4rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
@@ -333,7 +384,7 @@ export default function ProjectList() {
                             <>
                               <div className="my-1 border-t border-[var(--border-color)]" />
                               <button
-                                onClick={() => handleDeleteProject(project.id)}
+                                onClick={() => handleDeleteProject(project)}
                                 className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -475,6 +526,21 @@ export default function ProjectList() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={Boolean(pendingDeleteProject)}
+        onClose={() => setPendingDeleteProject(null)}
+        onConfirm={() => void confirmDeleteProject()}
+        title="프로젝트 삭제"
+        description={
+          pendingDeleteProject
+            ? `"${pendingDeleteProject.name}" 프로젝트와 관련 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
+            : ''
+        }
+        confirmLabel="프로젝트 삭제"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

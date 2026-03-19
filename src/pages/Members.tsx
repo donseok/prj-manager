@@ -3,11 +3,14 @@ import { useParams } from 'react-router-dom';
 import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
+import ConfirmModal from '../components/common/ConfirmModal';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, generateId } from '../lib/utils';
 import { syncProjectMembers } from '../lib/dataRepository';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { ProjectMember } from '../types';
 
 export default function Members() {
@@ -18,10 +21,12 @@ export default function Members() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [pendingDeleteMember, setPendingDeleteMember] = useState<ProjectMember | null>(null);
   const [newMember, setNewMember] = useState<{ name: string; role: ProjectMember['role'] }>({
     name: '',
     role: 'member',
   });
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const saveMembers = useCallback(
     (data: ProjectMember[]) => syncProjectMembers(projectId!, data),
@@ -49,10 +54,19 @@ export default function Members() {
     setNewMember({ name: '', role: 'member' });
   };
 
-  const handleDeleteMember = (id: string) => {
-    if (confirm('멤버를 삭제하시겠습니까?')) {
-      removeMember(id);
-    }
+  const handleDeleteMember = (member: ProjectMember) => {
+    setPendingDeleteMember(member);
+  };
+
+  const confirmDeleteMember = () => {
+    if (!pendingDeleteMember) return;
+    removeMember(pendingDeleteMember.id);
+    showFeedback({
+      tone: 'success',
+      title: '멤버 삭제 완료',
+      message: `"${pendingDeleteMember.name}" 멤버를 팀 구성에서 제거했습니다.`,
+    });
+    setPendingDeleteMember(null);
   };
 
   const handleStartEdit = (member: ProjectMember) => {
@@ -92,6 +106,15 @@ export default function Members() {
 
   return (
     <div className="space-y-8">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div
           className="app-panel-dark relative overflow-hidden p-6 md:p-8"
@@ -283,7 +306,7 @@ export default function Members() {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteMember(member.id)}
+                      onClick={() => handleDeleteMember(member)}
                       className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.05)] text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.12)]"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -352,6 +375,20 @@ export default function Members() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={Boolean(pendingDeleteMember)}
+        onClose={() => setPendingDeleteMember(null)}
+        onConfirm={confirmDeleteMember}
+        title="멤버 삭제"
+        description={
+          pendingDeleteMember
+            ? `"${pendingDeleteMember.name}" 멤버를 프로젝트 팀 구성에서 제거합니다. 저장되면 멤버 보드와 관련 필터에서 바로 반영됩니다.`
+            : ''
+        }
+        confirmLabel="멤버 삭제"
+        confirmVariant="danger"
+      />
     </div>
   );
 }

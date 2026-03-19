@@ -473,7 +473,10 @@ select {
 }
 
 .dark .app-table thead th {
-  background: rgba(24, 29, 36, 0.94);
+  background: #1b2340;
+  color: #ffffff;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
 }
 
 .app-table td {

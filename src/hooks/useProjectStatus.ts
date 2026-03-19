@@ -12,8 +12,14 @@ export function useProjectStatus() {
 
   const changeStatus = async (project: Project, newStatus: ProjectStatus) => {
     const now = new Date().toISOString();
+    const nextSettings = {
+      ...project.settings,
+      statusMode: 'manual' as const,
+      manualStatus: newStatus,
+    };
     const updates: Partial<Project> = {
       status: newStatus,
+      settings: nextSettings,
       updatedAt: now,
     };
 
@@ -26,6 +32,7 @@ export function useProjectStatus() {
     const savedProject = await upsertProject({ ...project, ...updates } as Project);
     updateProject(project.id, {
       status: savedProject.status,
+      settings: savedProject.settings,
       completedAt: savedProject.completedAt,
       updatedAt: savedProject.updatedAt,
     });

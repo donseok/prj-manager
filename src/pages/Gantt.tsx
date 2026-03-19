@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -15,13 +15,15 @@ import {
 import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
-import GanttChart from '../components/wbs/GanttChart';
+import GanttChart, { HEADER_HEIGHT } from '../components/wbs/GanttChart';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
+import FeedbackNotice from '../components/common/FeedbackNotice';
 import { exportGanttWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 
@@ -53,8 +55,12 @@ export default function Gantt() {
   const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(12);
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
 
   const tableRef = useRef<HTMLDivElement>(null);
+  const scrollSourceRef = useRef<'left' | 'right' | null>(null);
+  const [ganttToolbarHeight, setGanttToolbarHeight] = useState(52);
+  const [ganttScrollTop, setGanttScrollTop] = useState<number | undefined>(undefined);
   const rowHeight = density === 'compact' ? 34 : 42;
 
   const taskMap = useMemo(
@@ -120,7 +126,7 @@ export default function Gantt() {
     if (rowIndex < 0) return;
 
     tableRef.current.scrollTo({
-      top: Math.max(rowIndex * rowHeight - rowHeight * 2, 0),
+      top: Math.max(HEADER_HEIGHT + rowIndex * rowHeight - rowHeight * 2, 0),
       behavior: 'smooth',
     });
   }, [filteredFlatTasks, resolvedSelectedTaskId, rowHeight]);
@@ -155,9 +161,35 @@ export default function Gantt() {
     loadedProjectId,
   });
 
+  // Scroll sync: left task list → right gantt chart
+  const handleLeftScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    if (scrollSourceRef.current === 'right') {
+      scrollSourceRef.current = null;
+      return;
+    }
+    scrollSourceRef.current = 'left';
+    setGanttScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  // Scroll sync: right gantt chart → left task list
+  const handleGanttScroll = useCallback((scrollTop: number) => {
+    if (scrollSourceRef.current === 'left') {
+      scrollSourceRef.current = null;
+      return;
+    }
+    scrollSourceRef.current = 'right';
+    if (tableRef.current) {
+      tableRef.current.scrollTop = scrollTop;
+    }
+  }, []);
+
   const handleExportExcel = () => {
     if (filteredFlatTasks.length === 0) {
-      alert('현재 조건에 맞는 작업이 없습니다.');
+      showFeedback({
+        tone: 'info',
+        title: '내보낼 작업 없음',
+        message: '현재 검색어와 필터 조건에 맞는 작업이 없습니다. 조건을 조정한 뒤 다시 시도해주세요.',
+      });
       return;
     }
 
@@ -177,6 +209,15 @@ export default function Gantt() {
 
   return (
     <div className="flex h-full flex-col gap-6">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <div
           className="app-panel-dark relative overflow-hidden p-6 md:p-8"
@@ -585,14 +626,17 @@ export default function Gantt() {
       <div className="app-panel flex min-h-0 flex-1 overflow-hidden">
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
           <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
-            <div className="flex h-[64px] items-center justify-between border-b border-[var(--border-color)] px-4">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">
-                작업 목록
-              </span>
-              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
-            </div>
-
-            <div ref={tableRef} className="flex-1 overflow-auto">
+            <div ref={tableRef} className="flex-1 overflow-auto" onScroll={handleLeftScroll}>
+              {/* Combined header matching GanttChart toolbar + date header */}
+              <div
+                className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5"
+                style={{ height: ganttToolbarHeight + HEADER_HEIGHT }}
+              >
+                <span className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                  작업 목록
+                </span>
+                <span className="text-sm text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
+              </div>
               {filteredFlatTasks.map((task) => {
                 const hasChildren = tasks.some((item) => item.parentId === task.id);
                 const isSelected = resolvedSelectedTaskId === task.id;
@@ -674,6 +718,9 @@ export default function Gantt() {
               dayWidth={density === 'compact' ? 32 : 44}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
+              onVerticalScroll={handleGanttScroll}
+              externalScrollTop={ganttScrollTop}
+              onToolbarHeightChange={setGanttToolbarHeight}
             />
           </div>
         </div>
