@@ -229,7 +229,7 @@ export default function GanttChart({
           }}
         >
           <div
-            className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[rgba(255,248,241,0.88)] backdrop-blur-2xl dark:bg-[rgba(15,18,23,0.88)]"
+            className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[rgba(255,248,241,0.95)] backdrop-blur-2xl dark:bg-[rgba(20,24,30,0.97)]"
             style={{ height: HEADER_HEIGHT }}
           >
             <div className="flex h-1/2 border-b border-[var(--border-color)]">
@@ -253,15 +253,16 @@ export default function GanttChart({
                     key={date.toISOString()}
                     className={cn(
                       'flex flex-col items-center justify-center border-r border-[var(--border-color)] text-xs',
-                      isToday && 'bg-[rgba(15,118,110,0.12)] font-semibold text-[color:var(--accent-primary)]',
+                      isToday && 'bg-[rgba(15,118,110,0.15)] font-semibold text-[color:var(--accent-primary)]',
                       highlightWeekends &&
                         isWeekend &&
                         !isToday &&
-                        'bg-[rgba(127,111,97,0.06)] dark:bg-[rgba(255,255,255,0.04)]'
+                        'bg-[rgba(127,111,97,0.08)] dark:bg-[rgba(255,255,255,0.06)]'
                     )}
                     style={{ width: dayWidth }}
                   >
                     <span className={cn(
+                      'font-medium',
                       isToday ? 'text-[color:var(--accent-primary)]' : 'text-[color:var(--text-primary)]',
                       isWeekend && !isToday && 'text-[color:var(--text-secondary)]'
                     )}>{format(date, 'd')}</span>
@@ -287,7 +288,7 @@ export default function GanttChart({
                     key={`${date.toISOString()}-grid`}
                     className={cn(
                       'absolute top-0 bottom-0 border-r border-[var(--border-color)]',
-                      highlightWeekends && isWeekend && 'bg-[color:var(--bg-tertiary)]'
+                      highlightWeekends && isWeekend && 'bg-[rgba(127,111,97,0.05)] dark:bg-[rgba(255,255,255,0.03)]'
                     )}
                     style={{ left: index * dayWidth, width: dayWidth }}
                   />

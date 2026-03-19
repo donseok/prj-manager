@@ -211,4 +211,7 @@ export const storage = {
   remove(key: string): void {
     localStorage.removeItem(key);
   },
+  has(key: string): boolean {
+    return localStorage.getItem(key) !== null;
+  },
 };

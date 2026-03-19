@@ -269,8 +269,12 @@ function ensureLocalSampleWorkspace() {
 
   storage.set('projects', mergedProjects);
   for (const ws of sampleWorkspaces) {
-    storage.set(`members-${ws.project.id}`, ws.members);
-    storage.set(`tasks-${ws.project.id}`, ws.tasks);
+    if (!storage.has(`members-${ws.project.id}`)) {
+      storage.set(`members-${ws.project.id}`, ws.members);
+    }
+    if (!storage.has(`tasks-${ws.project.id}`)) {
+      storage.set(`tasks-${ws.project.id}`, ws.tasks);
+    }
   }
 
   return mergedProjects;

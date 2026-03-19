@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 /**
  * 데이터 변경 시 디바운스 자동 저장 훅.
@@ -18,22 +20,74 @@ export function useAutoSave<T>(
 ) {
   const { projectId, loadedProjectId, delay = 700 } = options;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentProjectIdRef = useRef<string | null | undefined>(null);
+  const hydratedRef = useRef(false);
+  const latestDataRef = useRef(data);
+  const saveFnRef = useRef(saveFn);
+  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectId || loadedProjectId !== projectId) return;
+    latestDataRef.current = data;
+  }, [data]);
 
+  useEffect(() => {
+    saveFnRef.current = saveFn;
+  }, [saveFn]);
+
+  const clearPendingSave = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  const runSave = useCallback(async (payload: T) => {
+    clearPendingSave();
+    setSaveStatus('saving');
+
+    try {
+      await saveFnRef.current(payload);
+      setLastSavedAt(new Date().toISOString());
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('자동 저장 실패:', error);
+      setSaveStatus('error');
+      throw error;
+    }
+  }, [clearPendingSave]);
+
+  useEffect(() => {
+    if (!projectId || loadedProjectId !== projectId) {
+      clearPendingSave();
+      return;
     }
 
+    if (currentProjectIdRef.current !== projectId) {
+      currentProjectIdRef.current = projectId;
+      hydratedRef.current = false;
+      setSaveStatus('idle');
+      setLastSavedAt(null);
+    }
+
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+
+    setSaveStatus('pending');
     timeoutRef.current = setTimeout(() => {
-      void saveFn(data);
+      void runSave(latestDataRef.current);
     }, delay);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearPendingSave();
     };
-  }, [data, projectId, loadedProjectId, delay, saveFn]);
+  }, [clearPendingSave, data, delay, loadedProjectId, projectId, runSave]);
+
+  return {
+    saveStatus,
+    lastSavedAt,
+    saveNow: async () => runSave(latestDataRef.current),
+  };
 }
