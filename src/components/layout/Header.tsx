@@ -4,7 +4,7 @@ import DKFlowLogo from '../common/DKFlowLogo';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
@@ -12,6 +12,7 @@ export default function Header() {
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
   const todayLabel = new Intl.DateTimeFormat('ko-KR', {
@@ -25,6 +26,30 @@ export default function Header() {
     setShowUserMenu(false);
     navigate('/login');
   };
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [showUserMenu]);
 
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
@@ -71,7 +96,7 @@ export default function Header() {
             )}
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"

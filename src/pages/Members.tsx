@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users } from 'lucide-react';
+import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
-import { generateId } from '../lib/utils';
+import { cn, generateId } from '../lib/utils';
 import { syncProjectMembers } from '../lib/dataRepository';
 import { useAutoSave } from '../hooks/useAutoSave';
 import type { ProjectMember } from '../types';
@@ -27,7 +27,11 @@ export default function Members() {
     (data: ProjectMember[]) => syncProjectMembers(projectId!, data),
     [projectId]
   );
-  useAutoSave(members, saveMembers, { projectId, loadedProjectId: membersLoadedProjectId, delay: 500 });
+  const { saveStatus, lastSavedAt, saveNow } = useAutoSave(members, saveMembers, {
+    projectId,
+    loadedProjectId: membersLoadedProjectId,
+    delay: 500,
+  });
 
   const handleAddMember = () => {
     if (!newMember.name.trim()) return;
@@ -154,10 +158,46 @@ export default function Members() {
               멤버 목록
             </h2>
           </div>
-          <Button variant="outline" onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4" />
-            멤버 추가
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void saveNow()}
+              disabled={!projectId || saveStatus === 'saving'}
+            >
+              {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              저장
+            </Button>
+            <div className={cn(
+              'surface-badge',
+              saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
+            )}>
+              {saveStatus === 'pending' && '변경사항 저장 대기'}
+              {saveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  저장중...
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
+                  {formatSaveStatus(lastSavedAt)}
+                </>
+              )}
+              {saveStatus === 'error' && (
+                <>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  저장 실패
+                </>
+              )}
+              {saveStatus === 'idle' && '자동 저장 준비'}
+            </div>
+            <Button variant="outline" onClick={() => setShowAddModal(true)}>
+              <Plus className="w-4 h-4" />
+              멤버 추가
+            </Button>
+          </div>
         </div>
 
         {members.length > 0 ? (
@@ -314,4 +354,12 @@ export default function Members() {
       </Modal>
     </div>
   );
+}
+
+function formatSaveStatus(lastSavedAt: string | null) {
+  if (!lastSavedAt) return '저장됨';
+  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} 저장됨`;
 }

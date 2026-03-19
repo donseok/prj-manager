@@ -18,8 +18,9 @@ import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
-import { deleteProjectById, syncProjectTasks, upsertProject } from '../lib/dataRepository';
+import { deleteProjectById, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
+import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useProjectStatus } from '../hooks/useProjectStatus';
 import type { ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
@@ -113,9 +114,13 @@ export default function Settings() {
           return;
         }
 
-        setTasks(importedTasks);
-        void syncProjectTasks(projectId!, importedTasks);
-        alert(`${importedTasks.length}개의 작업을 가져왔습니다.`);
+        if (!currentProject) return;
+
+        void syncProjectWorkspace(currentProject, importedTasks).then(({ project, tasks: normalizedTasks }) => {
+          setTasks(normalizedTasks, projectId);
+          updateProject(project.id, project);
+          alert(`${normalizedTasks.length}개의 작업을 가져왔습니다.`);
+        });
       } catch (error) {
         console.error('Import error:', error);
         alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');

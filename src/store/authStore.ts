@@ -44,7 +44,19 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({ user: state.user }),
+      merge: (persistedState, currentState) => {
+        const nextState = persistedState as Partial<AuthState> | undefined;
+        const user = nextState?.user ?? null;
+        return {
+          ...currentState,
+          ...nextState,
+          user,
+          isAuthenticated: !!user,
+          isAdmin: user?.systemRole === 'admin',
+          isLoading: false,
+        };
+      },
     }
   )
 );

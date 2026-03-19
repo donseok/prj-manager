@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Task } from '../types';
 import { buildTaskTree, flattenTaskTree, calculateParentProgress } from '../lib/utils';
+import { normalizeTaskHierarchy } from '../lib/projectTaskSync';
 
 interface TaskState {
   tasks: Task[];
@@ -17,7 +18,11 @@ interface TaskState {
   historyIndex: number;
 
   // Actions
-  setTasks: (tasks: Task[], projectId?: string | null) => void;
+  setTasks: (
+    tasks: Task[],
+    projectId?: string | null,
+    options?: { recordHistory?: boolean; resetHistory?: boolean }
+  ) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -37,8 +42,6 @@ interface TaskState {
   // Undo/Redo
   undo: () => void;
   redo: () => void;
-  saveToHistory: () => void;
-
   // Computed
   getTaskById: (id: string) => Task | undefined;
   getChildTasks: (parentId: string) => Task[];
@@ -59,39 +62,57 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   history: [],
   historyIndex: -1,
 
-  setTasks: (tasks, projectId) => {
+  setTasks: (tasks, projectId, options) => {
+    const currentState = get();
     const expandedIds = get().expandedIds;
-    const tasksWithExpanded = tasks.map((t) => ({
+    const tasksWithExpanded = normalizeTaskHierarchy(tasks).map((t) => ({
       ...t,
       isExpanded: expandedIds.has(t.id),
     }));
     const tree = buildTaskTree(tasksWithExpanded);
     const flat = flattenTaskTree(tree);
-    set({
+    const nextState: Partial<TaskState> = {
       tasks: tasksWithExpanded,
       taskTree: tree,
       flatTasks: flat,
       loadedProjectId: projectId ?? get().loadedProjectId,
-    });
+      selectedTaskId:
+        currentState.selectedTaskId && tasksWithExpanded.some((task) => task.id === currentState.selectedTaskId)
+          ? currentState.selectedTaskId
+          : null,
+    };
+
+    const shouldResetHistory = options?.resetHistory ?? projectId !== undefined;
+
+    if (shouldResetHistory) {
+      nextState.history = [tasksWithExpanded.map((task) => ({ ...task }))];
+      nextState.historyIndex = 0;
+    } else if (options?.recordHistory) {
+      const nextHistory = currentState.history
+        .slice(0, currentState.historyIndex + 1)
+        .concat([tasksWithExpanded.map((task) => ({ ...task }))])
+        .slice(-50);
+      nextState.history = nextHistory;
+      nextState.historyIndex = nextHistory.length - 1;
+    }
+
+    set(nextState as TaskState);
   },
 
   addTask: (task) => {
-    const { tasks, saveToHistory } = get();
-    saveToHistory();
+    const { tasks } = get();
     const newTasks = [...tasks, { ...task, isExpanded: true }];
-    get().setTasks(newTasks);
+    get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
   updateTask: (id, updates) => {
-    const { tasks, saveToHistory } = get();
-    saveToHistory();
+    const { tasks } = get();
     const newTasks = tasks.map((t) => (t.id === id ? { ...t, ...updates } : t));
-    get().setTasks(newTasks);
+    get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
   deleteTask: (id) => {
-    const { tasks, saveToHistory } = get();
-    saveToHistory();
+    const { tasks } = get();
     // 자식 작업도 함께 삭제
     const idsToDelete = new Set<string>();
     const findChildren = (parentId: string) => {
@@ -100,12 +121,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     findChildren(id);
     const newTasks = tasks.filter((t) => !idsToDelete.has(t.id));
-    get().setTasks(newTasks);
+    get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
   moveTask: (taskId, newParentId, newIndex) => {
-    const { tasks, saveToHistory } = get();
-    saveToHistory();
+    const { tasks } = get();
 
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -162,7 +182,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       return t;
     });
 
-    get().setTasks(newTasks);
+    get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
   selectTask: (id) => set({ selectedTaskId: id }),
@@ -193,16 +213,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   setEditingCell: (cell) => set({ editingCell: cell }),
-
-  saveToHistory: () => {
-    const { tasks, history, historyIndex } = get();
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push([...tasks]);
-    set({
-      history: newHistory.slice(-50), // 최대 50개 저장
-      historyIndex: newHistory.length - 1,
-    });
-  },
 
   undo: () => {
     const { history, historyIndex } = get();

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -7,6 +7,10 @@ import {
   Clock3,
   Target,
   Download,
+  Save,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { differenceInCalendarDays } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
@@ -16,6 +20,8 @@ import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
 import { exportGanttWorkbook } from '../lib/excel';
+import { syncProjectWorkspace } from '../lib/projectTaskSync';
+import { useAutoSave } from '../hooks/useAutoSave';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 
@@ -36,8 +42,8 @@ const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
 ];
 
 export default function Gantt() {
-  const { tasks, flatTasks, toggleExpand } = useTaskStore();
-  const { currentProject, members } = useProjectStore();
+  const { tasks, flatTasks, loadedProjectId, toggleExpand, updateTask } = useTaskStore();
+  const { currentProject, members, updateProject } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
 
@@ -136,6 +142,19 @@ export default function Gantt() {
   const delayedCount = tasks.filter((task) => getDelayDays(task) > 0).length;
   const activeCount = tasks.filter((task) => task.status !== 'completed').length;
 
+  const saveTasks = useCallback(
+    async (data: Task[]) => {
+      if (!currentProject) return;
+      const { project } = await syncProjectWorkspace(currentProject, data);
+      updateProject(project.id, project);
+    },
+    [currentProject, updateProject]
+  );
+  const { saveStatus, lastSavedAt, saveNow } = useAutoSave(tasks, saveTasks, {
+    projectId: currentProject?.id,
+    loadedProjectId,
+  });
+
   const handleExportExcel = () => {
     if (filteredFlatTasks.length === 0) {
       alert('현재 조건에 맞는 작업이 없습니다.');
@@ -150,6 +169,10 @@ export default function Gantt() {
       searchQuery,
       weeksToShow,
     });
+  };
+
+  const handleTaskFieldChange = (taskId: string, field: keyof Task, value: Task[keyof Task]) => {
+    updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() });
   };
 
   return (
@@ -278,6 +301,184 @@ export default function Gantt() {
                   {selectedTask.output}
                 </div>
               )}
+
+              <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                <div className="flex flex-col gap-3 border-b border-[var(--border-color)] pb-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
+                      빠른 편집
+                    </p>
+                    <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                      간트 화면에서 핵심 일정과 상태를 바로 수정할 수 있습니다.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void saveNow()}
+                      disabled={!currentProject || saveStatus === 'saving'}
+                    >
+                      {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      저장
+                    </Button>
+                    <div className={cn(
+                      'surface-badge',
+                      saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
+                    )}>
+                      {saveStatus === 'pending' && '변경사항 저장 대기'}
+                      {saveStatus === 'saving' && (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          저장중...
+                        </>
+                      )}
+                      {saveStatus === 'saved' && (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
+                          {formatSaveStatus(lastSavedAt)}
+                        </>
+                      )}
+                      {saveStatus === 'error' && (
+                        <>
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          저장 실패
+                        </>
+                      )}
+                      {saveStatus === 'idle' && '자동 저장 준비'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="field-label">작업명</label>
+                    <input
+                      type="text"
+                      value={selectedTask.name}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'name', event.target.value)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="field-label">산출물</label>
+                    <input
+                      type="text"
+                      value={selectedTask.output || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'output', event.target.value)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">담당자</label>
+                    <select
+                      value={selectedTask.assigneeId || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'assigneeId', event.target.value || null)}
+                      className="field-select"
+                    >
+                      <option value="">미지정</option>
+                      {members.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="field-label">상태</label>
+                    <select
+                      value={selectedTask.status}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'status', event.target.value as Task['status'])}
+                      className="field-select"
+                    >
+                      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="field-label">계획 시작</label>
+                    <input
+                      type="date"
+                      value={selectedTask.planStart || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planStart', event.target.value || null)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">계획 종료</label>
+                    <input
+                      type="date"
+                      value={selectedTask.planEnd || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planEnd', event.target.value || null)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">실적 시작</label>
+                    <input
+                      type="date"
+                      value={selectedTask.actualStart || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualStart', event.target.value || null)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">실적 종료</label>
+                    <input
+                      type="date"
+                      value={selectedTask.actualEnd || ''}
+                      onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualEnd', event.target.value || null)}
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">실적 공정율</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={selectedTask.actualProgress}
+                      onChange={(event) =>
+                        handleTaskFieldChange(
+                          selectedTask.id,
+                          'actualProgress',
+                          Math.min(100, Math.max(0, Number(event.target.value) || 0))
+                        )
+                      }
+                      className="field-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="field-label">계획 공정율</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={selectedTask.planProgress}
+                      onChange={(event) =>
+                        handleTaskFieldChange(
+                          selectedTask.id,
+                          'planProgress',
+                          Math.min(100, Math.max(0, Number(event.target.value) || 0))
+                        )
+                      }
+                      className="field-input"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="empty-state min-h-[18rem]">
@@ -318,6 +519,15 @@ export default function Gantt() {
             <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={filteredFlatTasks.length === 0}>
               <Download className="w-4 h-4" />
               엑셀 다운로드
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void saveNow()}
+              disabled={!currentProject || saveStatus === 'saving'}
+            >
+              {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              저장
             </Button>
           </div>
         </div>
@@ -523,4 +733,12 @@ function getDurationLabel(start: string | null | undefined, end: string | null |
 
   if (!startDate || !endDate) return '-';
   return `${differenceInCalendarDays(endDate, startDate) + 1}일`;
+}
+
+function formatSaveStatus(lastSavedAt: string | null) {
+  if (!lastSavedAt) return '저장됨';
+  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} 저장됨`;
 }

@@ -118,7 +118,14 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="manual" element={<UserManual />} />
-          <Route path="admin/users" element={<UserManagement />} />
+          <Route
+            path="admin/users"
+            element={
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
@@ -132,15 +139,24 @@ function ProjectDetailWrapper() {
   const { setTasks, expandAll } = useTaskStore();
 
   useEffect(() => {
+    if (!projectId) {
+      setCurrentProject(null);
+      return;
+    }
+
+    const project = projects.find((item) => item.id === projectId) ?? null;
+    setCurrentProject(project);
+
+    return () => {
+      setCurrentProject(null);
+    };
+  }, [projectId, projects, setCurrentProject]);
+
+  useEffect(() => {
     let isCancelled = false;
 
     const loadProjectDetail = async () => {
       if (!projectId) return;
-
-      const project = projects.find((item) => item.id === projectId);
-      if (!project) return;
-
-      setCurrentProject(project);
 
       const [members, tasks] = await Promise.all([
         loadProjectMembers(projectId),
@@ -158,9 +174,8 @@ function ProjectDetailWrapper() {
 
     return () => {
       isCancelled = true;
-      setCurrentProject(null);
     };
-  }, [projectId, projects, setCurrentProject, setMembers, setTasks, expandAll]);
+  }, [projectId, setMembers, setTasks, expandAll]);
 
   return <Outlet />;
 }

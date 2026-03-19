@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import type { Project, ProjectMember } from '../types';
 
+function sortProjectsByUpdatedAt(projects: Project[]) {
+  return [...projects].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
 interface ProjectState {
   projects: Project[];
   currentProject: Project | null;
@@ -31,16 +35,18 @@ export const useProjectStore = create<ProjectState>((set) => ({
   membersLoadedProjectId: null,
   isLoading: false,
 
-  setProjects: (projects) => set({ projects }),
+  setProjects: (projects) => set({ projects: sortProjectsByUpdatedAt(projects) }),
 
   addProject: (project) =>
     set((state) => ({
-      projects: [...state.projects, project],
+      projects: sortProjectsByUpdatedAt([...state.projects, project]),
     })),
 
   updateProject: (id, updates) =>
     set((state) => ({
-      projects: state.projects.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+      projects: sortProjectsByUpdatedAt(
+        state.projects.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      ),
       currentProject:
         state.currentProject?.id === id
           ? { ...state.currentProject, ...updates }

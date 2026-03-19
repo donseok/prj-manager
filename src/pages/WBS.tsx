@@ -11,6 +11,10 @@ import {
   ShrinkIcon,
   Download,
   GripVertical,
+  Save,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -21,14 +25,14 @@ import {
   cn,
 } from '../lib/utils';
 import { exportWbsWorkbook } from '../lib/excel';
-import { syncProjectTasks } from '../lib/dataRepository';
+import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useAutoSave } from '../hooks/useAutoSave';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { members, currentProject } = useProjectStore();
+  const { members, currentProject, updateProject } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
   const {
@@ -142,10 +146,17 @@ export default function WBS() {
 
   // 변경 시 자동 저장 (디바운스)
   const saveTasks = useCallback(
-    (data: Task[]) => syncProjectTasks(projectId!, data),
-    [projectId]
+    async (data: Task[]) => {
+      if (!projectId || !currentProject) return;
+      const { project } = await syncProjectWorkspace(currentProject, data);
+      updateProject(project.id, project);
+    },
+    [currentProject, projectId, updateProject]
   );
-  useAutoSave(tasks, saveTasks, { projectId, loadedProjectId });
+  const { saveStatus, lastSavedAt, saveNow } = useAutoSave(tasks, saveTasks, {
+    projectId,
+    loadedProjectId,
+  });
 
   // 키보드 단축키
   useEffect(() => {
@@ -160,13 +171,17 @@ export default function WBS() {
             e.preventDefault();
             redo();
             break;
+          case 's':
+            e.preventDefault();
+            void saveNow();
+            break;
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [redo, saveNow, undo]);
 
   // 새 작업 추가
   const handleAddTask = (parentId?: string, level: number = 1) => {
@@ -480,6 +495,15 @@ export default function WBS() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void saveNow()}
+                disabled={!currentProject || saveStatus === 'saving'}
+              >
+                {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                저장
+              </Button>
               <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex <= 0}>
                 <Undo2 className="w-4 h-4" />
               </Button>
@@ -488,6 +512,31 @@ export default function WBS() {
               </Button>
               <div className="surface-badge">
                 총 {tasks.length}개 작업
+              </div>
+              <div className={cn(
+                'surface-badge',
+                saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
+              )}>
+                {saveStatus === 'pending' && '변경사항 저장 대기'}
+                {saveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    저장중...
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
+                    {formatSaveStatus(lastSavedAt)}
+                  </>
+                )}
+                {saveStatus === 'error' && (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    저장 실패
+                  </>
+                )}
+                {saveStatus === 'idle' && '자동 저장 준비'}
               </div>
             </div>
           </div>
@@ -631,4 +680,12 @@ export default function WBS() {
       </div>
     </div>
   );
+}
+
+function formatSaveStatus(lastSavedAt: string | null) {
+  if (!lastSavedAt) return '저장됨';
+  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} 저장됨`;
 }
