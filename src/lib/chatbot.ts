@@ -1,6 +1,7 @@
-import { TASK_STATUS_LABELS, LEVEL_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
+import { TASK_STATUS_LABELS, LEVEL_LABELS, PROJECT_STATUS_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
 import { isSupabaseConfigured, supabase } from './supabase';
+import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 
 // ─── Public types ────────────────────────────────────────────
 
@@ -8,13 +9,14 @@ export interface ChatbotContext {
   project: Project | null;
   members: ProjectMember[];
   tasks: Task[];
+  allProjects: Project[];
 }
 
 export const CHATBOT_SUGGESTIONS = [
-  '현재 프로젝트 진행률 요약해줘',
-  '지금 지연된 작업이 뭐야?',
-  '이번 주 집중해야 할 작업 알려줘',
-  '멤버별 담당 업무를 정리해줘',
+  '전체 프로젝트 현황 알려줘',
+  '지연된 작업이 뭐야?',
+  '이번 주 작업 알려줘',
+  '멤버별 업무 정리해줘',
   '완료된 작업 목록 보여줘',
 ];
 
@@ -32,6 +34,8 @@ type IntentType =
   | 'member_weekly'
   | 'task_detail'
   | 'status_query'
+  | 'project_list'
+  | 'project_detail'
   | 'guide_wbs'
   | 'guide_gantt'
   | 'guide_workflow'
@@ -42,15 +46,23 @@ interface ScoredIntent {
   score: number;
   matchedTask?: Task;
   matchedMember?: ProjectMember;
+  matchedProject?: Project;
   taskStatus?: TaskStatus;
+}
+
+// Resolved context: either current project or matched from question
+interface ResolvedContext {
+  project: Project;
+  members: ProjectMember[];
+  tasks: Task[];
 }
 
 // ─── Intent keyword map (primary=3, secondary=2, weak=1) ────
 
 const INTENT_KEYWORDS: Record<string, { primary: string[]; secondary: string[]; weak: string[] }> = {
   greeting: {
-    primary: ['안녕', '반가', '헬로', 'hello', 'hi', '하이', '안녕하세요', '처음'],
-    secondary: ['시작', '소개'],
+    primary: ['안녕', '반가', '헬로', 'hello', 'hi', '하이', '안녕하세요'],
+    secondary: ['처음', '시작', '소개'],
     weak: [],
   },
   overview: {
@@ -65,7 +77,7 @@ const INTENT_KEYWORDS: Record<string, { primary: string[]; secondary: string[]; 
   },
   weekly_this: {
     primary: ['이번주', '금주', '이주'],
-    secondary: ['이번에', '오늘포함', '주간', '이번주간'],
+    secondary: ['이번에', '주간', '이번주간'],
     weak: ['일정', '스케줄'],
   },
   weekly_next: {
@@ -82,6 +94,11 @@ const INTENT_KEYWORDS: Record<string, { primary: string[]; secondary: string[]; 
     primary: ['완료된', '끝난', '보류중', '대기중', '진행중인', '하고있는', '완료작업', '보류작업', '대기작업'],
     secondary: ['완료목록', '끝난것', '보류', '대기'],
     weak: ['목록', '리스트'],
+  },
+  project_list: {
+    primary: ['프로젝트목록', '프로젝트리스트', '프로젝트현황', '전체프로젝트'],
+    secondary: ['프로젝트몇개', '프로젝트몇건', '프로젝트얼마나'],
+    weak: ['프로젝트'],
   },
   guide_wbs: {
     primary: ['wbs', '작업구조', '작업분류', '작업분해', '작업구조도'],
@@ -146,12 +163,9 @@ function fuzzyMatchTask(question: string, tasks: Task[]): { task: Task; score: n
       const tTokens = tokenize(task.name);
       let score = 0;
 
-      // Exact substring (strongest signal)
       if (nt.length >= 2 && nq.includes(nt)) score += 12;
-      // Reverse substring
       if (nq.length >= 3 && nt.includes(nq)) score += 8;
 
-      // Token overlap
       if (tTokens.length > 0) {
         const overlap = tTokens.filter((tt) =>
           qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
@@ -159,7 +173,6 @@ function fuzzyMatchTask(question: string, tasks: Task[]): { task: Task; score: n
         score += (overlap.length / tTokens.length) * 6;
       }
 
-      // Bigram similarity for each token pair
       for (const qt of qTokens) {
         for (const tt of tTokens) {
           const dice = diceCoefficient(qt, tt);
@@ -167,7 +180,6 @@ function fuzzyMatchTask(question: string, tasks: Task[]): { task: Task; score: n
         }
       }
 
-      // Whole-string bigram similarity
       const wholeDice = diceCoefficient(nq, nt);
       if (wholeDice >= 0.4) score += wholeDice * 4;
 
@@ -188,11 +200,9 @@ function fuzzyMatchMember(question: string, members: ProjectMember[]): { member:
       let score = 0;
 
       if (nm.length >= 2 && nq.includes(nm)) {
-        // Short names (2 chars) require exact match to prevent false positives
         score += nm.length <= 2 ? 8 : 10;
       }
 
-      // Bigram similarity
       const dice = diceCoefficient(nq, nm);
       if (dice >= 0.5 && nm.length >= 3) score += dice * 5;
 
@@ -200,6 +210,38 @@ function fuzzyMatchMember(question: string, members: ProjectMember[]): { member:
     })
     .filter((item) => item.score >= 6)
     .sort((a, b) => b.score - a.score || b.member.name.length - a.member.name.length);
+
+  return scored[0] || null;
+}
+
+function fuzzyMatchProject(question: string, projects: Project[]): { project: Project; score: number } | null {
+  const nq = normalizeText(question);
+  const qTokens = tokenize(question);
+
+  const scored = projects
+    .filter((p) => p.status !== 'deleted')
+    .map((project) => {
+      const np = normalizeText(project.name);
+      const pTokens = tokenize(project.name);
+      let score = 0;
+
+      if (np.length >= 2 && nq.includes(np)) score += 12;
+      if (nq.length >= 3 && np.includes(nq)) score += 6;
+
+      if (pTokens.length > 0) {
+        const overlap = pTokens.filter((pt) =>
+          qTokens.some((qt) => qt.includes(pt) || pt.includes(qt))
+        );
+        score += (overlap.length / pTokens.length) * 6;
+      }
+
+      const dice = diceCoefficient(nq, np);
+      if (dice >= 0.4) score += dice * 4;
+
+      return { project, score };
+    })
+    .filter((item) => item.score >= 5)
+    .sort((a, b) => b.score - a.score);
 
   return scored[0] || null;
 }
@@ -213,7 +255,6 @@ function countKeywordMatches(text: string, keywords: string[]): number {
 function scoreIntents(question: string, normalized: string, context: ChatbotContext): ScoredIntent[] {
   const intents: ScoredIntent[] = [];
 
-  // Score keyword-based intents
   for (const [intentType, kw] of Object.entries(INTENT_KEYWORDS)) {
     const score =
       countKeywordMatches(normalized, kw.primary) * 3 +
@@ -224,12 +265,20 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
     }
   }
 
-  // Score entity matches
-  const taskMatch = fuzzyMatchTask(question, context.tasks);
-  const memberMatch = fuzzyMatchMember(question, context.members);
+  // Entity matching — use current context tasks/members + all projects
+  const allMembers = context.members;
+  const allTasks = context.tasks;
+
+  const taskMatch = fuzzyMatchTask(question, allTasks);
+  const memberMatch = fuzzyMatchMember(question, allMembers);
+  const projectMatch = fuzzyMatchProject(question, context.allProjects);
 
   if (taskMatch) {
     intents.push({ type: 'task_detail', score: taskMatch.score, matchedTask: taskMatch.task });
+  }
+
+  if (projectMatch && (!context.project || projectMatch.project.id !== context.project.id)) {
+    intents.push({ type: 'project_detail', score: projectMatch.score, matchedProject: projectMatch.project });
   }
 
   if (memberMatch) {
@@ -237,7 +286,6 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
     const hasWeekly = intents.some((i) => i.type === 'weekly_this' || i.type === 'weekly_next');
 
     if (hasDelay) {
-      // Compound: member + delay → member's delayed tasks
       intents.push({ type: 'member_delay', score: memberMatch.score + 6, matchedMember: memberMatch.member });
     } else if (hasWeekly) {
       intents.push({ type: 'member_weekly', score: memberMatch.score + 5, matchedMember: memberMatch.member });
@@ -246,7 +294,6 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
     }
   }
 
-  // Detect status query with specific status
   const statusIntent = intents.find((i) => i.type === 'status_query');
   if (statusIntent) {
     if (/완료|끝난/.test(normalized)) statusIntent.taskStatus = 'completed';
@@ -255,7 +302,6 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
     else if (/진행중/.test(normalized)) statusIntent.taskStatus = 'in_progress';
   }
 
-  // WBS + Gantt compound
   const hasWbs = intents.some((i) => i.type === 'guide_wbs');
   const hasGantt = intents.some((i) => i.type === 'guide_gantt');
   if (hasWbs && hasGantt) {
@@ -268,7 +314,7 @@ function scoreIntents(question: string, normalized: string, context: ChatbotCont
 // ─── Data helpers ────────────────────────────────────────────
 
 const HELP_TEXT =
-  '진행률, 지연 작업, 이번 주 일정, 담당자 업무, 특정 작업 상태 등을 물어보시면 현재 데이터 기준으로 정리해 드립니다.';
+  '프로젝트명, 작업명, 담당자명, 또는 키워드로 질문하시면 데이터 기준으로 답변합니다.';
 
 function getLeafTasks(tasks: Task[]): Task[] {
   const parentIds = new Set(tasks.map((t) => t.parentId).filter(Boolean));
@@ -280,7 +326,7 @@ function getAssigneeName(task: Task, members: ProjectMember[]): string {
 }
 
 function formatTaskPeriod(task: Task): string {
-  if (!task.planStart && !task.planEnd) return '계획일정 미입력';
+  if (!task.planStart && !task.planEnd) return '일정 미입력';
   return `${formatDate(task.planStart) || '미정'} ~ ${formatDate(task.planEnd) || '미정'}`;
 }
 
@@ -288,39 +334,96 @@ function getBaseDate(project: Project | null): Date {
   return project?.baseDate ? new Date(project.baseDate) : new Date();
 }
 
+// Resolve context: use current project or dynamically load a matched project
+async function resolveContext(context: ChatbotContext, matchedProject?: Project): Promise<ResolvedContext | null> {
+  // If a specific project was matched from the question, load its data
+  if (matchedProject) {
+    const [members, tasks] = await Promise.all([
+      loadProjectMembers(matchedProject.id),
+      loadProjectTasks(matchedProject.id),
+    ]);
+    return { project: matchedProject, members, tasks };
+  }
+
+  // Use current project context
+  if (context.project) {
+    return { project: context.project, members: context.members, tasks: context.tasks };
+  }
+
+  // No project at all — try first available project
+  if (context.allProjects.length > 0) {
+    const firstActive = context.allProjects.find((p) => p.status === 'active') || context.allProjects[0];
+    const [members, tasks] = await Promise.all([
+      loadProjectMembers(firstActive.id),
+      loadProjectTasks(firstActive.id),
+    ]);
+    return { project: firstActive, members, tasks };
+  }
+
+  return null;
+}
+
 // ─── Answer builders ─────────────────────────────────────────
 
 function buildGreeting(context: ChatbotContext): string {
-  if (!context.project) {
-    return `안녕하세요, DK Bot입니다.\n${HELP_TEXT}\n먼저 프로젝트를 선택해 주세요.`;
+  const projectCount = context.allProjects.filter((p) => p.status !== 'deleted').length;
+  if (context.project) {
+    const leafTasks = getLeafTasks(context.tasks);
+    const progress = Math.round(calculateOverallProgress(context.tasks));
+    return [
+      `안녕하세요, DK Bot입니다.`,
+      `현재 프로젝트: "${context.project.name}" | 작업 ${leafTasks.length}건 | 공정률 ${progress}%`,
+      projectCount > 1 ? `전체 ${projectCount}개 프로젝트에 대해서도 질문할 수 있습니다.` : '',
+      HELP_TEXT,
+    ].filter(Boolean).join('\n');
   }
-  const leafTasks = getLeafTasks(context.tasks);
-  const progress = Math.round(calculateOverallProgress(context.tasks));
   return [
-    `안녕하세요, DK Bot입니다. 현재 프로젝트: "${context.project.name}"`,
-    leafTasks.length > 0
-      ? `실행 작업 ${leafTasks.length}건, 실적 공정률 ${progress}%입니다.`
-      : '아직 등록된 실행 작업이 없습니다.',
+    `안녕하세요, DK Bot입니다.`,
+    projectCount > 0 ? `현재 ${projectCount}개 프로젝트가 등록되어 있습니다.` : '등록된 프로젝트가 없습니다.',
+    `프로젝트명을 포함해서 질문하시면 해당 프로젝트 기준으로 답변합니다.`,
     HELP_TEXT,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
-function buildOverviewAnswer(context: ChatbotContext): string {
-  if (!context.project) return `프로젝트가 선택되지 않았습니다.\n${HELP_TEXT}`;
-  const leafTasks = getLeafTasks(context.tasks);
-  if (leafTasks.length === 0) return `${context.project.name}에 아직 실행 작업이 없습니다.`;
+function buildProjectListAnswer(context: ChatbotContext): string {
+  const projects = context.allProjects.filter((p) => p.status !== 'deleted');
+  if (projects.length === 0) return '등록된 프로젝트가 없습니다.';
 
-  const baseDate = getBaseDate(context.project);
+  const byStatus = {
+    preparing: projects.filter((p) => p.status === 'preparing'),
+    active: projects.filter((p) => p.status === 'active'),
+    completed: projects.filter((p) => p.status === 'completed'),
+  };
+
+  const lines: string[] = [`전체 프로젝트 ${projects.length}건`];
+
+  for (const [status, list] of Object.entries(byStatus)) {
+    if (list.length > 0) {
+      lines.push(`\n[${PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS]}] ${list.length}건`);
+      list.slice(0, 5).forEach((p) => {
+        lines.push(`- ${p.name} | ${p.startDate ? formatDate(p.startDate) : '일정 미정'} ~ ${p.endDate ? formatDate(p.endDate) : '미정'}`);
+      });
+      if (list.length > 5) lines.push(`  외 ${list.length - 5}건`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function buildProjectDetailAnswer(rc: ResolvedContext): string {
+  const leafTasks = getLeafTasks(rc.tasks);
+  const baseDate = getBaseDate(rc.project);
   const completed = leafTasks.filter((t) => t.status === 'completed').length;
   const inProgress = leafTasks.filter((t) => t.status === 'in_progress').length;
   const delayed = getDelayedTasks(leafTasks, baseDate);
-  const progress = Math.round(calculateOverallProgress(context.tasks));
+  const progress = Math.round(calculateOverallProgress(rc.tasks));
 
   return [
-    `${context.project.name} 프로젝트 요약`,
+    `"${rc.project.name}" 프로젝트 요약`,
+    `상태: ${PROJECT_STATUS_LABELS[rc.project.status]} | 멤버: ${rc.members.length}명`,
     `작업 ${leafTasks.length}건 | 완료 ${completed} | 진행 ${inProgress} | 지연 ${delayed.length} | 공정률 ${progress}%`,
-    context.project.startDate
-      ? `일정: ${formatDate(context.project.startDate)} ~ ${formatDate(context.project.endDate) || '미정'}`
+    rc.project.startDate
+      ? `일정: ${formatDate(rc.project.startDate)} ~ ${formatDate(rc.project.endDate) || '미정'}`
       : '전체 일정 미설정',
     delayed[0]
       ? `최우선 리스크: "${delayed[0].name}" (${getDelayDays(delayed[0], baseDate)}일 지연)`
@@ -328,44 +431,45 @@ function buildOverviewAnswer(context: ChatbotContext): string {
   ].join('\n');
 }
 
-function buildDelayAnswer(context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택하면 지연 작업을 확인할 수 있습니다.';
-  const baseDate = getBaseDate(context.project);
-  const delayed = getDelayedTasks(getLeafTasks(context.tasks), baseDate)
+function buildOverviewAnswer(rc: ResolvedContext): string {
+  return buildProjectDetailAnswer(rc);
+}
+
+function buildDelayAnswer(rc: ResolvedContext): string {
+  const baseDate = getBaseDate(rc.project);
+  const delayed = getDelayedTasks(getLeafTasks(rc.tasks), baseDate)
     .sort((a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate));
 
-  if (delayed.length === 0) return `${context.project.name}에 지연 작업이 없습니다.`;
+  if (delayed.length === 0) return `"${rc.project.name}"에 지연 작업이 없습니다.`;
 
   return [
-    `지연 작업 ${delayed.length}건 (상위 ${Math.min(delayed.length, 5)}건)`,
+    `"${rc.project.name}" 지연 작업 ${delayed.length}건`,
     ...delayed.slice(0, 5).map((t) =>
-      `- ${t.name} | ${getAssigneeName(t, context.members)} | ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연`
+      `- ${t.name} | ${getAssigneeName(t, rc.members)} | ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연`
     ),
   ].join('\n');
 }
 
-function buildWeeklyAnswer(context: ChatbotContext, type: 'this' | 'next'): string {
-  if (!context.project) return '프로젝트를 선택하면 주간 일정을 확인할 수 있습니다.';
+function buildWeeklyAnswer(rc: ResolvedContext, type: 'this' | 'next'): string {
   const label = type === 'this' ? '이번 주' : '다음 주';
-  const weekly = getWeeklyTasks(getLeafTasks(context.tasks), type)
+  const weekly = getWeeklyTasks(getLeafTasks(rc.tasks), type)
     .sort((a, b) => (a.planStart || '').localeCompare(b.planStart || ''));
 
-  if (weekly.length === 0) return `${label} 예정 작업이 없습니다.`;
+  if (weekly.length === 0) return `"${rc.project.name}" ${label} 예정 작업이 없습니다.`;
 
   return [
-    `${label} 작업 ${weekly.length}건`,
+    `"${rc.project.name}" ${label} 작업 ${weekly.length}건`,
     ...weekly.slice(0, 5).map((t) =>
-      `- ${t.name} | ${formatTaskPeriod(t)} | ${getAssigneeName(t, context.members)} | ${Math.round(t.actualProgress)}%`
+      `- ${t.name} | ${formatTaskPeriod(t)} | ${getAssigneeName(t, rc.members)} | ${Math.round(t.actualProgress)}%`
     ),
   ].join('\n');
 }
 
-function buildMemberSummaryAnswer(context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택하면 멤버별 현황을 확인할 수 있습니다.';
-  const leafTasks = getLeafTasks(context.tasks);
-  const baseDate = getBaseDate(context.project);
+function buildMemberSummaryAnswer(rc: ResolvedContext): string {
+  const leafTasks = getLeafTasks(rc.tasks);
+  const baseDate = getBaseDate(rc.project);
 
-  const workloads = context.members
+  const workloads = rc.members
     .map((m) => {
       const mt = leafTasks.filter((t) => t.assigneeId === m.id);
       return {
@@ -379,11 +483,11 @@ function buildMemberSummaryAnswer(context: ChatbotContext): string {
     .filter((w) => w.total > 0)
     .sort((a, b) => b.delayed - a.delayed || b.total - a.total);
 
-  if (workloads.length === 0) return '담당자가 배정된 작업이 없습니다.';
+  if (workloads.length === 0) return `"${rc.project.name}"에 담당자 배정된 작업이 없습니다.`;
 
   const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
   return [
-    '멤버별 업무 현황',
+    `"${rc.project.name}" 멤버별 업무 현황`,
     ...workloads.slice(0, 6).map((w) =>
       `- ${w.name}: 총 ${w.total} | 진행 ${w.inProgress} | 완료 ${w.completed} | 지연 ${w.delayed}`
     ),
@@ -391,16 +495,15 @@ function buildMemberSummaryAnswer(context: ChatbotContext): string {
   ].filter(Boolean).join('\n');
 }
 
-function buildMemberDetailAnswer(member: ProjectMember, context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
-  const baseDate = getBaseDate(context.project);
-  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
+function buildMemberDetailAnswer(member: ProjectMember, rc: ResolvedContext): string {
+  const baseDate = getBaseDate(rc.project);
+  const mt = getLeafTasks(rc.tasks).filter((t) => t.assigneeId === member.id);
 
   if (mt.length === 0) return `${member.name}님에게 배정된 작업이 없습니다.`;
 
   const delayed = getDelayedTasks(mt, baseDate);
   return [
-    `${member.name}님 업무 요약`,
+    `${member.name}님 업무 요약 ("${rc.project.name}")`,
     `총 ${mt.length}건 | 진행 ${mt.filter((t) => t.status === 'in_progress').length} | 완료 ${mt.filter((t) => t.status === 'completed').length} | 지연 ${delayed.length}`,
     ...mt.slice(0, 4).map((t) =>
       `- ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${Math.round(t.actualProgress)}%`
@@ -408,10 +511,9 @@ function buildMemberDetailAnswer(member: ProjectMember, context: ChatbotContext)
   ].join('\n');
 }
 
-function buildMemberDelayAnswer(member: ProjectMember, context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
-  const baseDate = getBaseDate(context.project);
-  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
+function buildMemberDelayAnswer(member: ProjectMember, rc: ResolvedContext): string {
+  const baseDate = getBaseDate(rc.project);
+  const mt = getLeafTasks(rc.tasks).filter((t) => t.assigneeId === member.id);
   const delayed = getDelayedTasks(mt, baseDate)
     .sort((a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate));
 
@@ -425,9 +527,8 @@ function buildMemberDelayAnswer(member: ProjectMember, context: ChatbotContext):
   ].join('\n');
 }
 
-function buildMemberWeeklyAnswer(member: ProjectMember, context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
-  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
+function buildMemberWeeklyAnswer(member: ProjectMember, rc: ResolvedContext): string {
+  const mt = getLeafTasks(rc.tasks).filter((t) => t.assigneeId === member.id);
   const weekly = getWeeklyTasks(mt, 'this');
 
   if (weekly.length === 0) return `${member.name}님의 이번 주 작업은 없습니다.`;
@@ -440,15 +541,15 @@ function buildMemberWeeklyAnswer(member: ProjectMember, context: ChatbotContext)
   ].join('\n');
 }
 
-function buildTaskDetailAnswer(task: Task, context: ChatbotContext): string {
-  const parent = context.tasks.find((t) => t.id === task.parentId);
-  const childCount = context.tasks.filter((t) => t.parentId === task.id).length;
-  const assignee = getAssigneeName(task, context.members);
-  const baseDate = getBaseDate(context.project);
+function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
+  const parent = rc.tasks.find((t) => t.id === task.parentId);
+  const childCount = rc.tasks.filter((t) => t.parentId === task.id).length;
+  const assignee = getAssigneeName(task, rc.members);
+  const baseDate = getBaseDate(rc.project);
   const delay = getDelayDays(task, baseDate);
 
   return [
-    `"${task.name}" 상세`,
+    `"${task.name}" 상세 ("${rc.project.name}")`,
     `${LEVEL_LABELS[task.level] || '작업'} | ${TASK_STATUS_LABELS[task.status]} | 담당: ${assignee} | 공정률: ${Math.round(task.actualProgress)}%`,
     `계획: ${formatTaskPeriod(task)}`,
     task.actualStart || task.actualEnd
@@ -460,17 +561,16 @@ function buildTaskDetailAnswer(task: Task, context: ChatbotContext): string {
   ].filter(Boolean).join('\n');
 }
 
-function buildStatusFilterAnswer(status: TaskStatus, context: ChatbotContext): string {
-  if (!context.project) return '프로젝트를 선택해 주세요.';
-  const filtered = getLeafTasks(context.tasks).filter((t) => t.status === status);
+function buildStatusFilterAnswer(status: TaskStatus, rc: ResolvedContext): string {
+  const filtered = getLeafTasks(rc.tasks).filter((t) => t.status === status);
   const label = TASK_STATUS_LABELS[status];
 
-  if (filtered.length === 0) return `"${label}" 상태의 작업이 없습니다.`;
+  if (filtered.length === 0) return `"${rc.project.name}"에 "${label}" 상태 작업이 없습니다.`;
 
   return [
-    `${label} 작업 ${filtered.length}건`,
+    `"${rc.project.name}" ${label} 작업 ${filtered.length}건`,
     ...filtered.slice(0, 8).map((t) =>
-      `- ${t.name} | ${getAssigneeName(t, context.members)} | ${Math.round(t.actualProgress)}%`
+      `- ${t.name} | ${getAssigneeName(t, rc.members)} | ${Math.round(t.actualProgress)}%`
     ),
     filtered.length > 8 ? `외 ${filtered.length - 8}건` : '',
   ].filter(Boolean).join('\n');
@@ -479,8 +579,8 @@ function buildStatusFilterAnswer(status: TaskStatus, context: ChatbotContext): s
 function buildWbsGuideAnswer(): string {
   return [
     'WBS는 작업 구조를 쪼개서 계획과 실적을 관리하는 화면입니다.',
-    '- Phase > Activity > Task > Function 순으로 세분화하여 작업명, 담당자, 계획일정, 공정률을 입력하세요.',
-    '- 엑셀 다운로드로 계층 코드와 일정 정보를 한 번에 정리할 수 있습니다.',
+    '- Phase > Activity > Task > Function 순으로 세분화하여 입력하세요.',
+    '- 엑셀 다운로드로 계층 코드와 일정을 한 번에 정리할 수 있습니다.',
   ].join('\n');
 }
 
@@ -503,30 +603,13 @@ function buildExportGuideAnswer(): string {
 
 // ─── Intent dispatch ─────────────────────────────────────────
 
-function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): string | null {
+async function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): Promise<string | null> {
+  // Guide intents don't need project context
   switch (intent.type) {
     case 'greeting':
       return buildGreeting(context);
-    case 'overview':
-      return buildOverviewAnswer(context);
-    case 'delay':
-      return buildDelayAnswer(context);
-    case 'weekly_this':
-      return buildWeeklyAnswer(context, 'this');
-    case 'weekly_next':
-      return buildWeeklyAnswer(context, 'next');
-    case 'member_summary':
-      return buildMemberSummaryAnswer(context);
-    case 'member_detail':
-      return intent.matchedMember ? buildMemberDetailAnswer(intent.matchedMember, context) : null;
-    case 'member_delay':
-      return intent.matchedMember ? buildMemberDelayAnswer(intent.matchedMember, context) : null;
-    case 'member_weekly':
-      return intent.matchedMember ? buildMemberWeeklyAnswer(intent.matchedMember, context) : null;
-    case 'task_detail':
-      return intent.matchedTask ? buildTaskDetailAnswer(intent.matchedTask, context) : null;
-    case 'status_query':
-      return intent.taskStatus ? buildStatusFilterAnswer(intent.taskStatus, context) : buildOverviewAnswer(context);
+    case 'project_list':
+      return buildProjectListAnswer(context);
     case 'guide_wbs':
       return buildWbsGuideAnswer();
     case 'guide_gantt':
@@ -535,6 +618,53 @@ function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): string |
       return [buildWbsGuideAnswer(), '', buildGanttGuideAnswer()].join('\n');
     case 'guide_export':
       return buildExportGuideAnswer();
+    default:
+      break;
+  }
+
+  // Resolve project context (current, matched, or first available)
+  const rc = await resolveContext(context, intent.matchedProject);
+  if (!rc) return '프로젝트 데이터가 없습니다. 프로젝트를 먼저 생성해 주세요.';
+
+  // For project_detail intent with a matched project, re-resolve with that project's data
+  if (intent.type === 'project_detail' && intent.matchedProject) {
+    return buildProjectDetailAnswer(rc);
+  }
+
+  // If task was matched but belongs to a different project, load that project's data
+  if (intent.matchedTask) {
+    const taskProjectId = intent.matchedTask.projectId;
+    if (taskProjectId !== rc.project.id) {
+      const taskProject = context.allProjects.find((p) => p.id === taskProjectId);
+      if (taskProject) {
+        const taskRc = await resolveContext(context, taskProject);
+        if (taskRc) return buildTaskDetailAnswer(intent.matchedTask, taskRc);
+      }
+    }
+    return buildTaskDetailAnswer(intent.matchedTask, rc);
+  }
+
+  switch (intent.type) {
+    case 'overview':
+      return buildOverviewAnswer(rc);
+    case 'delay':
+      return buildDelayAnswer(rc);
+    case 'weekly_this':
+      return buildWeeklyAnswer(rc, 'this');
+    case 'weekly_next':
+      return buildWeeklyAnswer(rc, 'next');
+    case 'member_summary':
+      return buildMemberSummaryAnswer(rc);
+    case 'member_detail':
+      return intent.matchedMember ? buildMemberDetailAnswer(intent.matchedMember, rc) : null;
+    case 'member_delay':
+      return intent.matchedMember ? buildMemberDelayAnswer(intent.matchedMember, rc) : null;
+    case 'member_weekly':
+      return intent.matchedMember ? buildMemberWeeklyAnswer(intent.matchedMember, rc) : null;
+    case 'task_detail':
+      return intent.matchedTask ? buildTaskDetailAnswer(intent.matchedTask, rc) : null;
+    case 'status_query':
+      return intent.taskStatus ? buildStatusFilterAnswer(intent.taskStatus, rc) : buildOverviewAnswer(rc);
     default:
       return null;
   }
@@ -555,7 +685,6 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
       if (nt.length >= 2 && nq.includes(nt)) score += 10;
       if (nq.length >= 3 && nt.includes(nq)) score += 6;
 
-      // Token overlap
       if (tTokens.length > 0 && qTokens.length > 0) {
         const overlap = tTokens.filter((tt) =>
           qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
@@ -563,7 +692,6 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
         score += (overlap.length / tTokens.length) * 5;
       }
 
-      // Bigram similarity
       const dice = diceCoefficient(nq, nt);
       if (dice >= 0.3) score += dice * 4;
 
@@ -582,6 +710,13 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
       }),
       '더 구체적으로 질문하시면 상세 정보를 드릴 수 있습니다.',
     ].join('\n');
+  }
+
+  // Also try matching project names
+  const projectMatch = fuzzyMatchProject(question, context.allProjects);
+  if (projectMatch) {
+    const p = projectMatch.project;
+    return `"${p.name}" 프로젝트를 찾았습니다.\n상태: ${PROJECT_STATUS_LABELS[p.status]} | ${p.startDate ? formatDate(p.startDate) : '일정 미정'} ~ ${p.endDate ? formatDate(p.endDate) : '미정'}\n이 프로젝트에 대해 더 자세히 질문해 보세요.`;
   }
 
   return null;
@@ -648,7 +783,7 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
 // ─── Main entry ──────────────────────────────────────────────
 
 const NOT_FOUND_MESSAGE =
-  '해당 정보는 현재 데이터에서 찾을 수 없습니다.\n작업명, 담당자명, 또는 키워드를 더 구체적으로 입력해 주세요.';
+  '해당 정보를 찾을 수 없습니다.\n프로젝트명, 작업명, 담당자명을 포함하여 질문해 주세요.';
 
 export async function createChatbotReply(question: string, context: ChatbotContext): Promise<string> {
   const trimmed = question.trim();
@@ -660,24 +795,19 @@ export async function createChatbotReply(question: string, context: ChatbotConte
   const intents = scoreIntents(trimmed, normalized, context);
 
   if (intents.length > 0) {
-    const answer = dispatchIntent(intents[0], context);
+    const answer = await dispatchIntent(intents[0], context);
     if (answer) return answer;
   }
 
-  // 2단계: 프로젝트 미선택 시 안내
-  if (!context.project) {
-    return `프로젝트가 선택되지 않았습니다.\n${HELP_TEXT}`;
-  }
-
-  // 3단계: 로컬 퍼지 검색
+  // 2단계: 로컬 퍼지 검색
   const localFallback = buildFallbackFromLocal(trimmed, context);
   if (localFallback) return localFallback;
 
-  // 4단계: Supabase DB 검색
+  // 3단계: Supabase DB 검색
   const dbResult = await searchSupabaseForAnswer(trimmed);
   if (dbResult) return dbResult;
 
-  // 5단계: 정보 없음
+  // 4단계: 정보 없음
   return NOT_FOUND_MESSAGE;
 }
 

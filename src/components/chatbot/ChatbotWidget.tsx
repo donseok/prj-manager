@@ -13,7 +13,7 @@ interface ChatMessage {
 }
 
 export default function ChatbotWidget() {
-  const { currentProject, members } = useProjectStore();
+  const { projects, currentProject, members } = useProjectStore();
   const { tasks } = useTaskStore();
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -27,8 +27,9 @@ export default function ChatbotWidget() {
       project: currentProject,
       members,
       tasks,
+      allProjects: projects,
     }),
-    [currentProject, members, tasks]
+    [currentProject, members, tasks, projects]
   );
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function ChatbotWidget() {
           project: currentProject,
           members: [],
           tasks: [],
+          allProjects: projects,
         }),
       },
     ]);
@@ -111,7 +113,7 @@ export default function ChatbotWidget() {
                 <div className="min-w-0">
                   <h2 className="text-sm font-semibold tracking-[-0.02em]">DK Bot</h2>
                   <p className="text-xs text-white/70">
-                    {currentProject ? currentProject.name : '프로젝트를 선택하세요'}
+                    {currentProject ? currentProject.name : `${projects.length}개 프로젝트`}
                   </p>
                 </div>
               </div>
@@ -127,7 +129,7 @@ export default function ChatbotWidget() {
                     setMessages([{
                       id: generateId(),
                       role: 'assistant',
-                      text: createChatbotGreeting({ project: currentProject, members: [], tasks: [] }),
+                      text: createChatbotGreeting({ project: currentProject, members: [], tasks: [], allProjects: projects }),
                     }]);
                     setDraft('');
                     setIsThinking(false);
