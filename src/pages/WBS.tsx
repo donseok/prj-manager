@@ -17,6 +17,8 @@ import {
   AlertCircle,
   Maximize2,
   Sparkles,
+  FileText,
+  Wand2,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -25,6 +27,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import Modal from '../components/common/Modal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import MemberSelect from '../components/wbs/MemberSelect';
+import WeeklyReportModal from '../components/WeeklyReportModal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   generateId,
@@ -36,6 +39,8 @@ import { syncProjectMembers } from '../lib/dataRepository';
 import { autoScheduleTasks, buildSequentialDependencies } from '../lib/taskScheduler';
 import { generateTasksFromPrompt, type TaskDraftResult } from '../lib/taskDraft';
 import { generateTasksFromTemplate, getTaskTemplate, listTaskTemplates } from '../lib/taskTemplates';
+import { syncTaskField, isSyncableField } from '../lib/taskFieldSync';
+import { autoFillTasks } from '../lib/taskAutoFill';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import type { Task, TaskStatus, ProjectMember } from '../types';
@@ -76,6 +81,7 @@ export default function WBS() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('web-launch');
   const [draftPrompt, setDraftPrompt] = useState('');
   const [draftResult, setDraftResult] = useState<TaskDraftResult | null>(null);
+  const [isWeeklyReportOpen, setIsWeeklyReportOpen] = useState(false);
   const dragOverCounterRef = useRef(0);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const templates = listTaskTemplates();
@@ -337,7 +343,48 @@ export default function WBS() {
     });
   };
 
+  const handleAutoFill = () => {
+    if (tasks.length === 0) {
+      showFeedback({
+        tone: 'info',
+        title: '자동채움 대상 없음',
+        message: '작업을 추가한 뒤 자동채움을 사용해 주세요.',
+      });
+      return;
+    }
+
+    const result = autoFillTasks(tasks, members);
+    setTasks(result.tasks, undefined, { recordHistory: true });
+
+    const details: string[] = [];
+    if (result.outputsFilled > 0) details.push(`산출물 ${result.outputsFilled}건`);
+    if (result.assigneesFilled > 0) details.push(`담당자 ${result.assigneesFilled}건`);
+    if (result.weightsCalculated) details.push('가중치 재계산');
+
+    showFeedback({
+      tone: 'success',
+      title: '자동채움 완료',
+      message: details.length > 0 ? details.join(', ') : '변경 사항이 없습니다.',
+    });
+  };
+
   const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
+
+    // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
+    if (task && !hasChildren && isSyncableField(field)) {
+      const { updates, changed } = syncTaskField(
+        { ...task, [field]: value },
+        field as 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress',
+        value
+      );
+      if (changed) {
+        updateTask(taskId, { [field]: value, ...updates, updatedAt: new Date().toISOString() }, { recordHistory });
+        return;
+      }
+    }
+
     updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
   };
 
@@ -640,6 +687,14 @@ export default function WBS() {
               </Button>
               <Button variant="outline" size="sm" onClick={handleBuildDependencies} disabled={tasks.length === 0}>
                 선후행 연결
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleAutoFill} disabled={tasks.length === 0}>
+                <Wand2 className="w-4 h-4" />
+                자동채움
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
+                <FileText className="w-4 h-4" />
+                주간보고
               </Button>
               <Button variant="outline" size="sm" onClick={expandAll}>
                 <ExpandIcon className="w-4 h-4" />
@@ -1068,6 +1123,17 @@ export default function WBS() {
         confirmLabel="작업 삭제"
         confirmVariant="danger"
       />
+
+      {projectId && (
+        <WeeklyReportModal
+          isOpen={isWeeklyReportOpen}
+          onClose={() => setIsWeeklyReportOpen(false)}
+          projectId={projectId}
+          projectName={currentProject?.name || '프로젝트'}
+          tasks={tasks}
+          members={members}
+        />
+      )}
     </div>
   );
 }
