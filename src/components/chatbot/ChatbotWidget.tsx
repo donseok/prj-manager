@@ -105,7 +105,7 @@ export default function ChatbotWidget() {
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
       {isOpen && (
         <section className="pointer-events-auto flex w-[min(92vw,25rem)] flex-col overflow-hidden rounded-[30px] border border-white/15 bg-[image:var(--gradient-surface)] shadow-[0_38px_120px_-48px_rgba(8,17,32,0.65)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
-          <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_56%,rgba(27,143,134,0.92))] px-4 py-3 text-white">
+          <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,#0E1B45_0%,#152560_48%,#1E3A7B_100%)] px-4 py-3 text-white">
             <div className="pointer-events-none absolute right-[-3.5rem] top-[-2rem] h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_70%)] blur-2xl" />
             <div className="relative flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -160,7 +160,7 @@ export default function ChatbotWidget() {
                   key={suggestion}
                   type="button"
                   onClick={() => submitQuestion(suggestion)}
-                  className="surface-badge cursor-pointer border-[rgba(15,118,110,0.14)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--text-secondary)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.24)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+                  className="surface-badge cursor-pointer border-[rgba(21,37,96,0.14)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left text-xs font-semibold text-[color:var(--text-secondary)] transition hover:-translate-y-0.5 hover:border-[rgba(21,37,96,0.28)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
                 >
                   {suggestion}
                 </button>
@@ -180,8 +180,8 @@ export default function ChatbotWidget() {
                     className={cn(
                       'max-w-[88%] whitespace-pre-wrap rounded-[22px] px-4 py-3 text-sm leading-6 shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]',
                       message.role === 'assistant'
-                        ? 'border border-[rgba(15,118,110,0.12)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
-                        : 'bg-[image:var(--gradient-primary)] text-white'
+                        ? 'border border-[rgba(21,37,96,0.12)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
+                        : 'bg-[linear-gradient(135deg,#152560,#1E3A7B)] text-white'
                     )}
                   >
                     {message.text}
@@ -191,12 +191,12 @@ export default function ChatbotWidget() {
 
               {isThinking && (
                 <div className="flex justify-start">
-                  <div className="max-w-[88%] rounded-[22px] border border-[rgba(15,118,110,0.12)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]">
+                  <div className="max-w-[88%] rounded-[22px] border border-[rgba(21,37,96,0.12)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-[0_20px_38px_-28px_rgba(15,23,42,0.45)]">
                     <div className="flex items-center gap-2">
                       <span className="flex gap-1">
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)] [animation-delay:-0.18s]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)] [animation-delay:-0.09s]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--accent-primary)]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#C8102E] [animation-delay:-0.18s]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#C8102E] [animation-delay:-0.09s]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[#C8102E]" />
                       </span>
                       데이터를 정리하는 중입니다.
                     </div>
@@ -231,7 +231,7 @@ export default function ChatbotWidget() {
                 <button
                   type="submit"
                   disabled={!draft.trim() || isThinking}
-                  className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[image:var(--gradient-primary)] text-white shadow-[0_22px_44px_-26px_rgba(15,118,110,0.82)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none"
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(135deg,#C8102E,#E8384F)] text-white shadow-[0_22px_44px_-26px_rgba(200,16,46,0.72)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none"
                   aria-label="질문 보내기"
                 >
                   <SendHorizonal className="h-4 w-4" />
@@ -244,14 +244,14 @@ export default function ChatbotWidget() {
 
       <div className="pointer-events-auto flex items-center gap-3">
         {!isOpen && (
-          <div className="hidden rounded-full border border-white/15 bg-[rgba(11,61,100,0.92)] px-4 py-2 text-sm font-medium text-white shadow-[0_28px_68px_-34px_rgba(11,61,100,0.82)] backdrop-blur-xl sm:block">
+          <div className="hidden rounded-full border border-white/15 bg-[rgba(21,37,96,0.94)] px-4 py-2 text-sm font-medium text-white shadow-[0_28px_68px_-34px_rgba(21,37,96,0.82)] backdrop-blur-xl sm:block">
             물어보면 바로 정리해 드릴게요
           </div>
         )}
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="group relative flex h-[66px] w-[66px] items-center justify-center rounded-full border border-white/16 bg-[linear-gradient(165deg,rgba(11,61,100,0.94),rgba(15,118,110,0.94)_58%,rgba(123,210,197,0.96))] shadow-[0_28px_72px_-34px_rgba(11,61,100,0.72)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
+          className="group relative flex h-[66px] w-[66px] items-center justify-center rounded-full border border-white/16 bg-[linear-gradient(165deg,#0E1B45_0%,#152560_50%,#1E3A7B_100%)] shadow-[0_28px_72px_-34px_rgba(21,37,96,0.72)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
           aria-label={isOpen ? '챗봇 닫기' : '챗봇 열기'}
         >
           <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.28),transparent_48%)]" />
@@ -260,7 +260,7 @@ export default function ChatbotWidget() {
             className="border-white/0 bg-transparent shadow-none transition duration-300 group-hover:scale-[1.04]"
           />
           {!isOpen && (
-            <span className="absolute -right-1 bottom-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-white/12 bg-white text-[color:var(--accent-primary)] shadow-[0_12px_28px_-18px_rgba(15,118,110,0.72)]">
+            <span className="absolute -right-1 bottom-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-white/12 bg-white text-[#C8102E] shadow-[0_12px_28px_-18px_rgba(200,16,46,0.62)]">
               <MessageCircle className="h-3.5 w-3.5" />
             </span>
           )}

@@ -16,23 +16,26 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
         className="absolute rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.4),transparent_68%)] blur-md"
         style={{ inset: size * 0.04 }}
       />
+      {/* Ears - navy */}
       <div
-        className="absolute rounded-full bg-[linear-gradient(180deg,#fff8d5_0%,#ffd86b_100%)] shadow-[0_8px_16px_-10px_rgba(216,139,68,0.9)]"
+        className="absolute rounded-full bg-[linear-gradient(180deg,#FFD6DA_0%,#F4929C_100%)] shadow-[0_8px_16px_-10px_rgba(200,16,46,0.7)]"
         style={{ left: size * 0.2, top: size * 0.03, width: size * 0.16, height: size * 0.16 }}
       />
       <div
-        className="absolute rounded-full bg-[linear-gradient(180deg,#fff8d5_0%,#ffd86b_100%)] shadow-[0_8px_16px_-10px_rgba(216,139,68,0.9)]"
+        className="absolute rounded-full bg-[linear-gradient(180deg,#FFD6DA_0%,#F4929C_100%)] shadow-[0_8px_16px_-10px_rgba(200,16,46,0.7)]"
         style={{ right: size * 0.2, top: size * 0.03, width: size * 0.16, height: size * 0.16 }}
       />
+      {/* Body - navy gradient */}
       <div
-        className="absolute rounded-[42%] border border-white/50 bg-[linear-gradient(180deg,#f2fffb_0%,#c9f3ea_38%,#8adbcf_70%,#4cb7a8_100%)] shadow-[0_24px_44px_-24px_rgba(15,118,110,0.72)]"
+        className="absolute rounded-[42%] border border-white/50 bg-[linear-gradient(180deg,#E8EDF8_0%,#B3C2E8_38%,#7B93CC_70%,#4A67A8_100%)] shadow-[0_24px_44px_-24px_rgba(21,37,96,0.72)]"
         style={{
           inset: size * 0.06,
           transform: 'scaleY(0.97)',
         }}
       />
+      {/* Arms */}
       <div
-        className="absolute rounded-full bg-[rgba(129,221,206,0.85)]"
+        className="absolute rounded-full bg-[rgba(139,160,210,0.85)]"
         style={{
           left: size * -0.02,
           top: size * 0.48,
@@ -42,7 +45,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
         }}
       />
       <div
-        className="absolute rounded-full bg-[rgba(129,221,206,0.85)]"
+        className="absolute rounded-full bg-[rgba(139,160,210,0.85)]"
         style={{
           right: size * -0.02,
           top: size * 0.48,
@@ -51,8 +54,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           transform: 'rotate(26deg)',
         }}
       />
+      {/* Face area */}
       <div
-        className="absolute rounded-full bg-[linear-gradient(180deg,#fffefb_0%,#f7fffc_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"
+        className="absolute rounded-full bg-[linear-gradient(180deg,#fffefb_0%,#F0F2F8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"
         style={{
           left: '50%',
           top: size * 0.18,
@@ -62,8 +66,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           transform: 'translateX(-50%)',
         }}
       />
+      {/* Eyes - navy */}
       <div
-        className="absolute rounded-full bg-[#123d64]"
+        className="absolute rounded-full bg-[#152560]"
         style={{
           left: size * 0.31,
           top: size * 0.27,
@@ -72,7 +77,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
         }}
       />
       <div
-        className="absolute rounded-full bg-[#123d64]"
+        className="absolute rounded-full bg-[#152560]"
         style={{
           right: size * 0.31,
           top: size * 0.27,
@@ -80,6 +85,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           height: size * 0.1,
         }}
       />
+      {/* Eye highlights */}
       <div
         className="absolute rounded-full bg-white/88"
         style={{
@@ -98,8 +104,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           height: size * 0.03,
         }}
       />
+      {/* Cheeks - red tint */}
       <div
-        className="absolute rounded-full bg-[rgba(255,184,193,0.9)]"
+        className="absolute rounded-full bg-[rgba(244,146,156,0.7)]"
         style={{
           left: size * 0.2,
           top: size * 0.35,
@@ -108,7 +115,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
         }}
       />
       <div
-        className="absolute rounded-full bg-[rgba(255,184,193,0.9)]"
+        className="absolute rounded-full bg-[rgba(244,146,156,0.7)]"
         style={{
           right: size * 0.2,
           top: size * 0.35,
@@ -116,8 +123,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           height: size * 0.05,
         }}
       />
+      {/* Mouth */}
       <div
-        className="absolute border-b-[2px] border-[#123d64]"
+        className="absolute border-b-[2px] border-[#152560]"
         style={{
           left: '50%',
           top: size * 0.36,
@@ -127,6 +135,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           transform: 'translateX(-50%)',
         }}
       />
+      {/* Belly highlight */}
       <div
         className="absolute rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0.14))]"
         style={{
@@ -137,8 +146,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
           transform: 'translateX(-50%)',
         }}
       />
+      {/* DK badge - red accent */}
       <div
-        className="absolute flex items-center justify-center rounded-full border border-white/70 bg-white/86 font-black uppercase tracking-[-0.04em] text-[#0f766e] shadow-[0_10px_20px_-14px_rgba(15,118,110,0.5)]"
+        className="absolute flex items-center justify-center rounded-full border border-white/70 bg-white/86 font-black uppercase tracking-[-0.04em] text-[#C8102E] shadow-[0_10px_20px_-14px_rgba(200,16,46,0.5)]"
         style={{
           left: '50%',
           bottom: size * 0.16,
@@ -150,8 +160,9 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
       >
         dk
       </div>
+      {/* Feet */}
       <div
-        className="absolute rounded-full bg-[rgba(106,197,183,0.72)]"
+        className="absolute rounded-full bg-[rgba(112,133,185,0.72)]"
         style={{
           left: size * 0.22,
           bottom: size * 0.04,
@@ -160,7 +171,7 @@ export default function DKBotAvatar({ size = 64, className }: DKBotAvatarProps) 
         }}
       />
       <div
-        className="absolute rounded-full bg-[rgba(106,197,183,0.72)]"
+        className="absolute rounded-full bg-[rgba(112,133,185,0.72)]"
         style={{
           right: size * 0.22,
           bottom: size * 0.04,
