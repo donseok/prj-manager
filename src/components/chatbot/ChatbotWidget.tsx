@@ -228,17 +228,17 @@ export default function ChatbotWidget() {
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="group relative flex h-[78px] w-[78px] items-center justify-center rounded-full border border-white/14 bg-[linear-gradient(165deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_58%,rgba(27,143,134,0.92))] shadow-[0_34px_84px_-36px_rgba(11,61,100,0.88)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
+          className="group relative flex h-[66px] w-[66px] items-center justify-center rounded-full border border-white/16 bg-[linear-gradient(165deg,rgba(11,61,100,0.94),rgba(15,118,110,0.94)_58%,rgba(123,210,197,0.96))] shadow-[0_28px_72px_-34px_rgba(11,61,100,0.72)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
           aria-label={isOpen ? '챗봇 닫기' : '챗봇 열기'}
         >
           <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.28),transparent_48%)]" />
           <DKBotAvatar
-            size={52}
+            size={44}
             className="border-white/0 bg-transparent shadow-none transition duration-300 group-hover:scale-[1.04]"
           />
           {!isOpen && (
-            <span className="absolute -right-1 bottom-1 flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-white text-[color:var(--accent-primary)] shadow-[0_12px_28px_-18px_rgba(15,118,110,0.72)]">
-              <MessageCircle className="h-4 w-4" />
+            <span className="absolute -right-1 bottom-0.5 flex h-7 w-7 items-center justify-center rounded-full border border-white/12 bg-white text-[color:var(--accent-primary)] shadow-[0_12px_28px_-18px_rgba(15,118,110,0.72)]">
+              <MessageCircle className="h-3.5 w-3.5" />
             </span>
           )}
         </button>
