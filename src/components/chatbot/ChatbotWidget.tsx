@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, SendHorizonal, Sparkles, X, CornerDownLeft, RotateCcw } from 'lucide-react';
+import { MessageCircle, SendHorizonal, X, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useTaskStore } from '../../store/taskStore';
 import { CHATBOT_SUGGESTIONS, createChatbotGreeting, createChatbotReply } from '../../lib/chatbot';
@@ -103,19 +103,15 @@ export default function ChatbotWidget() {
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
       {isOpen && (
         <section className="pointer-events-auto flex w-[min(92vw,25rem)] flex-col overflow-hidden rounded-[30px] border border-white/15 bg-[image:var(--gradient-surface)] shadow-[0_38px_120px_-48px_rgba(8,17,32,0.65)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
-          <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_56%,rgba(27,143,134,0.92))] px-5 pb-5 pt-4 text-white">
+          <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,rgba(11,61,100,0.98),rgba(15,118,110,0.96)_56%,rgba(27,143,134,0.92))] px-4 py-3 text-white">
             <div className="pointer-events-none absolute right-[-3.5rem] top-[-2rem] h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_70%)] blur-2xl" />
-            <div className="relative flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <DKBotAvatar size={60} />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <DKBotAvatar size={40} />
                 <div className="min-w-0">
-                  <div className="surface-badge border-white/12 bg-white/14 text-white/90">
-                    <Sparkles className="h-3.5 w-3.5 text-[#ffd66b]" />
-                    DK Bot
-                  </div>
-                  <h2 className="mt-3 text-lg font-semibold tracking-[-0.03em]">프로젝트 도우미 챗봇</h2>
-                  <p className="mt-1 text-sm leading-6 text-white/88">
-                    {currentProject ? `${currentProject.name} 데이터를 기준으로 답변합니다.` : '프로젝트를 선택하면 더 정확한 답변을 드립니다.'}
+                  <h2 className="text-sm font-semibold tracking-[-0.02em]">DK Bot</h2>
+                  <p className="text-xs text-white/70">
+                    {currentProject ? currentProject.name : '프로젝트를 선택하세요'}
                   </p>
                 </div>
               </div>
@@ -155,7 +151,7 @@ export default function ChatbotWidget() {
             </div>
           </div>
 
-          <div className="app-panel flex min-h-[30rem] flex-1 flex-col gap-4 p-4">
+          <div className="app-panel flex max-h-[min(70vh,28rem)] flex-1 flex-col gap-3 p-3">
             <div className="flex flex-wrap gap-2">
               {CHATBOT_SUGGESTIONS.map((suggestion) => (
                 <button
@@ -213,15 +209,8 @@ export default function ChatbotWidget() {
                 event.preventDefault();
                 submitQuestion(draft);
               }}
-              className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-3 backdrop-blur-xl"
+              className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-2 backdrop-blur-xl"
             >
-              <label
-                htmlFor="dk-bot-input"
-                className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]"
-              >
-                <CornerDownLeft className="h-3.5 w-3.5" />
-                Ask DK Bot
-              </label>
               <div className="flex items-end gap-2">
                 <textarea
                   id="dk-bot-input"
@@ -233,9 +222,9 @@ export default function ChatbotWidget() {
                       submitQuestion(draft);
                     }
                   }}
-                  placeholder="진행률, 지연 작업, 담당자 현황, 특정 작업 상태를 물어보세요."
-                  rows={3}
-                  className="field-input min-h-[88px] flex-1 resize-none rounded-[20px]"
+                  placeholder="질문을 입력하세요 (Enter로 전송)"
+                  rows={2}
+                  className="field-input min-h-[56px] flex-1 resize-none rounded-[16px] text-sm"
                 />
                 <button
                   type="submit"

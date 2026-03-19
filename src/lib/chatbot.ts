@@ -1,6 +1,8 @@
-import { TASK_STATUS_LABELS, LEVEL_LABELS, type Project, type ProjectMember, type Task } from '../types';
+import { TASK_STATUS_LABELS, LEVEL_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
 import { isSupabaseConfigured, supabase } from './supabase';
+
+// ─── Public types ────────────────────────────────────────────
 
 export interface ChatbotContext {
   project: Project | null;
@@ -13,23 +15,268 @@ export const CHATBOT_SUGGESTIONS = [
   '지금 지연된 작업이 뭐야?',
   '이번 주 집중해야 할 작업 알려줘',
   '멤버별 담당 업무를 정리해줘',
-  'WBS와 간트는 어떻게 활용하면 돼?',
+  '완료된 작업 목록 보여줘',
 ];
 
-const HELP_TEXT =
-  '진행률, 지연 작업, 이번 주 일정, 담당자 업무, 특정 작업 상태, WBS·간트·엑셀 활용법을 물어보면 현재 데이터 기준으로 바로 정리해 드릴게요.';
+// ─── Intent types ────────────────────────────────────────────
+
+type IntentType =
+  | 'greeting'
+  | 'overview'
+  | 'delay'
+  | 'weekly_this'
+  | 'weekly_next'
+  | 'member_summary'
+  | 'member_detail'
+  | 'member_delay'
+  | 'member_weekly'
+  | 'task_detail'
+  | 'status_query'
+  | 'guide_wbs'
+  | 'guide_gantt'
+  | 'guide_workflow'
+  | 'guide_export';
+
+interface ScoredIntent {
+  type: IntentType;
+  score: number;
+  matchedTask?: Task;
+  matchedMember?: ProjectMember;
+  taskStatus?: TaskStatus;
+}
+
+// ─── Intent keyword map (primary=3, secondary=2, weak=1) ────
+
+const INTENT_KEYWORDS: Record<string, { primary: string[]; secondary: string[]; weak: string[] }> = {
+  greeting: {
+    primary: ['안녕', '반가', '헬로', 'hello', 'hi', '하이', '안녕하세요', '처음'],
+    secondary: ['시작', '소개'],
+    weak: [],
+  },
+  overview: {
+    primary: ['진행률', '진척률', '진도', '요약', '현황', '종합', '대시보드', '전체상태', '공정률', '공정율'],
+    secondary: ['어때', '어떻게', '얼마나', '몇퍼센트', '전체', '프로젝트상태', '총괄'],
+    weak: ['상태', '알려줘', '보여줘'],
+  },
+  delay: {
+    primary: ['지연', '리스크', '밀린', '늦은', '위험', '딜레이', 'delay', '초과', '오버런'],
+    secondary: ['마감지남', '못끝낸', '넘긴', '문제', '이슈', '경고', '주의'],
+    weak: ['확인', '점검', '늦'],
+  },
+  weekly_this: {
+    primary: ['이번주', '금주', '이주'],
+    secondary: ['이번에', '오늘포함', '주간', '이번주간'],
+    weak: ['일정', '스케줄'],
+  },
+  weekly_next: {
+    primary: ['다음주', '차주', '내주'],
+    secondary: ['다다음', '다음주간'],
+    weak: [],
+  },
+  member_summary: {
+    primary: ['멤버별', '담당자별', '인력', '워크로드', '팀원별'],
+    secondary: ['멤버', '담당자', '팀원', '사람', '배분', '배정', '할당', '누가'],
+    weak: ['업무', '인원'],
+  },
+  status_query: {
+    primary: ['완료된', '끝난', '보류중', '대기중', '진행중인', '하고있는', '완료작업', '보류작업', '대기작업'],
+    secondary: ['완료목록', '끝난것', '보류', '대기'],
+    weak: ['목록', '리스트'],
+  },
+  guide_wbs: {
+    primary: ['wbs', '작업구조', '작업분류', '작업분해', '작업구조도'],
+    secondary: ['구조도', '분류체계'],
+    weak: [],
+  },
+  guide_gantt: {
+    primary: ['간트', 'gantt', '간트차트'],
+    secondary: ['일정표', '바차트'],
+    weak: [],
+  },
+  guide_export: {
+    primary: ['엑셀', '내보내기', 'export', '다운로드'],
+    secondary: ['출력', '보고서', '리포트', 'docx', '워드'],
+    weak: ['저장', '인쇄'],
+  },
+};
+
+// ─── Text utilities ──────────────────────────────────────────
 
 function normalizeText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '').replace(/[^0-9a-z가-힣]/g, '');
 }
 
+function tokenize(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[\s,·.;:!?]+/)
+    .map((t) => t.replace(/[^0-9a-z가-힣]/g, ''))
+    .filter((t) => t.length >= 2);
+}
+
+function getBigrams(str: string): Set<string> {
+  const bigrams = new Set<string>();
+  for (let i = 0; i < str.length - 1; i++) {
+    bigrams.add(str.substring(i, i + 2));
+  }
+  return bigrams;
+}
+
+function diceCoefficient(a: string, b: string): number {
+  if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+  const bigramsA = getBigrams(a);
+  const bigramsB = getBigrams(b);
+  let intersection = 0;
+  for (const bg of bigramsA) {
+    if (bigramsB.has(bg)) intersection++;
+  }
+  const total = bigramsA.size + bigramsB.size;
+  return total === 0 ? 0 : (2 * intersection) / total;
+}
+
+// ─── Fuzzy entity matching ───────────────────────────────────
+
+function fuzzyMatchTask(question: string, tasks: Task[]): { task: Task; score: number } | null {
+  const nq = normalizeText(question);
+  const qTokens = tokenize(question);
+
+  const scored = tasks
+    .map((task) => {
+      const nt = normalizeText(task.name);
+      const tTokens = tokenize(task.name);
+      let score = 0;
+
+      // Exact substring (strongest signal)
+      if (nt.length >= 2 && nq.includes(nt)) score += 12;
+      // Reverse substring
+      if (nq.length >= 3 && nt.includes(nq)) score += 8;
+
+      // Token overlap
+      if (tTokens.length > 0) {
+        const overlap = tTokens.filter((tt) =>
+          qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
+        );
+        score += (overlap.length / tTokens.length) * 6;
+      }
+
+      // Bigram similarity for each token pair
+      for (const qt of qTokens) {
+        for (const tt of tTokens) {
+          const dice = diceCoefficient(qt, tt);
+          if (dice >= 0.55) score += dice * 3;
+        }
+      }
+
+      // Whole-string bigram similarity
+      const wholeDice = diceCoefficient(nq, nt);
+      if (wholeDice >= 0.4) score += wholeDice * 4;
+
+      return { task, score };
+    })
+    .filter((item) => item.score >= 4)
+    .sort((a, b) => b.score - a.score || b.task.name.length - a.task.name.length);
+
+  return scored[0] || null;
+}
+
+function fuzzyMatchMember(question: string, members: ProjectMember[]): { member: ProjectMember; score: number } | null {
+  const nq = normalizeText(question);
+
+  const scored = members
+    .map((member) => {
+      const nm = normalizeText(member.name);
+      let score = 0;
+
+      if (nm.length >= 2 && nq.includes(nm)) {
+        // Short names (2 chars) require exact match to prevent false positives
+        score += nm.length <= 2 ? 8 : 10;
+      }
+
+      // Bigram similarity
+      const dice = diceCoefficient(nq, nm);
+      if (dice >= 0.5 && nm.length >= 3) score += dice * 5;
+
+      return { member, score };
+    })
+    .filter((item) => item.score >= 6)
+    .sort((a, b) => b.score - a.score || b.member.name.length - a.member.name.length);
+
+  return scored[0] || null;
+}
+
+// ─── Intent scoring ──────────────────────────────────────────
+
+function countKeywordMatches(text: string, keywords: string[]): number {
+  return keywords.filter((kw) => text.includes(kw)).length;
+}
+
+function scoreIntents(question: string, normalized: string, context: ChatbotContext): ScoredIntent[] {
+  const intents: ScoredIntent[] = [];
+
+  // Score keyword-based intents
+  for (const [intentType, kw] of Object.entries(INTENT_KEYWORDS)) {
+    const score =
+      countKeywordMatches(normalized, kw.primary) * 3 +
+      countKeywordMatches(normalized, kw.secondary) * 2 +
+      countKeywordMatches(normalized, kw.weak) * 1;
+    if (score >= 2) {
+      intents.push({ type: intentType as IntentType, score });
+    }
+  }
+
+  // Score entity matches
+  const taskMatch = fuzzyMatchTask(question, context.tasks);
+  const memberMatch = fuzzyMatchMember(question, context.members);
+
+  if (taskMatch) {
+    intents.push({ type: 'task_detail', score: taskMatch.score, matchedTask: taskMatch.task });
+  }
+
+  if (memberMatch) {
+    const hasDelay = intents.some((i) => i.type === 'delay');
+    const hasWeekly = intents.some((i) => i.type === 'weekly_this' || i.type === 'weekly_next');
+
+    if (hasDelay) {
+      // Compound: member + delay → member's delayed tasks
+      intents.push({ type: 'member_delay', score: memberMatch.score + 6, matchedMember: memberMatch.member });
+    } else if (hasWeekly) {
+      intents.push({ type: 'member_weekly', score: memberMatch.score + 5, matchedMember: memberMatch.member });
+    } else {
+      intents.push({ type: 'member_detail', score: memberMatch.score, matchedMember: memberMatch.member });
+    }
+  }
+
+  // Detect status query with specific status
+  const statusIntent = intents.find((i) => i.type === 'status_query');
+  if (statusIntent) {
+    if (/완료|끝난/.test(normalized)) statusIntent.taskStatus = 'completed';
+    else if (/보류/.test(normalized)) statusIntent.taskStatus = 'on_hold';
+    else if (/대기/.test(normalized)) statusIntent.taskStatus = 'pending';
+    else if (/진행중/.test(normalized)) statusIntent.taskStatus = 'in_progress';
+  }
+
+  // WBS + Gantt compound
+  const hasWbs = intents.some((i) => i.type === 'guide_wbs');
+  const hasGantt = intents.some((i) => i.type === 'guide_gantt');
+  if (hasWbs && hasGantt) {
+    intents.push({ type: 'guide_workflow', score: 10 });
+  }
+
+  return intents.sort((a, b) => b.score - a.score);
+}
+
+// ─── Data helpers ────────────────────────────────────────────
+
+const HELP_TEXT =
+  '진행률, 지연 작업, 이번 주 일정, 담당자 업무, 특정 작업 상태 등을 물어보시면 현재 데이터 기준으로 정리해 드립니다.';
+
 function getLeafTasks(tasks: Task[]): Task[] {
-  const parentIds = new Set(tasks.map((task) => task.parentId).filter(Boolean));
-  return tasks.filter((task) => !parentIds.has(task.id));
+  const parentIds = new Set(tasks.map((t) => t.parentId).filter(Boolean));
+  return tasks.filter((t) => !parentIds.has(t.id));
 }
 
 function getAssigneeName(task: Task, members: ProjectMember[]): string {
-  return members.find((member) => member.id === task.assigneeId)?.name || '미지정';
+  return members.find((m) => m.id === task.assigneeId)?.name || '미지정';
 }
 
 function formatTaskPeriod(task: Task): string {
@@ -41,288 +288,306 @@ function getBaseDate(project: Project | null): Date {
   return project?.baseDate ? new Date(project.baseDate) : new Date();
 }
 
-function matchTask(question: string, tasks: Task[]): Task | null {
-  const normalizedQuestion = normalizeText(question);
-
-  return (
-    tasks
-      .filter((task) => {
-        const taskName = normalizeText(task.name);
-        return taskName.length >= 2 && normalizedQuestion.includes(taskName);
-      })
-      .sort((a, b) => b.name.length - a.name.length)[0] || null
-  );
-}
-
-function matchMember(question: string, members: ProjectMember[]): ProjectMember | null {
-  const normalizedQuestion = normalizeText(question);
-
-  return (
-    members
-      .filter((member) => {
-        const memberName = normalizeText(member.name);
-        return memberName.length >= 2 && normalizedQuestion.includes(memberName);
-      })
-      .sort((a, b) => b.name.length - a.name.length)[0] || null
-  );
-}
-
-function hasKeyword(question: string, keywords: string[]): boolean {
-  return keywords.some((keyword) => question.includes(keyword));
-}
+// ─── Answer builders ─────────────────────────────────────────
 
 function buildGreeting(context: ChatbotContext): string {
   if (!context.project) {
-    return `안녕하세요. DK Bot입니다.\n${HELP_TEXT}\n먼저 프로젝트를 선택해 주시면 더 정확하게 답변할 수 있습니다.`;
+    return `안녕하세요, DK Bot입니다.\n${HELP_TEXT}\n먼저 프로젝트를 선택해 주세요.`;
   }
-
   const leafTasks = getLeafTasks(context.tasks);
-  const overallProgress = Math.round(calculateOverallProgress(context.tasks));
-
+  const progress = Math.round(calculateOverallProgress(context.tasks));
   return [
-    `안녕하세요. DK Bot입니다. 지금 보고 있는 프로젝트는 "${context.project.name}"입니다.`,
+    `안녕하세요, DK Bot입니다. 현재 프로젝트: "${context.project.name}"`,
     leafTasks.length > 0
-      ? `현재 등록된 실행 단위 작업은 ${leafTasks.length}건이고, 실적 기준 전체 공정률은 ${overallProgress}%입니다.`
-      : '아직 실행 단위 작업이 많지 않아서, WBS에 작업이 더 쌓이면 답변 정확도가 더 올라갑니다.',
+      ? `실행 작업 ${leafTasks.length}건, 실적 공정률 ${progress}%입니다.`
+      : '아직 등록된 실행 작업이 없습니다.',
     HELP_TEXT,
   ].join('\n');
 }
 
 function buildOverviewAnswer(context: ChatbotContext): string {
-  if (!context.project) {
-    return `현재 선택된 프로젝트가 없습니다.\n${HELP_TEXT}`;
-  }
-
+  if (!context.project) return `프로젝트가 선택되지 않았습니다.\n${HELP_TEXT}`;
   const leafTasks = getLeafTasks(context.tasks);
-  if (leafTasks.length === 0) {
-    return `${context.project.name} 프로젝트에는 아직 요약할 실행 단위 작업이 없습니다.\nWBS에서 작업명, 담당자, 계획일정을 입력하면 챗봇이 더 정확하게 답변할 수 있습니다.`;
-  }
+  if (leafTasks.length === 0) return `${context.project.name}에 아직 실행 작업이 없습니다.`;
 
   const baseDate = getBaseDate(context.project);
-  const completedCount = leafTasks.filter((task) => task.status === 'completed').length;
-  const inProgressCount = leafTasks.filter((task) => task.status === 'in_progress').length;
-  const delayedTasks = getDelayedTasks(leafTasks, baseDate).sort(
-    (a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate)
-  );
-  const thisWeekTasks = getWeeklyTasks(leafTasks, 'this');
-  const overallProgress = Math.round(calculateOverallProgress(context.tasks));
-  const timeline =
-    context.project.startDate || context.project.endDate
-      ? `일정은 ${formatDate(context.project.startDate) || '미정'}부터 ${formatDate(context.project.endDate) || '미정'}까지 잡혀 있습니다.`
-      : '프로젝트 전체 일정은 아직 설정되지 않았습니다.';
+  const completed = leafTasks.filter((t) => t.status === 'completed').length;
+  const inProgress = leafTasks.filter((t) => t.status === 'in_progress').length;
+  const delayed = getDelayedTasks(leafTasks, baseDate);
+  const progress = Math.round(calculateOverallProgress(context.tasks));
 
   return [
-    `${context.project.name} 프로젝트 요약입니다.`,
-    `실행 단위 작업 ${leafTasks.length}건 중 완료 ${completedCount}건, 진행중 ${inProgressCount}건이며 현재 실적 공정률은 ${overallProgress}%입니다.`,
-    timeline,
-    delayedTasks[0]
-      ? `가장 먼저 확인할 리스크는 "${delayedTasks[0].name}" 작업으로, 계획 종료일 대비 ${getDelayDays(delayedTasks[0], baseDate)}일 지연 상태입니다.`
-      : '현재 기준으로 지연으로 판정되는 작업은 없습니다.',
-    thisWeekTasks.length > 0
-      ? `이번 주 일정에 걸린 작업은 ${thisWeekTasks.length}건입니다. 우선순위는 ${thisWeekTasks
-          .slice(0, 3)
-          .map((task) => `"${task.name}"`)
-          .join(', ')} 순으로 보는 것이 좋습니다.`
-      : '이번 주 일정에 걸린 작업은 아직 없습니다.',
+    `${context.project.name} 프로젝트 요약`,
+    `작업 ${leafTasks.length}건 | 완료 ${completed} | 진행 ${inProgress} | 지연 ${delayed.length} | 공정률 ${progress}%`,
+    context.project.startDate
+      ? `일정: ${formatDate(context.project.startDate)} ~ ${formatDate(context.project.endDate) || '미정'}`
+      : '전체 일정 미설정',
+    delayed[0]
+      ? `최우선 리스크: "${delayed[0].name}" (${getDelayDays(delayed[0], baseDate)}일 지연)`
+      : '지연 작업 없음',
   ].join('\n');
 }
 
 function buildDelayAnswer(context: ChatbotContext): string {
-  if (!context.project) {
-    return '프로젝트를 선택하면 지연 작업을 바로 추려드릴 수 있습니다.';
-  }
-
+  if (!context.project) return '프로젝트를 선택하면 지연 작업을 확인할 수 있습니다.';
   const baseDate = getBaseDate(context.project);
-  const delayedTasks = getDelayedTasks(getLeafTasks(context.tasks), baseDate).sort(
-    (a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate)
-  );
+  const delayed = getDelayedTasks(getLeafTasks(context.tasks), baseDate)
+    .sort((a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate));
 
-  if (delayedTasks.length === 0) {
-    return `${context.project.name} 프로젝트에는 ${formatDate(baseDate)} 기준 지연 작업이 없습니다.`;
-  }
+  if (delayed.length === 0) return `${context.project.name}에 지연 작업이 없습니다.`;
 
   return [
-    `${context.project.name} 프로젝트의 지연 작업 상위 ${Math.min(delayedTasks.length, 5)}건입니다.`,
-    ...delayedTasks.slice(0, 5).map((task) => {
-      const assignee = getAssigneeName(task, context.members);
-      return `- ${task.name} | 담당 ${assignee} | 계획종료 ${formatDate(task.planEnd)} | ${getDelayDays(task, baseDate)}일 지연`;
-    }),
+    `지연 작업 ${delayed.length}건 (상위 ${Math.min(delayed.length, 5)}건)`,
+    ...delayed.slice(0, 5).map((t) =>
+      `- ${t.name} | ${getAssigneeName(t, context.members)} | ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연`
+    ),
   ].join('\n');
 }
 
 function buildWeeklyAnswer(context: ChatbotContext, type: 'this' | 'next'): string {
-  if (!context.project) {
-    return '프로젝트를 선택하면 주간 일정도 바로 요약할 수 있습니다.';
-  }
-
+  if (!context.project) return '프로젝트를 선택하면 주간 일정을 확인할 수 있습니다.';
   const label = type === 'this' ? '이번 주' : '다음 주';
-  const weeklyTasks = getWeeklyTasks(getLeafTasks(context.tasks), type).sort((a, b) => {
-    const aDate = a.planStart || a.planEnd || '';
-    const bDate = b.planStart || b.planEnd || '';
-    return aDate.localeCompare(bDate);
-  });
+  const weekly = getWeeklyTasks(getLeafTasks(context.tasks), type)
+    .sort((a, b) => (a.planStart || '').localeCompare(b.planStart || ''));
 
-  if (weeklyTasks.length === 0) {
-    return `${context.project.name} 프로젝트에는 ${label}에 걸린 실행 단위 작업이 없습니다.`;
-  }
+  if (weekly.length === 0) return `${label} 예정 작업이 없습니다.`;
 
   return [
-    `${label} 집중 작업 ${Math.min(weeklyTasks.length, 5)}건입니다.`,
-    ...weeklyTasks.slice(0, 5).map((task) => {
-      const assignee = getAssigneeName(task, context.members);
-      return `- ${task.name} | ${formatTaskPeriod(task)} | 담당 ${assignee} | ${Math.round(task.actualProgress)}%`;
-    }),
+    `${label} 작업 ${weekly.length}건`,
+    ...weekly.slice(0, 5).map((t) =>
+      `- ${t.name} | ${formatTaskPeriod(t)} | ${getAssigneeName(t, context.members)} | ${Math.round(t.actualProgress)}%`
+    ),
   ].join('\n');
 }
 
 function buildMemberSummaryAnswer(context: ChatbotContext): string {
-  if (!context.project) {
-    return '프로젝트를 선택하면 멤버별 업무 현황을 집계할 수 있습니다.';
-  }
-
+  if (!context.project) return '프로젝트를 선택하면 멤버별 현황을 확인할 수 있습니다.';
   const leafTasks = getLeafTasks(context.tasks);
   const baseDate = getBaseDate(context.project);
 
   const workloads = context.members
-    .map((member) => {
-      const memberTasks = leafTasks.filter((task) => task.assigneeId === member.id);
-      const completed = memberTasks.filter((task) => task.status === 'completed').length;
-      const inProgress = memberTasks.filter((task) => task.status === 'in_progress').length;
-      const delayed = getDelayedTasks(memberTasks, baseDate).length;
+    .map((m) => {
+      const mt = leafTasks.filter((t) => t.assigneeId === m.id);
       return {
-        member,
-        total: memberTasks.length,
-        completed,
-        inProgress,
-        delayed,
+        name: m.name,
+        total: mt.length,
+        inProgress: mt.filter((t) => t.status === 'in_progress').length,
+        completed: mt.filter((t) => t.status === 'completed').length,
+        delayed: getDelayedTasks(mt, baseDate).length,
       };
     })
-    .filter((item) => item.total > 0)
-    .sort((a, b) => b.delayed - a.delayed || b.inProgress - a.inProgress || b.total - a.total);
+    .filter((w) => w.total > 0)
+    .sort((a, b) => b.delayed - a.delayed || b.total - a.total);
 
-  if (workloads.length === 0) {
-    return `${context.project.name} 프로젝트에는 아직 담당자가 배정된 실행 단위 작업이 없습니다.`;
-  }
+  if (workloads.length === 0) return '담당자가 배정된 작업이 없습니다.';
 
-  const unassignedCount = leafTasks.filter((task) => !task.assigneeId).length;
-
+  const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
   return [
-    '멤버별 업무 현황입니다.',
-    ...workloads.slice(0, 6).map((item) => {
-      return `- ${item.member.name}: 총 ${item.total}건, 진행중 ${item.inProgress}건, 완료 ${item.completed}건, 지연 ${item.delayed}건`;
-    }),
-    unassignedCount > 0 ? `미지정 작업은 ${unassignedCount}건입니다.` : '담당 미지정 작업은 없습니다.',
-  ].join('\n');
+    '멤버별 업무 현황',
+    ...workloads.slice(0, 6).map((w) =>
+      `- ${w.name}: 총 ${w.total} | 진행 ${w.inProgress} | 완료 ${w.completed} | 지연 ${w.delayed}`
+    ),
+    unassigned > 0 ? `미지정 ${unassigned}건` : '',
+  ].filter(Boolean).join('\n');
 }
 
 function buildMemberDetailAnswer(member: ProjectMember, context: ChatbotContext): string {
-  if (!context.project) {
-    return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
-  }
-
+  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
   const baseDate = getBaseDate(context.project);
-  const memberTasks = getLeafTasks(context.tasks).filter((task) => task.assigneeId === member.id);
+  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
 
-  if (memberTasks.length === 0) {
-    return `${member.name}님에게 배정된 실행 단위 작업은 아직 없습니다.`;
-  }
+  if (mt.length === 0) return `${member.name}님에게 배정된 작업이 없습니다.`;
 
-  const delayedTasks = getDelayedTasks(memberTasks, baseDate);
-  const nextTasks = [...memberTasks]
-    .sort((a, b) => {
-      const aDate = a.planEnd || a.planStart || '9999-12-31';
-      const bDate = b.planEnd || b.planStart || '9999-12-31';
-      return aDate.localeCompare(bDate);
-    })
-    .slice(0, 4);
+  const delayed = getDelayedTasks(mt, baseDate);
+  return [
+    `${member.name}님 업무 요약`,
+    `총 ${mt.length}건 | 진행 ${mt.filter((t) => t.status === 'in_progress').length} | 완료 ${mt.filter((t) => t.status === 'completed').length} | 지연 ${delayed.length}`,
+    ...mt.slice(0, 4).map((t) =>
+      `- ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${Math.round(t.actualProgress)}%`
+    ),
+  ].join('\n');
+}
+
+function buildMemberDelayAnswer(member: ProjectMember, context: ChatbotContext): string {
+  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
+  const baseDate = getBaseDate(context.project);
+  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
+  const delayed = getDelayedTasks(mt, baseDate)
+    .sort((a, b) => getDelayDays(b, baseDate) - getDelayDays(a, baseDate));
+
+  if (delayed.length === 0) return `${member.name}님 담당 작업 중 지연된 것은 없습니다.`;
 
   return [
-    `${member.name}님 업무 요약입니다.`,
-    `총 ${memberTasks.length}건 중 진행중 ${memberTasks.filter((task) => task.status === 'in_progress').length}건, 완료 ${memberTasks.filter((task) => task.status === 'completed').length}건, 지연 ${delayedTasks.length}건입니다.`,
-    `우선 확인할 작업은 ${nextTasks.map((task) => `"${task.name}"`).join(', ')}입니다.`,
+    `${member.name}님 지연 작업 ${delayed.length}건`,
+    ...delayed.slice(0, 5).map((t) =>
+      `- ${t.name} | ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연`
+    ),
+  ].join('\n');
+}
+
+function buildMemberWeeklyAnswer(member: ProjectMember, context: ChatbotContext): string {
+  if (!context.project) return '프로젝트를 선택한 뒤 다시 질문해 주세요.';
+  const mt = getLeafTasks(context.tasks).filter((t) => t.assigneeId === member.id);
+  const weekly = getWeeklyTasks(mt, 'this');
+
+  if (weekly.length === 0) return `${member.name}님의 이번 주 작업은 없습니다.`;
+
+  return [
+    `${member.name}님 이번 주 작업 ${weekly.length}건`,
+    ...weekly.slice(0, 5).map((t) =>
+      `- ${t.name} | ${formatTaskPeriod(t)} | ${Math.round(t.actualProgress)}%`
+    ),
   ].join('\n');
 }
 
 function buildTaskDetailAnswer(task: Task, context: ChatbotContext): string {
-  const parentTask = context.tasks.find((item) => item.id === task.parentId);
-  const childCount = context.tasks.filter((item) => item.parentId === task.id).length;
+  const parent = context.tasks.find((t) => t.id === task.parentId);
+  const childCount = context.tasks.filter((t) => t.parentId === task.id).length;
   const assignee = getAssigneeName(task, context.members);
   const baseDate = getBaseDate(context.project);
-  const delayDays = getDelayDays(task, baseDate);
+  const delay = getDelayDays(task, baseDate);
 
   return [
-    `"${task.name}" 작업 기준입니다.`,
-    `${LEVEL_LABELS[task.level] || '작업'} 단계이고 상태는 ${TASK_STATUS_LABELS[task.status]}입니다. 담당자는 ${assignee}, 실적 공정률은 ${Math.round(task.actualProgress)}%입니다.`,
-    `계획 일정은 ${formatTaskPeriod(task)}입니다.`,
+    `"${task.name}" 상세`,
+    `${LEVEL_LABELS[task.level] || '작업'} | ${TASK_STATUS_LABELS[task.status]} | 담당: ${assignee} | 공정률: ${Math.round(task.actualProgress)}%`,
+    `계획: ${formatTaskPeriod(task)}`,
     task.actualStart || task.actualEnd
-      ? `실적 일정은 ${formatDate(task.actualStart) || '미정'} ~ ${formatDate(task.actualEnd) || '미정'}입니다.`
-      : '실적 일정은 아직 충분히 입력되지 않았습니다.',
-    delayDays > 0 ? `현재 기준 ${delayDays}일 지연 상태입니다.` : '현재 기준 지연으로 판정되지는 않습니다.',
-    parentTask ? `상위 작업은 "${parentTask.name}"입니다.` : '최상위 레벨에 가까운 작업입니다.',
-    childCount > 0 ? `하위 작업 ${childCount}건이 연결돼 있습니다.` : '하위 작업 없이 바로 실행되는 단위 작업입니다.',
-  ].join('\n');
+      ? `실적: ${formatDate(task.actualStart) || '미정'} ~ ${formatDate(task.actualEnd) || '미정'}`
+      : '실적 일정 미입력',
+    delay > 0 ? `${delay}일 지연` : '지연 없음',
+    parent ? `상위: "${parent.name}"` : '',
+    childCount > 0 ? `하위 작업 ${childCount}건` : '',
+  ].filter(Boolean).join('\n');
+}
+
+function buildStatusFilterAnswer(status: TaskStatus, context: ChatbotContext): string {
+  if (!context.project) return '프로젝트를 선택해 주세요.';
+  const filtered = getLeafTasks(context.tasks).filter((t) => t.status === status);
+  const label = TASK_STATUS_LABELS[status];
+
+  if (filtered.length === 0) return `"${label}" 상태의 작업이 없습니다.`;
+
+  return [
+    `${label} 작업 ${filtered.length}건`,
+    ...filtered.slice(0, 8).map((t) =>
+      `- ${t.name} | ${getAssigneeName(t, context.members)} | ${Math.round(t.actualProgress)}%`
+    ),
+    filtered.length > 8 ? `외 ${filtered.length - 8}건` : '',
+  ].filter(Boolean).join('\n');
 }
 
 function buildWbsGuideAnswer(): string {
   return [
     'WBS는 작업 구조를 쪼개서 계획과 실적을 관리하는 화면입니다.',
-    '- Phase > Activity > Task > Function 순으로 세분화하면서 작업명, 담당자, 계획일정, 공정률을 입력하세요.',
-    '- 상위 작업은 하위 작업 공정률과 구조를 정리하는 기준점으로 보고, 실제 실행은 하위 작업 중심으로 관리하는 편이 좋습니다.',
-    '- 엑셀 다운로드를 쓰면 계층 코드와 일정 정보를 한 번에 정리할 수 있어서 리뷰나 공유용으로 적합합니다.',
+    '- Phase > Activity > Task > Function 순으로 세분화하여 작업명, 담당자, 계획일정, 공정률을 입력하세요.',
+    '- 엑셀 다운로드로 계층 코드와 일정 정보를 한 번에 정리할 수 있습니다.',
   ].join('\n');
 }
 
 function buildGanttGuideAnswer(): string {
   return [
     '간트는 일정 흐름과 병목을 보는 화면입니다.',
-    '- 막대가 겹치는 구간을 보면 어떤 주차에 일이 몰리는지 바로 파악할 수 있습니다.',
-    '- 지연 작업은 계획종료일과 실적 공정률을 같이 보면서 우선순위를 잡는 데 쓰는 것이 좋습니다.',
-    '- 현재 필터와 보기 범위를 반영한 엑셀도 내려받을 수 있어서 주간회의 자료로 쓰기 좋습니다.',
-  ].join('\n');
-}
-
-function buildWorkflowGuideAnswer(): string {
-  return [
-    buildWbsGuideAnswer(),
-    '',
-    buildGanttGuideAnswer(),
+    '- 막대가 겹치는 구간에서 일정 몰림을 파악할 수 있습니다.',
+    '- 지연 작업은 계획종료일과 공정률을 같이 보면서 우선순위를 잡으세요.',
   ].join('\n');
 }
 
 function buildExportGuideAnswer(): string {
   return [
-    '현재 프로젝트에서는 엑셀 내보내기를 이렇게 쓰면 됩니다.',
-    '- WBS 화면: 계층형 작업표와 재가져오기용 데이터 시트를 함께 다운로드할 수 있습니다.',
-    '- 간트 화면: 현재 검색어, 필터, 보기 범위를 반영한 일정 매트릭스를 다운로드할 수 있습니다.',
-    '- 설정 화면: WBS 데이터 시트를 다시 가져와 구조를 복원할 수 있습니다.',
+    '엑셀/보고서 내보내기 안내',
+    '- WBS 화면: 계층형 작업표 다운로드',
+    '- 간트 화면: 일정 매트릭스 다운로드',
+    '- 설정 화면: WBS 데이터 가져오기/내보내기',
   ].join('\n');
 }
 
+// ─── Intent dispatch ─────────────────────────────────────────
+
+function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): string | null {
+  switch (intent.type) {
+    case 'greeting':
+      return buildGreeting(context);
+    case 'overview':
+      return buildOverviewAnswer(context);
+    case 'delay':
+      return buildDelayAnswer(context);
+    case 'weekly_this':
+      return buildWeeklyAnswer(context, 'this');
+    case 'weekly_next':
+      return buildWeeklyAnswer(context, 'next');
+    case 'member_summary':
+      return buildMemberSummaryAnswer(context);
+    case 'member_detail':
+      return intent.matchedMember ? buildMemberDetailAnswer(intent.matchedMember, context) : null;
+    case 'member_delay':
+      return intent.matchedMember ? buildMemberDelayAnswer(intent.matchedMember, context) : null;
+    case 'member_weekly':
+      return intent.matchedMember ? buildMemberWeeklyAnswer(intent.matchedMember, context) : null;
+    case 'task_detail':
+      return intent.matchedTask ? buildTaskDetailAnswer(intent.matchedTask, context) : null;
+    case 'status_query':
+      return intent.taskStatus ? buildStatusFilterAnswer(intent.taskStatus, context) : buildOverviewAnswer(context);
+    case 'guide_wbs':
+      return buildWbsGuideAnswer();
+    case 'guide_gantt':
+      return buildGanttGuideAnswer();
+    case 'guide_workflow':
+      return [buildWbsGuideAnswer(), '', buildGanttGuideAnswer()].join('\n');
+    case 'guide_export':
+      return buildExportGuideAnswer();
+    default:
+      return null;
+  }
+}
+
+// ─── Fallback: fuzzy local search ────────────────────────────
+
 function buildFallbackFromLocal(question: string, context: ChatbotContext): string | null {
-  const normalizedQuestion = normalizeText(question);
-  const relatedTasks = context.tasks
+  const nq = normalizeText(question);
+  const qTokens = tokenize(question);
+
+  const scored = context.tasks
     .map((task) => {
-      const normalizedTaskName = normalizeText(task.name);
+      const nt = normalizeText(task.name);
+      const tTokens = tokenize(task.name);
       let score = 0;
-      if (normalizedQuestion.includes(normalizedTaskName)) score += 10;
-      if (normalizedTaskName.includes(normalizedQuestion) && normalizedQuestion.length >= 2) score += 6;
+
+      if (nt.length >= 2 && nq.includes(nt)) score += 10;
+      if (nq.length >= 3 && nt.includes(nq)) score += 6;
+
+      // Token overlap
+      if (tTokens.length > 0 && qTokens.length > 0) {
+        const overlap = tTokens.filter((tt) =>
+          qTokens.some((qt) => qt.includes(tt) || tt.includes(qt))
+        );
+        score += (overlap.length / tTokens.length) * 5;
+      }
+
+      // Bigram similarity
+      const dice = diceCoefficient(nq, nt);
+      if (dice >= 0.3) score += dice * 4;
+
       return { task, score };
     })
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || b.task.name.length - a.task.name.length)
-    .slice(0, 3)
-    .map((item) => item.task.name);
+    .filter((item) => item.score >= 3)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
 
-  if (relatedTasks.length > 0) {
+  if (scored.length > 0) {
     return [
-      '현재 대시보드 데이터에서 관련 가능성이 높은 작업입니다.',
-      ...relatedTasks.map((name) => `- ${name}`),
-      '작업명이나 담당자명을 조금 더 구체적으로 적어주시면 상태와 일정까지 바로 정리해 드릴게요.',
+      '관련 가능성이 높은 작업입니다.',
+      ...scored.map((s) => {
+        const t = s.task;
+        return `- ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${Math.round(t.actualProgress)}%`;
+      }),
+      '더 구체적으로 질문하시면 상세 정보를 드릴 수 있습니다.',
     ].join('\n');
   }
 
   return null;
 }
+
+// ─── Fallback: Supabase DB search ────────────────────────────
 
 async function searchSupabaseForAnswer(question: string): Promise<string | null> {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -331,7 +596,6 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
   if (keyword.length < 2) return null;
 
   try {
-    // 프로젝트 검색
     const { data: projects } = await supabase
       .from('projects')
       .select('name, status, start_date, end_date')
@@ -339,13 +603,14 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       .limit(3);
 
     if (projects && projects.length > 0) {
-      const lines = projects.map((p: { name: string; status: string; start_date: string | null; end_date: string | null }) =>
-        `- ${p.name} | 상태: ${p.status} | ${p.start_date || '미정'} ~ ${p.end_date || '미정'}`
-      );
-      return [`데이터베이스에서 관련 프로젝트를 찾았습니다.`, ...lines].join('\n');
+      return [
+        'DB에서 관련 프로젝트를 찾았습니다.',
+        ...projects.map((p: { name: string; status: string; start_date: string | null; end_date: string | null }) =>
+          `- ${p.name} | ${p.status} | ${p.start_date || '미정'} ~ ${p.end_date || '미정'}`
+        ),
+      ].join('\n');
     }
 
-    // 작업 검색
     const { data: tasks } = await supabase
       .from('tasks')
       .select('name, status, plan_start, plan_end, actual_progress')
@@ -353,13 +618,14 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       .limit(5);
 
     if (tasks && tasks.length > 0) {
-      const lines = tasks.map((t: { name: string; status: string; plan_start: string | null; plan_end: string | null; actual_progress: number }) =>
-        `- ${t.name} | 상태: ${TASK_STATUS_LABELS[t.status as keyof typeof TASK_STATUS_LABELS] || t.status} | 공정률: ${Math.round(t.actual_progress)}%`
-      );
-      return [`데이터베이스에서 관련 작업을 찾았습니다.`, ...lines].join('\n');
+      return [
+        'DB에서 관련 작업을 찾았습니다.',
+        ...tasks.map((t: { name: string; status: string; actual_progress: number }) =>
+          `- ${t.name} | ${TASK_STATUS_LABELS[t.status as TaskStatus] || t.status} | ${Math.round(t.actual_progress)}%`
+        ),
+      ].join('\n');
     }
 
-    // 멤버 검색
     const { data: members } = await supabase
       .from('project_members')
       .select('name, role')
@@ -367,8 +633,10 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       .limit(3);
 
     if (members && members.length > 0) {
-      const lines = members.map((m: { name: string; role: string }) => `- ${m.name} | 역할: ${m.role}`);
-      return [`데이터베이스에서 관련 멤버를 찾았습니다.`, ...lines].join('\n');
+      return [
+        'DB에서 관련 멤버를 찾았습니다.',
+        ...members.map((m: { name: string; role: string }) => `- ${m.name} | ${m.role}`),
+      ].join('\n');
     }
   } catch (error) {
     console.error('Chatbot DB search failed:', error);
@@ -377,86 +645,39 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
   return null;
 }
 
-const NOT_FOUND_MESSAGE = '해당 정보는 현재 대시보드 데이터와 데이터베이스에서 찾을 수 없습니다.\n작업명, 담당자명, 또는 키워드를 더 구체적으로 입력해 주세요.';
+// ─── Main entry ──────────────────────────────────────────────
+
+const NOT_FOUND_MESSAGE =
+  '해당 정보는 현재 데이터에서 찾을 수 없습니다.\n작업명, 담당자명, 또는 키워드를 더 구체적으로 입력해 주세요.';
 
 export async function createChatbotReply(question: string, context: ChatbotContext): Promise<string> {
-  const trimmedQuestion = question.trim();
-  const normalizedQuestion = normalizeText(trimmedQuestion);
-  const asksWbs = hasKeyword(normalizedQuestion, ['wbs', '작업구조']);
-  const asksGantt = hasKeyword(normalizedQuestion, ['간트', 'gantt']);
+  const trimmed = question.trim();
+  if (!trimmed) return '질문을 입력해 주세요.';
 
-  if (!trimmedQuestion) {
-    return '질문을 입력해 주세요.';
+  const normalized = normalizeText(trimmed);
+
+  // 1단계: 의도 분류 스코어링
+  const intents = scoreIntents(trimmed, normalized, context);
+
+  if (intents.length > 0) {
+    const answer = dispatchIntent(intents[0], context);
+    if (answer) return answer;
   }
 
-  if (hasKeyword(normalizedQuestion, ['안녕', '반가', '헬로', 'hello', 'hi'])) {
-    return buildGreeting(context);
-  }
-
-  // 1단계: 대시보드 데이터에서 즉시 검색
-  const matchedTask = matchTask(trimmedQuestion, context.tasks);
-  if (matchedTask) {
-    return buildTaskDetailAnswer(matchedTask, context);
-  }
-
-  const matchedMember = matchMember(trimmedQuestion, context.members);
-  if (matchedMember) {
-    return buildMemberDetailAnswer(matchedMember, context);
-  }
-
-  if (hasKeyword(normalizedQuestion, ['진행률', '진척', '진도', '요약', '현황', '상태'])) {
-    return buildOverviewAnswer(context);
-  }
-
-  if (hasKeyword(normalizedQuestion, ['지연', '리스크', '밀린', '늦', '위험'])) {
-    return buildDelayAnswer(context);
-  }
-
-  if (hasKeyword(normalizedQuestion, ['다음주', '차주'])) {
-    return buildWeeklyAnswer(context, 'next');
-  }
-
-  if (hasKeyword(normalizedQuestion, ['이번주', '금주', '주간', '일정'])) {
-    return buildWeeklyAnswer(context, 'this');
-  }
-
-  if (hasKeyword(normalizedQuestion, ['멤버', '담당자', '인력', '업무', '누가'])) {
-    return buildMemberSummaryAnswer(context);
-  }
-
-  if (asksWbs && asksGantt) {
-    return buildWorkflowGuideAnswer();
-  }
-
-  if (asksWbs) {
-    return buildWbsGuideAnswer();
-  }
-
-  if (asksGantt) {
-    return buildGanttGuideAnswer();
-  }
-
-  if (hasKeyword(normalizedQuestion, ['엑셀', '다운로드', '내보내기', '보고서', 'export'])) {
-    return buildExportGuideAnswer();
-  }
-
+  // 2단계: 프로젝트 미선택 시 안내
   if (!context.project) {
-    return `현재 선택된 프로젝트가 없어서 일반 안내로 답변드릴게요.\n${HELP_TEXT}`;
+    return `프로젝트가 선택되지 않았습니다.\n${HELP_TEXT}`;
   }
 
-  // 2단계: 로컬 대시보드 데이터에서 유사 작업 검색
-  const localFallback = buildFallbackFromLocal(trimmedQuestion, context);
-  if (localFallback) {
-    return localFallback;
-  }
+  // 3단계: 로컬 퍼지 검색
+  const localFallback = buildFallbackFromLocal(trimmed, context);
+  if (localFallback) return localFallback;
 
-  // 3단계: Supabase 데이터베이스에서 검색
-  const dbResult = await searchSupabaseForAnswer(trimmedQuestion);
-  if (dbResult) {
-    return dbResult;
-  }
+  // 4단계: Supabase DB 검색
+  const dbResult = await searchSupabaseForAnswer(trimmed);
+  if (dbResult) return dbResult;
 
-  // 4단계: 정보 없음 — 거짓 답변 금지
+  // 5단계: 정보 없음
   return NOT_FOUND_MESSAGE;
 }
 
