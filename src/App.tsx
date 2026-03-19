@@ -14,7 +14,7 @@ import UserManual from './pages/UserManual';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
-import { ensureSupabaseSession, subscribeToSupabaseAuthChanges } from './lib/supabase';
+import { ensureSupabaseSession, subscribeToSupabaseAuthChanges, isSupabaseConfigured } from './lib/supabase';
 import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
 
 // 인증 라우트 가드
@@ -55,6 +55,21 @@ function App() {
     let unsubscribe = () => {};
 
     const initializeApp = async () => {
+      if (!isSupabaseConfigured) {
+        // localStorage 모드: 로컬 사용자로 자동 로그인
+        const localUser = {
+          id: 'local-user',
+          email: 'local@localhost',
+          name: '로컬 사용자',
+          systemRole: 'admin' as const,
+          createdAt: new Date().toISOString(),
+        };
+        setUser(localUser);
+        const projects = await loadInitialProjects();
+        if (!isCancelled) setProjects(projects);
+        return;
+      }
+
       const sessionUser = await ensureSupabaseSession();
       if (isCancelled) return;
 

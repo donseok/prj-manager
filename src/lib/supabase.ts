@@ -2,14 +2,19 @@ import { createClient } from '@supabase/supabase-js';
 import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import type { SystemRole, User } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
+  : (null as unknown as ReturnType<typeof createClient>);
 
 // ─── Auth ────────────────────────────────────────────────────
 
 export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
+  if (!isSupabaseConfigured) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -23,6 +28,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 export async function signUpWithEmail(email: string, password: string, name: string): Promise<{ user: User | null; error: string | null }> {
+  if (!isSupabaseConfigured) return { user: null, error: 'Supabase가 설정되지 않았습니다.' };
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -40,6 +46,8 @@ export async function signUpWithEmail(email: string, password: string, name: str
 }
 
 export async function ensureSupabaseSession(): Promise<User | null> {
+  if (!isSupabaseConfigured) return null;
+
   const {
     data: { session },
     error: sessionError,
@@ -58,6 +66,8 @@ export async function ensureSupabaseSession(): Promise<User | null> {
 }
 
 export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => void) {
+  if (!isSupabaseConfigured) return () => {};
+
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -73,6 +83,7 @@ export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => 
 }
 
 export async function signOutSupabase() {
+  if (!isSupabaseConfigured) return;
   const { error } = await supabase.auth.signOut();
   if (error) {
     console.error('Failed to sign out from Supabase:', error);
@@ -82,6 +93,7 @@ export async function signOutSupabase() {
 // ─── Profiles ────────────────────────────────────────────────
 
 export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; createdAt: string }>> {
+  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, name, system_role, created_at')
@@ -102,6 +114,7 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
 }
 
 export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
   const { error } = await supabase
     .from('profiles')
     .update({ system_role: role })
