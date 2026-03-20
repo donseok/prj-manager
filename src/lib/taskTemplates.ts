@@ -340,6 +340,7 @@ const TASK_TEMPLATES: TaskTemplateDefinition[] = [
 ];
 
 export function listTaskTemplates(): TaskTemplateSummary[] {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return TASK_TEMPLATES.map(({ nodes: _nodes, ...summary }) => summary);
 }
 

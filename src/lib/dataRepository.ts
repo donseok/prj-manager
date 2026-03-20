@@ -91,6 +91,7 @@ export async function upsertProject(project: Project): Promise<Project> {
   const row = toProjectRow(project);
 
   // 기존 프로젝트면 UPDATE, 신규면 INSERT (upsert는 RLS INSERT 정책을 먼저 체크하므로 분리)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
   const { data: updatedRows, error: updateError } = await supabase
     .from('projects')

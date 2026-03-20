@@ -127,6 +127,7 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
 
   const flatten = (nodes: InternalTask[]) => {
     nodes.forEach((node) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _children, _sourceIndex, ...task } = node;
       normalized.push({ ...task });
       if (_children && _children.length > 0) {

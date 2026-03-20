@@ -23,7 +23,6 @@ import {
   Minus,
 } from 'lucide-react';
 import Modal from './common/Modal';
-import Button from './common/Button';
 import { cn } from '../lib/utils';
 import {
   generateWeeklyReport,

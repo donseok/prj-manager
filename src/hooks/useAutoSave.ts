@@ -66,6 +66,8 @@ export function useAutoSave<T>(
     if (currentProjectIdRef.current !== projectId) {
       currentProjectIdRef.current = projectId;
       hydratedRef.current = false;
+      // 프로젝트 전환 시 저장 상태 초기화 (의도적 effect 내 setState)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 프로젝트 전환 시 저장 상태 초기화
       setSaveStatus('idle');
       setLastSavedAt(null);
     }
