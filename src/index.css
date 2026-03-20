@@ -1500,3 +1500,22 @@ select::-ms-expand {
   border-color: rgba(50, 182, 171, 0.4);
   background: rgba(50, 182, 171, 0.06);
 }
+
+/* Danger zone — Settings page */
+.danger-zone-container {
+  background: linear-gradient(180deg, rgba(255, 244, 245, 0.88), rgba(255, 248, 244, 0.72));
+}
+
+.dark .danger-zone-container {
+  background: linear-gradient(180deg, rgba(49, 20, 28, 0.66), rgba(23, 16, 20, 0.72));
+  border-color: rgba(255, 115, 138, 0.2);
+}
+
+.danger-zone-inner {
+  background: rgba(203, 75, 95, 0.08);
+}
+
+.dark .danger-zone-inner {
+  background: rgba(203, 75, 95, 0.12);
+  border-color: rgba(255, 115, 138, 0.16);
+}

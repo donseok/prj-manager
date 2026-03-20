@@ -575,14 +575,14 @@ export default function Settings() {
           </div>
 
           {canDeleteProject && (
-            <div className="rounded-[30px] border border-[rgba(203,75,95,0.16)] bg-[linear-gradient(180deg,rgba(255,244,245,0.88),rgba(255,248,244,0.72))] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)] dark:bg-[linear-gradient(180deg,rgba(49,20,28,0.66),rgba(23,16,20,0.72))]">
+            <div className="danger-zone-container rounded-[30px] border border-[rgba(203,75,95,0.16)] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)]">
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
                 <AlertTriangle className="w-5 h-5" />
                 위험 영역
               </h2>
 
               <div className="mt-5">
-              <div className="rounded-[22px] border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.08)] p-4 dark:bg-[rgba(203,75,95,0.12)]">
+                <div className="danger-zone-inner rounded-[22px] border border-[rgba(203,75,95,0.16)] p-4">
                   <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
                   <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
                     프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
