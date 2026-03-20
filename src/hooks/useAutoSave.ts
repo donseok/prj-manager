@@ -88,6 +88,6 @@ export function useAutoSave<T>(
   return {
     saveStatus,
     lastSavedAt,
-    saveNow: async () => runSave(latestDataRef.current),
+    saveNow: async (payload?: T) => runSave(payload ?? latestDataRef.current),
   };
 }

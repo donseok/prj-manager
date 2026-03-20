@@ -92,19 +92,18 @@ export async function upsertProject(project: Project): Promise<Project> {
 
   // 기존 프로젝트면 UPDATE, 신규면 INSERT (upsert는 RLS INSERT 정책을 먼저 체크하므로 분리)
   const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
-  const { data: updated, error: updateError } = await supabase
+  const { data: updatedRows, error: updateError } = await supabase
     .from('projects')
     .update(updateFields)
     .eq('id', project.id)
-    .select()
-    .single();
+    .select();
 
-  if (!updateError && updated) {
-    return mapProjectRow(updated as ProjectRow);
+  if (!updateError && updatedRows && updatedRows.length > 0) {
+    return mapProjectRow(updatedRows[0] as ProjectRow);
   }
 
   // UPDATE 실패 시 (행이 없는 경우 등) INSERT 시도
-  if (updateError?.code === 'PGRST116') {
+  if (!updateError) {
     const { data: inserted, error: insertError } = await supabase
       .from('projects')
       .insert(row)
@@ -238,8 +237,26 @@ export async function syncProjectTasks(projectId: string, tasks: Task[]) {
       .upsert(rows, { onConflict: 'id' });
 
     if (upsertError) {
-      console.error('Failed to upsert tasks:', upsertError);
-      throw new Error(`작업 저장 실패: ${upsertError.message}`);
+      // 마이그레이션 미적용 컬럼이 원인이면 해당 컬럼 제거 후 재시도
+      if (upsertError.code === 'PGRST204') {
+        const extraCols = ['duration_days', 'predecessor_ids', 'task_source'];
+        const strippedRows = rows.map((row) => {
+          const clean = { ...row };
+          for (const col of extraCols) delete (clean as Record<string, unknown>)[col];
+          return clean;
+        });
+        const { error: retryError } = await supabase
+          .from('tasks')
+          .upsert(strippedRows, { onConflict: 'id' });
+
+        if (retryError) {
+          console.error('Failed to upsert tasks (retry):', { code: retryError.code, message: retryError.message, details: retryError.details, hint: retryError.hint });
+          throw new Error(`작업 저장 실패 [${retryError.code}]: ${retryError.message}`);
+        }
+      } else {
+        console.error('Failed to upsert tasks:', { code: upsertError.code, message: upsertError.message, details: upsertError.details, hint: upsertError.hint });
+        throw new Error(`작업 저장 실패 [${upsertError.code}]: ${upsertError.message}`);
+      }
     }
 
     // 삭제된 작업 정리
