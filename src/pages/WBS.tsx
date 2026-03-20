@@ -19,6 +19,7 @@ import {
   Sparkles,
   FileText,
   Wand2,
+  ClipboardList,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -27,6 +28,8 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import Modal from '../components/common/Modal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import MemberSelect from '../components/wbs/MemberSelect';
+import ContextMenu from '../components/wbs/ContextMenu';
+import QuickProgressModal from '../components/wbs/QuickProgressModal';
 import WeeklyReportModal from '../components/WeeklyReportModal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
@@ -81,7 +84,12 @@ export default function WBS() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('steel-project');
   const [draftPrompt, setDraftPrompt] = useState('');
   const [isWeeklyReportOpen, setIsWeeklyReportOpen] = useState(false);
+  const [isQuickProgressOpen, setIsQuickProgressOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: Task } | null>(null);
+  const [copiedTask, setCopiedTask] = useState<Task | null>(null);
   const dragOverCounterRef = useRef(0);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const popupScrollRef = useRef<HTMLDivElement>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const templates = listTaskTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
@@ -195,7 +203,38 @@ export default function WBS() {
     });
   };
 
-  // 키보드 단축키
+  // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
+  const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
+
+    // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
+    if (task && !hasChildren && isSyncableField(field)) {
+      const { updates, changed } = syncTaskField(
+        { ...task, [field]: value },
+        field as 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress',
+        value
+      );
+      if (changed) {
+        updateTask(taskId, { [field]: value, ...updates, updatedAt: new Date().toISOString() }, { recordHistory });
+        return;
+      }
+    }
+
+    updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
+  };
+
+  // 셀 편집 완료 시 히스토리 기록
+  const handleCellCommit = () => {
+    const { tasks: currentTasks } = useTaskStore.getState();
+    useTaskStore.getState().setTasks(currentTasks, undefined, { recordHistory: true });
+    setEditingCell(null);
+  };
+
+  // 셀 내비게이션에 사용할 컬럼 순서
+  const navigableColumns = ['name', 'output', 'weight', 'planStart', 'planEnd', 'planProgress', 'actualStart', 'actualEnd', 'actualProgress'];
+
+  // 키보드 단축키 (Ctrl+Z/Y/S + Tab/Enter/Arrow 내비게이션)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -213,12 +252,53 @@ export default function WBS() {
             handleManualSave();
             break;
         }
+        return;
+      }
+
+      // Tab / Enter / Arrow navigation when editing
+      if (!editingCell) return;
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        handleCellCommit();
+        const colIdx = navigableColumns.indexOf(editingCell.columnId);
+        const taskIdx = flatTasks.findIndex((t) => t.id === editingCell.taskId);
+        if (e.shiftKey) {
+          // Shift+Tab: previous column or previous row last column
+          if (colIdx > 0) {
+            setEditingCell({ taskId: editingCell.taskId, columnId: navigableColumns[colIdx - 1] });
+          } else if (taskIdx > 0) {
+            setEditingCell({ taskId: flatTasks[taskIdx - 1].id, columnId: navigableColumns[navigableColumns.length - 1] });
+          }
+        } else {
+          // Tab: next column or next row first column
+          if (colIdx < navigableColumns.length - 1) {
+            setEditingCell({ taskId: editingCell.taskId, columnId: navigableColumns[colIdx + 1] });
+          } else if (taskIdx < flatTasks.length - 1) {
+            setEditingCell({ taskId: flatTasks[taskIdx + 1].id, columnId: navigableColumns[0] });
+          }
+        }
+      } else if (e.key === 'ArrowDown' && e.altKey) {
+        e.preventDefault();
+        handleCellCommit();
+        const taskIdx = flatTasks.findIndex((t) => t.id === editingCell.taskId);
+        if (taskIdx < flatTasks.length - 1) {
+          setEditingCell({ taskId: flatTasks[taskIdx + 1].id, columnId: editingCell.columnId });
+        }
+      } else if (e.key === 'ArrowUp' && e.altKey) {
+        e.preventDefault();
+        handleCellCommit();
+        const taskIdx = flatTasks.findIndex((t) => t.id === editingCell.taskId);
+        if (taskIdx > 0) {
+          setEditingCell({ taskId: flatTasks[taskIdx - 1].id, columnId: editingCell.columnId });
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [redo, saveNow, undo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCell, flatTasks, redo, saveNow, undo]);
 
   // 새 작업 추가
   const suggestOutput = (parentId: string | undefined, level: number): string | undefined => {
@@ -280,6 +360,145 @@ export default function WBS() {
 
     addTask(newTask);
     setEditingCell({ taskId: newTask.id, columnId: 'name' });
+  };
+
+  // 컨텍스트 메뉴 핸들러
+  const handleContextMenu = (e: React.MouseEvent, task: Task) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, task });
+  };
+
+  const handleAddTaskAbove = (task: Task) => {
+    const newTask: Task = {
+      id: generateId(),
+      projectId: projectId!,
+      parentId: task.parentId || null,
+      level: task.level,
+      orderIndex: task.orderIndex,
+      name: '',
+      weight: 0,
+      planProgress: 0,
+      actualProgress: 0,
+      status: 'pending',
+      taskSource: 'manual',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isExpanded: true,
+    };
+    // Shift orderIndex of siblings at and after this position
+    const updated = tasks.map((t) =>
+      t.parentId === task.parentId && t.orderIndex >= task.orderIndex
+        ? { ...t, orderIndex: t.orderIndex + 1 }
+        : t
+    );
+    setTasks([...updated, newTask], undefined, { recordHistory: true });
+    setEditingCell({ taskId: newTask.id, columnId: 'name' });
+  };
+
+  const handleAddTaskBelow = (task: Task) => {
+    const newTask: Task = {
+      id: generateId(),
+      projectId: projectId!,
+      parentId: task.parentId || null,
+      level: task.level,
+      orderIndex: task.orderIndex + 1,
+      name: '',
+      weight: 0,
+      planProgress: 0,
+      actualProgress: 0,
+      status: 'pending',
+      taskSource: 'manual',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isExpanded: true,
+    };
+    const updated = tasks.map((t) =>
+      t.parentId === task.parentId && t.orderIndex > task.orderIndex
+        ? { ...t, orderIndex: t.orderIndex + 1 }
+        : t
+    );
+    setTasks([...updated, newTask], undefined, { recordHistory: true });
+    setEditingCell({ taskId: newTask.id, columnId: 'name' });
+  };
+
+  const handleCopyTask = (task: Task) => {
+    setCopiedTask(task);
+    showFeedback({ tone: 'info', title: '복사됨', message: `"${task.name || '작업'}"이 복사되었습니다.` });
+  };
+
+  const handlePasteTask = (targetTask: Task) => {
+    if (!copiedTask) return;
+    const newTask: Task = {
+      ...copiedTask,
+      id: generateId(),
+      parentId: targetTask.parentId || null,
+      orderIndex: targetTask.orderIndex + 1,
+      level: targetTask.level,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const updated = tasks.map((t) =>
+      t.parentId === targetTask.parentId && t.orderIndex > targetTask.orderIndex
+        ? { ...t, orderIndex: t.orderIndex + 1 }
+        : t
+    );
+    setTasks([...updated, newTask], undefined, { recordHistory: true });
+  };
+
+  const handleIndent = (task: Task) => {
+    // Find previous sibling to become new parent
+    const siblings = tasks
+      .filter((t) => t.parentId === task.parentId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = siblings.findIndex((s) => s.id === task.id);
+    if (idx <= 0 || task.level >= 4) return;
+    const newParent = siblings[idx - 1];
+    moveTask(task.id, newParent.id, tasks.filter((t) => t.parentId === newParent.id).length);
+  };
+
+  const handleOutdent = (task: Task) => {
+    if (!task.parentId) return;
+    const parent = tasks.find((t) => t.id === task.parentId);
+    if (!parent) return;
+    const grandParentId = parent.parentId || null;
+    const grandSiblings = tasks.filter((t) => t.parentId === grandParentId);
+    const parentIdx = grandSiblings.findIndex((s) => s.id === parent.id);
+    moveTask(task.id, grandParentId, parentIdx + 1);
+  };
+
+  const handleMarkComplete = (task: Task) => {
+    handleCellChange(task.id, 'status', 'completed' as TaskStatus, true);
+  };
+
+  // 빠른 실적 입력에서 작업 업데이트
+  const handleQuickProgressUpdate = (taskId: string, updates: Partial<Task>) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
+
+    // Apply sync logic
+    if (task && !hasChildren && updates.actualProgress !== undefined) {
+      const { updates: syncUpdates, changed } = syncTaskField(
+        { ...task, ...updates },
+        'actualProgress',
+        updates.actualProgress
+      );
+      if (changed) {
+        updateTask(taskId, { ...updates, ...syncUpdates }, { recordHistory: true });
+        return;
+      }
+    }
+    if (task && !hasChildren && updates.status !== undefined) {
+      const { updates: syncUpdates, changed } = syncTaskField(
+        { ...task, ...updates },
+        'status',
+        updates.status
+      );
+      if (changed) {
+        updateTask(taskId, { ...updates, ...syncUpdates }, { recordHistory: true });
+        return;
+      }
+    }
+    updateTask(taskId, updates, { recordHistory: true });
   };
 
   // 작업 삭제
@@ -387,33 +606,6 @@ export default function WBS() {
       title: '자동채움 완료',
       message: details.length > 0 ? details.join(', ') : '변경 사항이 없습니다.',
     });
-  };
-
-  const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
-    const task = tasks.find((t) => t.id === taskId);
-    const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
-
-    // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
-    if (task && !hasChildren && isSyncableField(field)) {
-      const { updates, changed } = syncTaskField(
-        { ...task, [field]: value },
-        field as 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress',
-        value
-      );
-      if (changed) {
-        updateTask(taskId, { [field]: value, ...updates, updatedAt: new Date().toISOString() }, { recordHistory });
-        return;
-      }
-    }
-
-    updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
-  };
-
-  // 셀 편집 완료 시 히스토리 기록
-  const handleCellCommit = () => {
-    const { tasks: currentTasks } = useTaskStore.getState();
-    useTaskStore.getState().setTasks(currentTasks, undefined, { recordHistory: true });
-    setEditingCell(null);
   };
 
   const handleExportExcel = () => {
@@ -559,13 +751,38 @@ export default function WBS() {
       case 'actualStart':
       case 'actualEnd': {
         const dateValue = task[columnId as keyof Task] as string | null;
+        // Date validation: warn if actualStart > actualEnd or planStart > planEnd
+        let hasWarning = false;
+        if (columnId === 'actualEnd' && task.actualStart && task.actualEnd && task.actualStart > task.actualEnd) {
+          hasWarning = true;
+        }
+        if (columnId === 'actualStart' && task.actualStart && task.actualEnd && task.actualStart > task.actualEnd) {
+          hasWarning = true;
+        }
+        if (columnId === 'planEnd' && task.planStart && task.planEnd && task.planStart > task.planEnd) {
+          hasWarning = true;
+        }
+        if (columnId === 'planStart' && task.planStart && task.planEnd && task.planStart > task.planEnd) {
+          hasWarning = true;
+        }
+        // Warn if actual date is later than planned (delayed)
+        const isDelayedDate =
+          (columnId === 'actualEnd' && task.planEnd && task.actualEnd && task.actualEnd > task.planEnd) ||
+          (columnId === 'actualStart' && task.planStart && task.actualStart && task.actualStart > task.planStart);
         return (
-          <input
-            type="date"
-            value={dateValue || ''}
-            onChange={(e) => handleCellChange(task.id, columnId as keyof Task, e.target.value || null, true)}
-            className="cell-input text-sm"
-          />
+          <div className="relative">
+            <input
+              type="date"
+              value={dateValue || ''}
+              onChange={(e) => handleCellChange(task.id, columnId as keyof Task, e.target.value || null, true)}
+              className={cn(
+                'cell-input text-sm',
+                hasWarning && 'text-[color:var(--accent-danger)] ring-1 ring-[rgba(203,75,95,0.3)]',
+                isDelayedDate && !hasWarning && 'text-[color:var(--accent-warning)]'
+              )}
+              title={hasWarning ? '시작일이 종료일보다 늦습니다' : isDelayedDate ? '계획 대비 지연' : undefined}
+            />
+          </div>
         );
       }
 
@@ -573,21 +790,38 @@ export default function WBS() {
       case 'actualProgress': {
         const progressValue = task[columnId as keyof Task] as number;
         return isEditing ? (
-          <input
-            type="number"
-            value={progressValue}
-            onChange={(e) =>
-              handleCellChange(task.id, columnId as keyof Task, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))
-            }
-            onBlur={() => handleCellCommit()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
-            }}
-            className="cell-input text-right"
-            min="0"
-            max="100"
-            autoFocus
-          />
+          <div className="flex items-center gap-1">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={progressValue}
+              onChange={(e) =>
+                handleCellChange(task.id, columnId as keyof Task, Number(e.target.value))
+              }
+              onBlur={() => handleCellCommit()}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') handleCellCommit();
+              }}
+              className="progress-slider flex-1"
+              autoFocus
+            />
+            <input
+              type="number"
+              value={progressValue}
+              onChange={(e) =>
+                handleCellChange(task.id, columnId as keyof Task, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))
+              }
+              onBlur={() => handleCellCommit()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
+              }}
+              className="cell-input w-10 text-right text-xs"
+              min="0"
+              max="100"
+            />
+          </div>
         ) : (
           <div
             className="cursor-text flex items-center gap-1"
@@ -739,6 +973,10 @@ export default function WBS() {
                 <Wand2 className="w-4 h-4" />
                 자동채움
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsQuickProgressOpen(true)} disabled={tasks.length === 0}>
+                <ClipboardList className="w-4 h-4" />
+                빠른 실적 입력
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
                 <FileText className="w-4 h-4" />
                 주간보고
@@ -815,7 +1053,7 @@ export default function WBS() {
         >
           <Maximize2 className="h-4 w-4" />
         </button>
-        <div className="h-full overflow-auto">
+        <div ref={tableScrollRef} className="h-full overflow-auto scrollbar-visible">
           <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
@@ -864,6 +1102,7 @@ export default function WBS() {
                         }
                       }}
                       onDrop={(e) => handleDrop(e, task)}
+                      onContextMenu={(e) => handleContextMenu(e, task)}
                       className={cn(
                         task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
                         dragTaskId === task.id && 'opacity-40',
@@ -955,7 +1194,7 @@ export default function WBS() {
       </div>
 
       <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="WBS 전체 보기" size="fullscreen">
-        <div className="h-full overflow-auto">
+        <div ref={popupScrollRef} className="h-full overflow-auto scrollbar-visible">
           <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
@@ -979,6 +1218,7 @@ export default function WBS() {
               {flatTasks.map((task) => (
                 <tr
                   key={task.id}
+                  onContextMenu={(e) => handleContextMenu(e, task)}
                   className={cn(
                     task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
                   )}
@@ -1133,6 +1373,41 @@ export default function WBS() {
           projectName={currentProject?.name || '프로젝트'}
           tasks={tasks}
           members={members}
+        />
+      )}
+
+      <QuickProgressModal
+        isOpen={isQuickProgressOpen}
+        onClose={() => setIsQuickProgressOpen(false)}
+        tasks={tasks}
+        members={members}
+        onUpdateTask={handleQuickProgressUpdate}
+      />
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          task={contextMenu.task}
+          onClose={() => setContextMenu(null)}
+          onAddAbove={() => handleAddTaskAbove(contextMenu.task)}
+          onAddBelow={() => handleAddTaskBelow(contextMenu.task)}
+          onAddChild={() => handleAddTask(contextMenu.task.id, contextMenu.task.level + 1)}
+          onDelete={() => handleDeleteTask(contextMenu.task.id)}
+          onCopy={() => handleCopyTask(contextMenu.task)}
+          onPaste={() => handlePasteTask(contextMenu.task)}
+          onIndent={() => handleIndent(contextMenu.task)}
+          onOutdent={() => handleOutdent(contextMenu.task)}
+          onMarkComplete={() => handleMarkComplete(contextMenu.task)}
+          canPaste={copiedTask !== null}
+          canIndent={(() => {
+            const siblings = tasks
+              .filter((t) => t.parentId === contextMenu.task.parentId)
+              .sort((a, b) => a.orderIndex - b.orderIndex);
+            const idx = siblings.findIndex((s) => s.id === contextMenu.task.id);
+            return idx > 0 && contextMenu.task.level < 4;
+          })()}
+          canOutdent={!!contextMenu.task.parentId}
         />
       )}
     </div>

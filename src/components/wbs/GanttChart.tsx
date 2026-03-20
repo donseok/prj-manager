@@ -18,12 +18,14 @@ import Button from '../common/Button';
 
 interface GanttChartProps {
   tasks: Task[];
+  allTasks?: Task[];
   selectedTaskId?: string | null;
   startDate?: Date;
   weeksToShow?: number;
   dayWidth?: number;
   rowHeight?: number;
   highlightWeekends?: boolean;
+  showDependencies?: boolean;
   onTaskClick?: (task: Task) => void;
   onVerticalScroll?: (scrollTop: number) => void;
   externalScrollTop?: number;
@@ -38,12 +40,15 @@ export { HEADER_HEIGHT };
 
 export default function GanttChart({
   tasks,
+  // allTasks reserved for future use (e.g., cross-filter dependency resolution)
+  allTasks: _allTasks = [],
   selectedTaskId = null,
   startDate: propStartDate,
   weeksToShow = 12,
   dayWidth = DEFAULT_DAY_WIDTH,
   rowHeight = DEFAULT_ROW_HEIGHT,
   highlightWeekends = true,
+  showDependencies = true,
   onTaskClick,
   onVerticalScroll,
   externalScrollTop,
@@ -266,7 +271,7 @@ export default function GanttChart({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto" ref={containerRef} onScroll={handleScroll}>
+      <div className="flex-1 overflow-auto scrollbar-visible" ref={containerRef} onScroll={handleScroll}>
         <div
           style={{
             minWidth: dateRange.length * dayWidth,
@@ -386,6 +391,52 @@ export default function GanttChart({
                   오늘
                 </div>
               </>
+            )}
+
+            {/* Dependency lines */}
+            {showDependencies && (
+              <svg
+                className="pointer-events-none absolute inset-0 z-10"
+                style={{
+                  width: dateRange.length * dayWidth,
+                  height: tasks.length * rowHeight,
+                }}
+              >
+                {tasks.map((task, rowIndex) => {
+                  if (!task.predecessorIds || task.predecessorIds.length === 0) return null;
+                  return task.predecessorIds.map((predId) => {
+                    const predIndex = tasks.findIndex((t) => t.id === predId);
+                    if (predIndex < 0) return null;
+                    const predTask = tasks[predIndex];
+                    const predBar = calculateBar(predTask.planStart, predTask.planEnd);
+                    const taskBar = calculateBar(task.planStart, task.planEnd);
+                    if (!predBar || !taskBar) return null;
+
+                    const fromX = predBar.left + predBar.width;
+                    const fromY = predIndex * rowHeight + planBarTop + barHeight / 2;
+                    const toX = taskBar.left;
+                    const toY = rowIndex * rowHeight + planBarTop + barHeight / 2;
+                    const midX = (fromX + toX) / 2;
+
+                    return (
+                      <g key={`${predId}-${task.id}`}>
+                        <path
+                          d={`M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX} ${toY}`}
+                          fill="none"
+                          stroke={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}
+                          strokeWidth={1.5}
+                          strokeDasharray="4 2"
+                        />
+                        {/* Arrow head */}
+                        <polygon
+                          points={`${toX},${toY} ${toX - 6},${toY - 3} ${toX - 6},${toY + 3}`}
+                          fill={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}
+                        />
+                      </g>
+                    );
+                  });
+                })}
+              </svg>
             )}
 
             {tasks.map((task, rowIndex) => {

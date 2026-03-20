@@ -32,6 +32,14 @@
   --shadow-xl: 0 52px 120px -52px rgba(17, 24, 39, 0.38);
   --shadow-glow: 0 28px 64px -30px rgba(15, 118, 110, 0.45);
   --ring-soft: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  --surface-soft: rgba(255, 255, 255, 0.76);
+  --field-surface: rgba(255, 255, 255, 0.84);
+  --field-surface-strong: rgba(255, 255, 255, 0.96);
+  --field-surface-disabled: rgba(255, 255, 255, 0.52);
+  --menu-surface: #fffaf4;
+  --menu-surface-strong: #ffffff;
+  --menu-text: #17181d;
+  --menu-muted: #5c544d;
   --wbs-sticky-bg-level1: #ede4d7;
 }
 
@@ -65,6 +73,14 @@
   --shadow-xl: 0 64px 144px -64px rgba(0, 0, 0, 0.72);
   --shadow-glow: 0 28px 72px -28px rgba(43, 191, 178, 0.4);
   --ring-soft: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  --surface-soft: rgba(20, 26, 34, 0.82);
+  --field-surface: rgba(20, 26, 34, 0.92);
+  --field-surface-strong: rgba(26, 33, 42, 0.98);
+  --field-surface-disabled: rgba(20, 26, 34, 0.72);
+  --menu-surface: #faf6ef;
+  --menu-surface-strong: #ffffff;
+  --menu-text: #17181d;
+  --menu-muted: #5c544d;
   --wbs-sticky-bg-level1: #292f39;
 }
 
@@ -157,6 +173,54 @@ select {
 
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--text-secondary);
+}
+
+/* Visible scrollbar variant — always show scrollbar */
+.scrollbar-visible::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 5px;
+}
+
+.dark .scrollbar-visible::-webkit-scrollbar-track {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.18);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dark .scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.32);
+}
+
+.dark .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+.scrollbar-visible::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+/* Firefox scrollbar support for visible mode */
+.scrollbar-visible {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0, 0, 0, 0.18) rgba(0, 0, 0, 0.03);
+}
+
+.dark .scrollbar-visible {
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
 /* Glassmorphism card */
@@ -349,7 +413,7 @@ select {
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
   border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface-soft);
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 600;
@@ -359,7 +423,6 @@ select {
 }
 
 .dark .surface-badge {
-  background: rgba(255, 255, 255, 0.1);
   border-color: var(--border-strong);
   color: var(--text-primary);
 }
@@ -378,7 +441,7 @@ select {
   width: 100%;
   border-radius: 18px;
   border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.64);
+  background: var(--field-surface);
   color: var(--text-primary);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -387,7 +450,6 @@ select {
 .dark .field-input,
 .dark .field-select,
 .dark .field-textarea {
-  background: rgba(255, 255, 255, 0.08);
   border-color: var(--border-strong);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
@@ -400,6 +462,12 @@ select {
 .field-textarea {
   padding: 1rem;
   resize: vertical;
+}
+
+.field-input:hover,
+.field-select:hover,
+.field-textarea:hover {
+  background: var(--field-surface-strong);
 }
 
 .field-input:focus,
@@ -416,6 +484,14 @@ select {
 .field-input::placeholder,
 .field-textarea::placeholder {
   color: var(--text-muted);
+}
+
+.field-input:disabled,
+.field-select:disabled,
+.field-textarea:disabled {
+  background: var(--field-surface-disabled);
+  color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
 }
 
 .metric-card {
@@ -515,6 +591,13 @@ select {
   border-radius: 10px;
   background: transparent;
   color: inherit;
+}
+
+.app-table .cell-select {
+  padding-right: 1.5rem;
+  background-position:
+    calc(100% - 0.8rem) calc(50% - 0.08rem),
+    calc(100% - 0.52rem) calc(50% - 0.08rem);
 }
 
 .app-table .cell-input:focus,
@@ -715,55 +798,84 @@ select {
 }
 
 /* Modern input styles */
-input[type="text"],
-input[type="number"],
-input[type="date"],
-input[type="email"],
-input[type="password"],
-textarea {
+input:not(.field-input):not(.cell-input)[type="text"],
+input:not(.field-input):not(.cell-input)[type="number"],
+input:not(.field-input):not(.cell-input)[type="date"],
+input:not(.field-input):not(.cell-input)[type="email"],
+input:not(.field-input):not(.cell-input)[type="password"],
+textarea:not(.field-input):not(.field-textarea):not(.cell-input) {
   width: 100%;
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  background-color: var(--bg-secondary);
+  background-color: var(--field-surface);
   color: var(--text-primary);
   font-size: 0.875rem;
   transition: all 0.2s ease;
 }
 
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-textarea:focus {
+input:not(.field-input):not(.cell-input)[type="text"]:focus,
+input:not(.field-input):not(.cell-input)[type="number"]:focus,
+input:not(.field-input):not(.cell-input)[type="date"]:focus,
+input:not(.field-input):not(.cell-input)[type="email"]:focus,
+input:not(.field-input):not(.cell-input)[type="password"]:focus,
+textarea:not(.field-input):not(.field-textarea):not(.cell-input):focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.field-input):not(.cell-input)::placeholder,
+textarea:not(.field-input):not(.field-textarea):not(.cell-input)::placeholder {
   color: var(--text-secondary);
   opacity: 0.7;
 }
 
 select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) calc(50% - 0.08rem),
+    calc(100% - 0.72rem) calc(50% - 0.08rem);
+  background-repeat: no-repeat;
+  background-size: 0.45rem 0.45rem, 0.45rem 0.45rem;
+  color-scheme: light;
+}
+
+select:not(.field-input):not(.field-select):not(.cell-select) {
   width: 100%;
-  padding: 0.625rem 0.875rem;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  background-color: var(--bg-secondary);
+  background-color: var(--field-surface);
   color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-select:focus {
+select:not(.field-input):not(.field-select):not(.cell-select):focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+select option,
+select optgroup {
+  background: var(--menu-surface);
+  color: var(--menu-text);
+}
+
+select option:disabled {
+  color: var(--menu-muted);
+}
+
+select::-ms-expand {
+  display: none;
 }
 
 /* 다크모드 input date icon */
@@ -870,4 +982,70 @@ select:focus {
 
 @keyframes shimmer {
   100% { left: 100%; }
+}
+
+/* Progress slider (range input) */
+.progress-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(15, 118, 110, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+
+.progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f766e, #1f8f86);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.progress-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.5);
+}
+
+.progress-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+.progress-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f766e, #1f8f86);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.4);
+}
+
+.progress-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(15, 118, 110, 0.1);
+}
+
+.dark .progress-slider {
+  background: rgba(50, 182, 171, 0.15);
+}
+
+.dark .progress-slider::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #32b6ab, #5eead4);
+  box-shadow: 0 2px 6px rgba(50, 182, 171, 0.4);
+}
+
+.dark .progress-slider::-moz-range-thumb {
+  background: linear-gradient(135deg, #32b6ab, #5eead4);
+  box-shadow: 0 2px 6px rgba(50, 182, 171, 0.4);
+}
+
+.dark .progress-slider::-moz-range-track {
+  background: rgba(50, 182, 171, 0.15);
 }

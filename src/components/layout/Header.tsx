@@ -1,33 +1,46 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings, Moon, Sun, ChevronRight, Sparkles, CalendarDays, ShieldCheck, Users } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronRight,
+  LogOut,
+  Moon,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  User,
+  Users,
+} from 'lucide-react';
 import DKFlowLogo from '../common/DKFlowLogo';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
-import { useEffect, useRef, useState } from 'react';
-import { signOutSupabase, loadPendingCount } from '../../lib/supabase';
+import { loadPendingCount, signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
   const { user, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
   const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
   const todayLabel = new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
     day: 'numeric',
     weekday: 'short',
   }).format(new Date());
-  const [pendingCount, setPendingCount] = useState(0);
 
-  // 관리자인 경우 승인 대기 수를 주기적으로 조회
   useEffect(() => {
     if (!isAdmin) return;
+
     const fetchCount = () => void loadPendingCount().then(setPendingCount);
     fetchCount();
-    const interval = setInterval(fetchCount, 30_000); // 30초마다
+
+    const interval = setInterval(fetchCount, 30_000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
@@ -35,7 +48,6 @@ export default function Header() {
     logout();
     setShowUserMenu(false);
     navigate('/login');
-    // Supabase 세션 정리는 백그라운드로 처리 (UI 블로킹 방지)
     void signOutSupabase();
   };
 
@@ -67,21 +79,23 @@ export default function Header() {
     <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02] shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] rounded-2xl">
+          <Link to="/" className="group flex items-center gap-3">
+            <div className="rounded-2xl shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02]">
               <DKFlowLogo size={44} />
             </div>
             <div className="min-w-0">
               <span className="block truncate text-lg font-bold tracking-[-0.02em] text-[color:var(--text-primary)]">
                 DK Flow
               </span>
-              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-secondary)]">업무의 흐름을 설계하다</p>
+              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-secondary)]">
+                업무의 흐름을 설계하다
+              </p>
             </div>
           </Link>
 
           {currentProject && (
             <div className="hidden min-w-0 items-center gap-2 lg:flex">
-              <ChevronRight className="w-4 h-4 text-[color:var(--text-secondary)]" />
+              <ChevronRight className="h-4 w-4 text-[color:var(--text-secondary)]" />
               <div className="surface-badge max-w-[24rem]">
                 <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
                 <span className="truncate">{currentProject.name}</span>
@@ -97,24 +111,28 @@ export default function Header() {
           </div>
 
           <button
+            type="button"
             onClick={toggleTheme}
             className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
             title={isDark ? '라이트 모드' : '다크 모드'}
           >
             {isDark ? (
-              <Sun className="w-5 h-5 text-amber-300 transition-all duration-300 group-hover:rotate-45 group-hover:text-amber-200" />
+              <Sun className="h-5 w-5 text-amber-300 transition-all duration-300 group-hover:rotate-45 group-hover:text-amber-200" />
             ) : (
-              <Moon className="w-5 h-5 text-slate-700 transition-all duration-300 group-hover:-rotate-12 group-hover:text-slate-900" />
+              <Moon className="h-5 w-5 text-slate-700 transition-all duration-300 group-hover:-rotate-12 group-hover:text-slate-900" />
             )}
           </button>
 
           <div className="relative" ref={menuRef}>
             <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
+              type="button"
+              onClick={() => setShowUserMenu((prev) => !prev)}
               className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
+              aria-expanded={showUserMenu}
+              aria-haspopup="menu"
             >
               <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all group-hover:scale-[1.03]">
-                <User className="w-4 h-4 text-white" />
+                <User className="h-4 w-4 text-white" />
                 {pendingCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1 text-[10px] font-bold text-white ring-2 ring-[color:var(--bg-elevated)]">
                     {pendingCount}
@@ -125,7 +143,9 @@ export default function Header() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
                   {isAdmin ? 'Admin' : 'Operator'}
                 </p>
-                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{user?.name || '사용자'}</p>
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                  {user?.name || '사용자'}
+                </p>
               </div>
             </button>
 
@@ -133,7 +153,9 @@ export default function Header() {
               <div className="absolute right-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-[24px] border border-[var(--border-color)] bg-[image:var(--gradient-surface)] p-2 shadow-[0_32px_80px_-42px_rgba(0,0,0,0.55)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
                 <div className="rounded-[20px] border border-white/10 bg-[image:var(--gradient-primary)] p-4 text-white shadow-[0_24px_52px_-28px_rgba(15,118,110,0.82)]">
                   <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/82">로그인 계정</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/82">
+                      로그인 계정
+                    </p>
                     {isAdmin && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                         <ShieldCheck className="h-3 w-3" />
@@ -141,16 +163,21 @@ export default function Header() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-base font-semibold tracking-[-0.03em]">{user?.name || '사용자'}</p>
-                  <p className="mt-1 truncate text-sm text-white/82">{user?.email || 'user@example.com'}</p>
+                  <p className="mt-2 text-base font-semibold tracking-[-0.03em]">
+                    {user?.name || '사용자'}
+                  </p>
+                  <p className="mt-1 truncate text-sm text-white/82">
+                    {user?.email || 'user@example.com'}
+                  </p>
                 </div>
+
                 {isAdmin && (
                   <Link
                     to="/admin/users"
                     className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                     onClick={() => setShowUserMenu(false)}
                   >
-                    <Users className="w-4 h-4" />
+                    <Users className="h-4 w-4" />
                     사용자 관리
                     {pendingCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1.5 text-[11px] font-bold text-white">
@@ -159,26 +186,28 @@ export default function Header() {
                     )}
                   </Link>
                 )}
+
                 <Link
                   to={settingsLink}
                   className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                   onClick={() => setShowUserMenu(false)}
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="h-4 w-4" />
                   설정
                 </Link>
-                <button
-                  onClick={() => {
-                    void handleLogout();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
-                >
-                  <LogOut className="w-4 h-4" />
-                  로그아웃
-                </button>
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(203,75,95,0.2)] bg-[rgba(203,75,95,0.08)] px-3 text-sm font-semibold text-[color:var(--accent-danger)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(203,75,95,0.14)]"
+            title="로그아웃"
+          >
+            <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            <span className="hidden sm:inline">로그아웃</span>
+          </button>
         </div>
       </div>
     </header>

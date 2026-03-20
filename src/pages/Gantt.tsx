@@ -689,7 +689,7 @@ export default function Gantt() {
         </button>
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
           <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
-            <div ref={tableRef} className="flex-1 overflow-auto" onScroll={handleLeftScroll}>
+            <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
               {/* Combined header matching GanttChart toolbar + date header */}
               <div
                 className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5"
@@ -776,6 +776,7 @@ export default function Gantt() {
           <div className="min-w-0 flex-1">
             <GanttChart
               tasks={filteredFlatTasks}
+              allTasks={tasks}
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
               weeksToShow={weeksToShow}
@@ -810,10 +811,44 @@ export default function Gantt() {
       </div>
 
       <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="간트 차트 전체 보기" size="fullscreen">
-        <div className="relative h-full w-full overflow-hidden">
-          <div className="absolute inset-0">
+        <div className="flex h-full w-full overflow-hidden">
+          {/* Fullscreen: Left task list */}
+          <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+            <div className="border-b border-[var(--border-color)] px-4 py-3">
+              <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
+              <span className="ml-2 text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개</span>
+            </div>
+            <div className="flex-1 overflow-auto scrollbar-visible">
+              {filteredFlatTasks.map((task) => {
+                const isSelected = resolvedSelectedTaskId === task.id;
+                return (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      'flex cursor-pointer items-center border-b border-[var(--border-color)] px-3 py-2 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
+                      isSelected && 'bg-[rgba(15,118,110,0.08)]',
+                      task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
+                    )}
+                    style={{ paddingLeft: `${(task.depth || 0) * 12 + 12}px` }}
+                    onClick={() => setSelectedTaskId(task.id)}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs text-[color:var(--text-primary)]">
+                        {task.name || '이름 없음'}
+                      </p>
+                    </div>
+                    <span className="ml-2 text-[10px] text-[color:var(--text-secondary)]">{task.actualProgress}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Fullscreen: Gantt chart */}
+          <div className="min-w-0 flex-1">
             <GanttChart
               tasks={filteredFlatTasks}
+              allTasks={tasks}
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
               weeksToShow={weeksToShow}
@@ -822,6 +857,89 @@ export default function Gantt() {
               highlightWeekends={highlightWeekends}
             />
           </div>
+
+          {/* Fullscreen: Quick edit panel */}
+          {selectedTask && (
+            <div className="flex w-[300px] flex-shrink-0 flex-col border-l border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+              <div className="border-b border-[var(--border-color)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">빠른 편집</p>
+                <p className="mt-1 truncate text-sm font-semibold text-[color:var(--text-primary)]">{selectedTask.name || '이름 없음'}</p>
+              </div>
+              <div className="flex-1 overflow-auto scrollbar-visible p-4 space-y-3">
+                <div>
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">상태</label>
+                  <select
+                    value={selectedTask.status}
+                    onChange={(e) => handleTaskFieldChange(selectedTask.id, 'status', e.target.value as Task['status'])}
+                    disabled={isReadOnly}
+                    className={cn('field-select mt-1', isReadOnly && 'cursor-not-allowed opacity-60')}
+                  >
+                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 공정율</label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={selectedTask.actualProgress}
+                      onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualProgress', Math.min(100, Math.max(0, Number(e.target.value))))}
+                      disabled={isReadOnly}
+                      className="progress-slider flex-1"
+                    />
+                    <span className="w-10 text-right text-sm font-semibold text-[color:var(--text-primary)]">{selectedTask.actualProgress}%</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">계획 시작</label>
+                    <input type="date" value={selectedTask.planStart || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'planStart', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">계획 종료</label>
+                    <input type="date" value={selectedTask.planEnd || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'planEnd', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 시작</label>
+                    <input type="date" value={selectedTask.actualStart || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualStart', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 종료</label>
+                    <input type="date" value={selectedTask.actualEnd || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualEnd', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">담당자</label>
+                  <select
+                    value={selectedTask.assigneeId || ''}
+                    onChange={(e) => handleTaskFieldChange(selectedTask.id, 'assigneeId', e.target.value || null)}
+                    disabled={isReadOnly}
+                    className={cn('field-select mt-1', isReadOnly && 'cursor-not-allowed opacity-60')}
+                  >
+                    <option value="">미지정</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualSave}
+                  disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
+                  className="w-full"
+                >
+                  {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  저장
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

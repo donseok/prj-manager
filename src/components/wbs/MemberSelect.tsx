@@ -131,7 +131,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
     ? createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] overflow-hidden rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] shadow-[0_20px_48px_-14px_rgba(0,0,0,0.32)]"
+          className="fixed z-[9999] overflow-hidden rounded-xl border border-[var(--border-color)] bg-[color:var(--menu-surface)] text-[color:var(--menu-text)] shadow-[0_20px_48px_-14px_rgba(0,0,0,0.32)]"
           style={{
             top: position.openUp ? undefined : position.top,
             bottom: position.openUp ? window.innerHeight - position.top + 2 : undefined,
@@ -141,14 +141,14 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
         >
           {/* 검색 */}
           <div className="flex items-center gap-2 border-b border-[var(--border-color)] px-3 py-2">
-            <Search className="h-3.5 w-3.5 shrink-0 text-[color:var(--text-muted)]" />
+            <Search className="h-3.5 w-3.5 shrink-0 text-[color:var(--menu-muted)]" />
             <input
               ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="멤버 검색..."
-              className="flex-1 bg-transparent text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
+              className="flex-1 bg-transparent text-sm text-[color:var(--menu-text)] outline-none placeholder:text-[color:var(--menu-muted)]"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && filtered.length === 1) {
                   handleSelect(filtered[0].id);
@@ -158,7 +158,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]"
+                className="text-[color:var(--menu-muted)] hover:text-[color:var(--menu-text)]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -171,12 +171,12 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
             <button
               onClick={() => handleSelect(null)}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[color:var(--bg-tertiary)]',
-                !value && 'bg-[rgba(15,118,110,0.06)]'
+                'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(15,118,110,0.08)]',
+                !value && 'bg-[rgba(15,118,110,0.12)]'
               )}
             >
-              <span className="text-[color:var(--text-muted)]">-</span>
-              <span className="text-[color:var(--text-secondary)]">배정 안함</span>
+              <span className="text-[color:var(--menu-muted)]">-</span>
+              <span className="text-[color:var(--menu-muted)]">배정 안함</span>
             </button>
 
             {filtered.map((m) => (
@@ -184,17 +184,17 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                 key={m.id}
                 onClick={() => handleSelect(m.id)}
                 className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[color:var(--bg-tertiary)]',
-                  value === m.id && 'bg-[rgba(15,118,110,0.06)]'
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(15,118,110,0.08)]',
+                  value === m.id && 'bg-[rgba(15,118,110,0.12)]'
                 )}
               >
-                <UserCircle className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-                <span className="truncate text-[color:var(--text-primary)]">{m.name}</span>
+                <UserCircle className="h-4 w-4 shrink-0 text-[color:var(--menu-muted)]" />
+                <span className="truncate text-[color:var(--menu-text)]">{m.name}</span>
               </button>
             ))}
 
             {filtered.length === 0 && search && (
-              <div className="px-3 py-2 text-center text-xs text-[color:var(--text-muted)]">
+              <div className="px-3 py-2 text-center text-xs text-[color:var(--menu-muted)]">
                 일치하는 멤버가 없습니다
               </div>
             )}
@@ -210,7 +210,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="이름 입력"
-                  className="flex-1 rounded-md border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-2 py-1.5 text-sm text-[color:var(--text-primary)] outline-none focus:border-[var(--accent-primary)] placeholder:text-[color:var(--text-muted)]"
+                  className="flex-1 rounded-md border border-[var(--border-color)] bg-[color:var(--menu-surface-strong)] px-2 py-1.5 text-sm text-[color:var(--menu-text)] outline-none focus:border-[var(--accent-primary)] placeholder:text-[color:var(--menu-muted)]"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleCreate();
                     if (e.key === 'Escape') {
@@ -230,7 +230,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
             ) : (
               <button
                 onClick={handleStartCreate}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[color:var(--accent-primary)] transition-colors hover:bg-[color:var(--bg-tertiary)]"
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
               >
                 <Plus className="h-4 w-4" />
                 새 멤버 추가

@@ -572,7 +572,7 @@ export default function ProjectList() {
                     sourceProjectId: event.target.value === 'clone' ? newProject.sourceProjectId : '',
                   })
                 }
-                className="field-input"
+                className="field-select"
               >
                 <option value="blank">빈 프로젝트</option>
                 <option value="clone">기존 프로젝트 복제</option>
@@ -584,7 +584,7 @@ export default function ProjectList() {
               <select
                 value={newProject.sourceProjectId}
                 onChange={(event) => setNewProject({ ...newProject, sourceProjectId: event.target.value })}
-                className="field-input"
+                className="field-select"
                 disabled={newProject.creationMode !== 'clone'}
               >
                 <option value="">원본 프로젝트 선택</option>
