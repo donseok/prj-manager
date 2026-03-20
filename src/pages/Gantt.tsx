@@ -74,6 +74,12 @@ export default function Gantt() {
   const [ganttScrollTop, setGanttScrollTop] = useState<number | undefined>(undefined);
   const rowHeight = density === 'compact' ? 34 : 42;
 
+  // Fullscreen modal scroll sync
+  const fsTableRef = useRef<HTMLDivElement>(null);
+  const fsScrollSourceRef = useRef<'left' | 'right' | null>(null);
+  const [fsGanttToolbarHeight, setFsGanttToolbarHeight] = useState(52);
+  const [fsGanttScrollTop, setFsGanttScrollTop] = useState<number | undefined>(undefined);
+
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
@@ -279,6 +285,28 @@ export default function Gantt() {
     scrollSourceRef.current = 'right';
     if (tableRef.current) {
       tableRef.current.scrollTop = scrollTop;
+    }
+  }, []);
+
+  // Fullscreen: Scroll sync left → right
+  const handleFsLeftScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    if (fsScrollSourceRef.current === 'right') {
+      fsScrollSourceRef.current = null;
+      return;
+    }
+    fsScrollSourceRef.current = 'left';
+    setFsGanttScrollTop(e.currentTarget.scrollTop);
+  }, []);
+
+  // Fullscreen: Scroll sync right → left
+  const handleFsGanttScroll = useCallback((scrollTop: number) => {
+    if (fsScrollSourceRef.current === 'left') {
+      fsScrollSourceRef.current = null;
+      return;
+    }
+    fsScrollSourceRef.current = 'right';
+    if (fsTableRef.current) {
+      fsTableRef.current.scrollTop = scrollTop;
     }
   }, []);
 
@@ -859,17 +887,22 @@ export default function Gantt() {
             className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
             style={{ width: mainLeftPanelWidth }}
           >
+            {/* Fixed header outside scroll — matches GanttChart toolbar height */}
+            <div
+              className="flex flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] px-5"
+              style={{ height: ganttToolbarHeight }}
+            >
+              <span className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                작업 목록
+              </span>
+              <span className="text-sm text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
+            </div>
             <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
-              {/* Combined header matching GanttChart toolbar + date header */}
+              {/* Sticky header inside scroll — matches GanttChart HEADER_HEIGHT (month/day rows) */}
               <div
-                className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5"
-                style={{ height: ganttToolbarHeight + HEADER_HEIGHT }}
-              >
-                <span className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                  작업 목록
-                </span>
-                <span className="text-sm text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
-              </div>
+                className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+                style={{ height: HEADER_HEIGHT }}
+              />
               {filteredFlatTasks.map((task) => {
                 const hasChildren = tasks.some((item) => item.parentId === task.id);
                 const isSelected = resolvedSelectedTaskId === task.id;
@@ -980,30 +1013,67 @@ export default function Gantt() {
             className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
             style={{ width: fullscreenLeftPanelWidth }}
           >
-            <div className="border-b border-[var(--border-color)] px-4 py-3">
+            {/* Fixed header outside scroll — matches GanttChart toolbar */}
+            <div
+              className="flex flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] px-4"
+              style={{ height: fsGanttToolbarHeight }}
+            >
               <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
-              <span className="ml-2 text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개</span>
+              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
             </div>
-            <div className="flex-1 overflow-auto scrollbar-visible">
+            <div ref={fsTableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleFsLeftScroll}>
+              {/* Sticky header matching HEADER_HEIGHT */}
+              <div
+                className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+                style={{ height: HEADER_HEIGHT }}
+              />
               {filteredFlatTasks.map((task) => {
+                const hasChildren = tasks.some((item) => item.parentId === task.id);
                 const isSelected = resolvedSelectedTaskId === task.id;
+                const delayDays = getDelayDays(task);
                 return (
                   <div
                     key={task.id}
                     className={cn(
-                      'flex cursor-pointer items-center border-b border-[var(--border-color)] px-3 py-2 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
+                      'flex cursor-pointer items-center overflow-hidden border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
                       isSelected && 'bg-[rgba(15,118,110,0.08)]',
                       task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
                     )}
-                    style={{ paddingLeft: `${(task.depth || 0) * 12 + 12}px` }}
+                    style={{
+                      height: rowHeight,
+                      minHeight: rowHeight,
+                      maxHeight: rowHeight,
+                      paddingLeft: `${(task.depth || 0) * 16 + 12}px`,
+                    }}
                     onClick={() => setSelectedTaskId(task.id)}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs text-[color:var(--text-primary)]">
-                        {task.name || '이름 없음'}
+                    {hasChildren ? (
+                      <button
+                        onClick={(event) => { event.stopPropagation(); toggleExpand(task.id); }}
+                        className="mr-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
+                      >
+                        {task.isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="w-5 flex-shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
+                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
                       </p>
                     </div>
-                    <span className="ml-2 text-[10px] text-[color:var(--text-secondary)]">{task.actualProgress}%</span>
+                    <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
+                      {task.actualProgress}%
+                    </span>
+                    {delayDays > 0 && (
+                      <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
+                        +{delayDays}d
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -1021,6 +1091,9 @@ export default function Gantt() {
               dayWidth={fullscreenDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
+              onVerticalScroll={handleFsGanttScroll}
+              externalScrollTop={fsGanttScrollTop}
+              onToolbarHeightChange={setFsGanttToolbarHeight}
             />
           </div>
 
