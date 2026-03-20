@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:migrate": "bash scripts/migrate.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.2",

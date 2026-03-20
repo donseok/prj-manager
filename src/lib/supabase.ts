@@ -11,6 +11,47 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!)
   : (null as unknown as ReturnType<typeof createClient>);
 
+// ─── DB Migration ───────────────────────────────────────────
+
+let _migrationChecked = false;
+
+/** 앱 시작 시 호출: account_status 컬럼이 없으면 자동 추가 */
+export async function ensureMigrations(): Promise<void> {
+  if (!isSupabaseConfigured || _migrationChecked) return;
+  _migrationChecked = true;
+
+  try {
+    // account_status 컬럼 존재 여부 확인 (한 행만 조회)
+    const { error } = await supabase
+      .from('profiles')
+      .select('account_status')
+      .limit(1);
+
+    if (error && error.message.includes('account_status')) {
+      console.log('[migration] account_status 컬럼 없음 — 마이그레이션 실행');
+      // rpc로 마이그레이션 함수 호출 시도
+      const { error: rpcError } = await supabase.rpc('run_account_status_migration');
+      if (rpcError) {
+        console.warn('[migration] RPC 실패 — SQL 직접 실행 시도:', rpcError.message);
+        // RPC 함수가 없으면 직접 SQL 실행 (service_role 필요할 수 있음)
+        const { error: sqlError } = await supabase.rpc('exec_sql', {
+          query: `
+            ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active'
+              CHECK (account_status IN ('pending', 'active', 'suspended'));
+          `,
+        });
+        if (sqlError) {
+          console.error('[migration] 자동 마이그레이션 실패. Supabase SQL Editor에서 수동 실행 필요:', sqlError.message);
+        }
+      }
+    } else {
+      console.log('[migration] account_status 컬럼 확인 완료');
+    }
+  } catch (err) {
+    console.error('[migration] 마이그레이션 확인 중 오류:', err);
+  }
+}
+
 // ─── Auth ────────────────────────────────────────────────────
 
 export async function signInWithEmail(email: string, password: string): Promise<{ user: User | null; error: string | null }> {
@@ -94,10 +135,34 @@ export async function signOutSupabase() {
 
 export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; accountStatus: AccountStatus; createdAt: string }>> {
   if (!isSupabaseConfigured) return [];
+
+  // account_status 포함 조회 시도
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, name, system_role, account_status, created_at')
     .order('created_at', { ascending: true });
+
+  if (error && error.message.includes('account_status')) {
+    // 컬럼 없음 → account_status 없이 조회
+    const { data: fallback, error: fallbackError } = await supabase
+      .from('profiles')
+      .select('id, email, name, system_role, created_at')
+      .order('created_at', { ascending: true });
+
+    if (fallbackError) {
+      console.error('Failed to load profiles:', fallbackError);
+      return [];
+    }
+
+    return (fallback || []).map((row) => ({
+      id: row.id,
+      email: row.email || '',
+      name: row.name || '',
+      systemRole: row.system_role as SystemRole,
+      accountStatus: 'active' as AccountStatus,
+      createdAt: row.created_at,
+    }));
+  }
 
   if (error) {
     console.error('Failed to load profiles:', error);
@@ -109,19 +174,23 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
     email: row.email || '',
     name: row.name || '',
     systemRole: row.system_role as SystemRole,
-    accountStatus: (row.account_status as AccountStatus) || 'pending',
+    accountStatus: (row.account_status as AccountStatus) || 'active',
     createdAt: row.created_at,
   }));
 }
 
 export async function loadPendingCount(): Promise<number> {
   if (!isSupabaseConfigured) return 0;
-  const { count, error } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('account_status', 'pending');
-  if (error) return 0;
-  return count ?? 0;
+  try {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_status', 'pending');
+    if (error) return 0; // 컬럼 없으면 0
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
@@ -158,19 +227,33 @@ export async function updateAccountStatus(userId: string, status: AccountStatus)
 
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {
   let systemRole: SystemRole = 'user';
-  let accountStatus: AccountStatus = 'pending';
+  let accountStatus: AccountStatus = 'active'; // 컬럼 없으면 active로 기본 처리
 
-  const { data } = await supabase
+  // account_status 포함하여 조회 시도
+  const { data, error } = await supabase
     .from('profiles')
     .select('system_role, account_status')
     .eq('id', user.id)
     .single();
 
-  if (data?.system_role) {
-    systemRole = data.system_role as SystemRole;
-  }
-  if (data?.account_status) {
-    accountStatus = data.account_status as AccountStatus;
+  if (error && error.message.includes('account_status')) {
+    // account_status 컬럼이 없는 경우 → system_role만 조회
+    const { data: fallback } = await supabase
+      .from('profiles')
+      .select('system_role')
+      .eq('id', user.id)
+      .single();
+    if (fallback?.system_role) {
+      systemRole = fallback.system_role as SystemRole;
+    }
+    // accountStatus는 'active' 유지 (마이그레이션 전 기존 사용자)
+  } else {
+    if (data?.system_role) {
+      systemRole = data.system_role as SystemRole;
+    }
+    if (data?.account_status) {
+      accountStatus = data.account_status as AccountStatus;
+    }
   }
 
   return {
