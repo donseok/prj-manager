@@ -32,6 +32,7 @@
   --shadow-xl: 0 52px 120px -52px rgba(17, 24, 39, 0.38);
   --shadow-glow: 0 28px 64px -30px rgba(15, 118, 110, 0.45);
   --ring-soft: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  --wbs-sticky-bg-level1: #ede4d7;
 }
 
 .dark {
@@ -64,6 +65,7 @@
   --shadow-xl: 0 64px 144px -64px rgba(0, 0, 0, 0.72);
   --shadow-glow: 0 28px 72px -28px rgba(43, 191, 178, 0.4);
   --ring-soft: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  --wbs-sticky-bg-level1: #292f39;
 }
 
 html {
@@ -519,6 +521,70 @@ select {
 .app-table .cell-select:focus {
   outline: none;
   background: rgba(15, 118, 110, 0.07);
+}
+
+/* Sticky columns — WBS table */
+.app-table.wbs-fixed-table {
+  table-layout: fixed;
+}
+
+.app-table .sticky-col {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--bg-secondary-solid);
+}
+
+.app-table thead .sticky-col {
+  z-index: 12;
+  background: #fff8f1;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dark .app-table thead .sticky-col {
+  background: #1b2340;
+}
+
+.app-table tr.wbs-level-1 .sticky-col {
+  background-color: var(--wbs-sticky-bg-level1);
+}
+
+.app-table tbody tr:hover .sticky-col {
+  background-color: #f3f3ed;
+}
+
+.app-table tbody tr.wbs-level-1:hover .sticky-col {
+  background-color: #e2dfd2;
+}
+
+.dark .app-table tbody tr:hover .sticky-col {
+  background-color: #19242c;
+}
+
+.dark .app-table tbody tr.wbs-level-1:hover .sticky-col {
+  background-color: #28333c;
+}
+
+.sticky-col-0 { left: 0; }
+.sticky-col-1 { left: 72px; }
+.sticky-col-2 { left: 172px; }
+.sticky-col-3 { left: 432px; }
+.sticky-col-4 { left: 572px; }
+.sticky-col-5 { left: 692px; }
+
+.sticky-col-5::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -6px;
+  width: 6px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.06), transparent);
+}
+
+.dark .sticky-col-5::after {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent);
 }
 
 .empty-state {

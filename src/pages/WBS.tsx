@@ -810,23 +810,23 @@ export default function WBS() {
           <Maximize2 className="h-4 w-4" />
         </button>
         <div className="h-full overflow-auto">
-          <table className="app-table">
+          <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
-                <th className="w-8 text-center"></th>
-                <th className="w-20 text-center">구분</th>
-                <th className="min-w-[280px] text-center">작업명</th>
-                <th className="w-40 text-center">산출물</th>
-                <th className="min-w-[120px] text-center whitespace-nowrap">담당자</th>
-                <th className="w-24 text-center whitespace-nowrap">가중치</th>
-                <th className="w-32 text-center whitespace-nowrap">계획시작</th>
-                <th className="w-32 text-center whitespace-nowrap">계획종료</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">계획공정율</th>
-                <th className="w-32 text-center whitespace-nowrap">실적시작</th>
-                <th className="w-32 text-center whitespace-nowrap">실적종료</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">실적공정율</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">상태</th>
-                <th className="w-24 text-center">액션</th>
+                <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
+                <th className="w-[100px] text-center sticky-col sticky-col-1">구분</th>
+                <th className="w-[260px] text-center sticky-col sticky-col-2">작업명</th>
+                <th className="w-[140px] text-center sticky-col sticky-col-3">산출물</th>
+                <th className="w-[120px] text-center whitespace-nowrap sticky-col sticky-col-4">담당자</th>
+                <th className="w-[88px] text-center whitespace-nowrap sticky-col sticky-col-5">가중치</th>
+                <th className="w-[128px] text-center whitespace-nowrap">계획시작</th>
+                <th className="w-[128px] text-center whitespace-nowrap">계획종료</th>
+                <th className="w-[108px] text-center whitespace-nowrap">계획공정율</th>
+                <th className="w-[128px] text-center whitespace-nowrap">실적시작</th>
+                <th className="w-[128px] text-center whitespace-nowrap">실적종료</th>
+                <th className="w-[108px] text-center whitespace-nowrap">실적공정율</th>
+                <th className="w-[104px] text-center whitespace-nowrap">상태</th>
+                <th className="w-[120px] text-center">액션</th>
               </tr>
             </thead>
             <tbody>
@@ -859,14 +859,14 @@ export default function WBS() {
                       }}
                       onDrop={(e) => handleDrop(e, task)}
                       className={cn(
-                        task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
+                        task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
                         dragTaskId === task.id && 'opacity-40',
                         dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
                         dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
                         dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
                       )}
                     >
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-0">
                         <div className="flex items-center">
                           <span className="cursor-grab active:cursor-grabbing text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] mr-0.5">
                             <GripVertical className="w-3.5 h-3.5" />
@@ -874,21 +874,21 @@ export default function WBS() {
                           {renderCell(task, 'expand')}
                         </div>
                       </td>
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-1">
                         {renderCell(task, 'level')}
                       </td>
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-2">
                         <div className="flex items-center">
                           {renderCell(task, 'name')}
                         </div>
                       </td>
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-3">
                         {renderCell(task, 'output')}
                       </td>
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-4">
                         {renderCell(task, 'assignee')}
                       </td>
-                      <td className="border-r border-[var(--border-color)]">
+                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-5">
                         {renderCell(task, 'weight')}
                       </td>
                       <td className="border-r border-[var(--border-color)]">
@@ -950,23 +950,23 @@ export default function WBS() {
 
       <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="WBS 전체 보기" size="fullscreen">
         <div className="h-full overflow-auto">
-          <table className="app-table">
+          <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
-                <th className="w-8 text-center"></th>
-                <th className="w-20 text-center">구분</th>
-                <th className="min-w-[280px] text-center">작업명</th>
-                <th className="w-40 text-center">산출물</th>
-                <th className="min-w-[120px] text-center whitespace-nowrap">담당자</th>
-                <th className="w-24 text-center whitespace-nowrap">가중치</th>
-                <th className="w-32 text-center whitespace-nowrap">계획시작</th>
-                <th className="w-32 text-center whitespace-nowrap">계획종료</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">계획공정율</th>
-                <th className="w-32 text-center whitespace-nowrap">실적시작</th>
-                <th className="w-32 text-center whitespace-nowrap">실적종료</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">실적공정율</th>
-                <th className="min-w-[100px] text-center whitespace-nowrap">상태</th>
-                <th className="w-24 text-center">액션</th>
+                <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
+                <th className="w-[100px] text-center sticky-col sticky-col-1">구분</th>
+                <th className="w-[260px] text-center sticky-col sticky-col-2">작업명</th>
+                <th className="w-[140px] text-center sticky-col sticky-col-3">산출물</th>
+                <th className="w-[120px] text-center whitespace-nowrap sticky-col sticky-col-4">담당자</th>
+                <th className="w-[88px] text-center whitespace-nowrap sticky-col sticky-col-5">가중치</th>
+                <th className="w-[128px] text-center whitespace-nowrap">계획시작</th>
+                <th className="w-[128px] text-center whitespace-nowrap">계획종료</th>
+                <th className="w-[108px] text-center whitespace-nowrap">계획공정율</th>
+                <th className="w-[128px] text-center whitespace-nowrap">실적시작</th>
+                <th className="w-[128px] text-center whitespace-nowrap">실적종료</th>
+                <th className="w-[108px] text-center whitespace-nowrap">실적공정율</th>
+                <th className="w-[104px] text-center whitespace-nowrap">상태</th>
+                <th className="w-[120px] text-center">액션</th>
               </tr>
             </thead>
             <tbody>
@@ -974,21 +974,21 @@ export default function WBS() {
                 <tr
                   key={task.id}
                   className={cn(
-                    task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
+                    task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
                   )}
                 >
-                  <td className="border-r border-[var(--border-color)]">
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-0">
                     <div className="flex items-center">
                       {renderCell(task, 'expand')}
                     </div>
                   </td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'level')}</td>
-                  <td className="border-r border-[var(--border-color)]">
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-1">{renderCell(task, 'level')}</td>
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-2">
                     <div className="flex items-center">{renderCell(task, 'name')}</div>
                   </td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'output')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'assignee')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'weight')}</td>
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-3">{renderCell(task, 'output')}</td>
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-4">{renderCell(task, 'assignee')}</td>
+                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-5">{renderCell(task, 'weight')}</td>
                   <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planStart')}</td>
                   <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planEnd')}</td>
                   <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planProgress')}</td>
