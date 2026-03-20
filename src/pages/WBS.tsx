@@ -292,6 +292,7 @@ export default function WBS() {
       templateId: selectedTemplate.id,
       projectId,
       projectStartDate: currentProject?.startDate,
+      members,
     });
 
     setTasks(generatedTasks, undefined, { recordHistory: true });
@@ -313,6 +314,7 @@ export default function WBS() {
       prompt: trimmedPrompt,
       projectId,
       projectStartDate: currentProject?.startDate,
+      members,
     });
 
     setSelectedTemplateId(result.templateId);

@@ -1,5 +1,5 @@
 import { addDays, format, parseISO } from 'date-fns';
-import type { Task } from '../types';
+import type { ProjectMember, Task } from '../types';
 import { generateId } from './utils';
 
 export interface TaskTemplateSummary {
@@ -351,6 +351,7 @@ export function generateTasksFromTemplate(params: {
   templateId: string;
   projectId: string;
   projectStartDate?: string;
+  members?: ProjectMember[];
 }): Task[] {
   const template = TASK_TEMPLATES.find((item) => item.id === params.templateId);
   if (!template) {
@@ -360,6 +361,15 @@ export function generateTasksFromTemplate(params: {
   const baseDate = params.projectStartDate ? parseISO(params.projectStartDate) : null;
   let nextStart = baseDate;
   const tasks: Task[] = [];
+  const assignableMembers = (params.members ?? []).filter((m) => m.role !== 'viewer');
+  let memberIdx = 0;
+
+  const pickMember = (): string | null => {
+    if (assignableMembers.length === 0) return null;
+    const member = assignableMembers[memberIdx % assignableMembers.length];
+    memberIdx++;
+    return member.id;
+  };
 
   const createNodes = (
     nodes: TemplateNode[],
@@ -382,6 +392,7 @@ export function generateTasksFromTemplate(params: {
         orderIndex: index,
         name: node.name,
         output: node.output,
+        assigneeId: isLeaf ? pickMember() : null,
         weight: isLeaf ? Number((100 / template.taskCount).toFixed(3)) : 0,
         durationDays: isLeaf ? durationDays : null,
         predecessorIds: [],

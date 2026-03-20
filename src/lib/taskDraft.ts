@@ -1,4 +1,4 @@
-import type { Task } from '../types';
+import type { ProjectMember, Task } from '../types';
 import { generateId } from './utils';
 import { generateTasksFromTemplate, getTaskTemplate } from './taskTemplates';
 
@@ -307,6 +307,7 @@ export function generateTasksFromPrompt(params: {
   prompt: string;
   projectId: string;
   projectStartDate?: string;
+  members?: ProjectMember[];
 }): TaskDraftResult {
   const normalizedPrompt = normalizePrompt(params.prompt);
   const templateId = scoreTemplates(normalizedPrompt);
@@ -315,6 +316,7 @@ export function generateTasksFromPrompt(params: {
     templateId,
     projectId: params.projectId,
     projectStartDate: params.projectStartDate,
+    members: params.members,
   });
   const matchedKeywords = appendDraftAdditions(baseTasks, params.projectId, normalizedPrompt);
 
