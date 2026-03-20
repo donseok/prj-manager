@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Task } from '../types';
 import { buildTaskTree, flattenTaskTree, calculateParentProgress } from '../lib/utils';
 import { normalizeTaskHierarchy } from '../lib/projectTaskSync';
+import { broadcastTasks, onTasksUpdated } from '../lib/broadcastSync';
 
 interface TaskState {
   tasks: Task[];
@@ -21,7 +22,7 @@ interface TaskState {
   setTasks: (
     tasks: Task[],
     projectId?: string | null,
-    options?: { recordHistory?: boolean; resetHistory?: boolean }
+    options?: { recordHistory?: boolean; resetHistory?: boolean; _fromRemote?: boolean }
   ) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>, options?: { recordHistory?: boolean }) => void;
@@ -97,6 +98,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
 
     set(nextState as TaskState);
+
+    // Broadcast to other windows (skip if this update came from remote)
+    if (!options?._fromRemote) {
+      const pid = projectId ?? get().loadedProjectId;
+      if (pid) {
+        broadcastTasks(pid, tasksWithExpanded);
+      }
+    }
   },
 
   addTask: (task) => {
@@ -254,3 +263,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 }));
+
+// Subscribe to cross-window task updates
+onTasksUpdated((projectId, tasks) => {
+  const { loadedProjectId } = useTaskStore.getState();
+  if (loadedProjectId === projectId) {
+    useTaskStore.getState().setTasks(tasks, projectId, { _fromRemote: true, resetHistory: true });
+  }
+});

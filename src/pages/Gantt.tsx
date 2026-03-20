@@ -11,7 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Maximize2,
+  ExternalLink,
   CalendarClock,
   Users,
 } from 'lucide-react';
@@ -23,13 +23,13 @@ import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, formatDate, getDelayDays, parseDate } from '../lib/utils';
 import Button from '../components/common/Button';
 import FeedbackNotice from '../components/common/FeedbackNotice';
-import Modal from '../components/common/Modal';
 import { exportGanttWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { isSyncableField, syncTaskField } from '../lib/taskFieldSync';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
+import { openPopup } from '../lib/popupWindow';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 
@@ -61,10 +61,10 @@ export default function Gantt() {
   const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(8);
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
+  const isInPopup = window.location.pathname.startsWith('/popup/');
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { isReadOnly } = useProjectPermission();
 
@@ -74,11 +74,6 @@ export default function Gantt() {
   const [ganttScrollTop, setGanttScrollTop] = useState<number | undefined>(undefined);
   const rowHeight = density === 'compact' ? 34 : 42;
 
-  // Fullscreen modal scroll sync
-  const fsTableRef = useRef<HTMLDivElement>(null);
-  const fsScrollSourceRef = useRef<'left' | 'right' | null>(null);
-  const [fsGanttToolbarHeight, setFsGanttToolbarHeight] = useState(52);
-  const [fsGanttScrollTop, setFsGanttScrollTop] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -91,34 +86,17 @@ export default function Gantt() {
   }, []);
 
   const mainLeftPanelWidth = useMemo(
-    () => getResponsiveWidth(viewportWidth * 0.22, 300, 440),
-    [getResponsiveWidth, viewportWidth]
-  );
-  const fullscreenLeftPanelWidth = useMemo(
-    () => getResponsiveWidth(viewportWidth * 0.18, 280, 380),
-    [getResponsiveWidth, viewportWidth]
-  );
-  const fullscreenEditorWidth = useMemo(
-    () => getResponsiveWidth(viewportWidth * 0.2, 300, 420),
-    [getResponsiveWidth, viewportWidth]
+    () => getResponsiveWidth(viewportWidth * (isInPopup ? 0.18 : 0.22), isInPopup ? 280 : 300, isInPopup ? 380 : 440),
+    [getResponsiveWidth, viewportWidth, isInPopup]
   );
   const mainDayWidth = useMemo(
     () =>
       getResponsiveWidth(
-        viewportWidth * (density === 'compact' ? 0.02 : 0.024),
-        density === 'compact' ? 32 : 44,
-        density === 'compact' ? 42 : 54
+        viewportWidth * (density === 'compact' ? (isInPopup ? 0.023 : 0.02) : (isInPopup ? 0.028 : 0.024)),
+        density === 'compact' ? (isInPopup ? 36 : 32) : (isInPopup ? 48 : 44),
+        density === 'compact' ? (isInPopup ? 50 : 42) : (isInPopup ? 64 : 54)
       ),
-    [density, getResponsiveWidth, viewportWidth]
-  );
-  const fullscreenDayWidth = useMemo(
-    () =>
-      getResponsiveWidth(
-        viewportWidth * (density === 'compact' ? 0.023 : 0.028),
-        density === 'compact' ? 36 : 48,
-        density === 'compact' ? 50 : 64
-      ),
-    [density, getResponsiveWidth, viewportWidth]
+    [density, getResponsiveWidth, viewportWidth, isInPopup]
   );
 
   const taskMap = useMemo(
@@ -288,27 +266,6 @@ export default function Gantt() {
     }
   }, []);
 
-  // Fullscreen: Scroll sync left → right
-  const handleFsLeftScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
-    if (fsScrollSourceRef.current === 'right') {
-      fsScrollSourceRef.current = null;
-      return;
-    }
-    fsScrollSourceRef.current = 'left';
-    setFsGanttScrollTop(e.currentTarget.scrollTop);
-  }, []);
-
-  // Fullscreen: Scroll sync right → left
-  const handleFsGanttScroll = useCallback((scrollTop: number) => {
-    if (fsScrollSourceRef.current === 'left') {
-      fsScrollSourceRef.current = null;
-      return;
-    }
-    fsScrollSourceRef.current = 'right';
-    if (fsTableRef.current) {
-      fsTableRef.current.scrollTop = scrollTop;
-    }
-  }, []);
 
   const handleExportExcel = () => {
     if (filteredFlatTasks.length === 0) {
@@ -875,13 +832,15 @@ export default function Gantt() {
       </section>
 
       <div className="app-panel relative flex min-h-0 flex-1 overflow-hidden">
-        <button
-          onClick={() => setIsPopupOpen(true)}
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-          title="크게 보기"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </button>
+        {!isInPopup && currentProject && (
+          <button
+            onClick={() => openPopup({ projectId: currentProject.id, page: 'gantt' })}
+            className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+            title="새 창에서 열기"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        )}
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
           <div
             className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
@@ -1006,184 +965,6 @@ export default function Gantt() {
         </div>
       </div>
 
-      <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="간트 차트 전체 보기" size="fullscreen">
-        <div className="flex h-full w-full overflow-hidden">
-          {/* Fullscreen: Left task list */}
-          <div
-            className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
-            style={{ width: fullscreenLeftPanelWidth }}
-          >
-            {/* Fixed header outside scroll — matches GanttChart toolbar */}
-            <div
-              className="flex flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] px-4"
-              style={{ height: fsGanttToolbarHeight }}
-            >
-              <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
-              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
-            </div>
-            <div ref={fsTableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleFsLeftScroll}>
-              {/* Sticky header matching HEADER_HEIGHT */}
-              <div
-                className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
-                style={{ height: HEADER_HEIGHT }}
-              />
-              {filteredFlatTasks.map((task) => {
-                const hasChildren = tasks.some((item) => item.parentId === task.id);
-                const isSelected = resolvedSelectedTaskId === task.id;
-                const delayDays = getDelayDays(task);
-                return (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      'flex cursor-pointer items-center overflow-hidden border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
-                      isSelected && 'bg-[rgba(15,118,110,0.08)]',
-                      task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
-                    )}
-                    style={{
-                      height: rowHeight,
-                      minHeight: rowHeight,
-                      maxHeight: rowHeight,
-                      paddingLeft: `${(task.depth || 0) * 16 + 12}px`,
-                    }}
-                    onClick={() => setSelectedTaskId(task.id)}
-                  >
-                    {hasChildren ? (
-                      <button
-                        onClick={(event) => { event.stopPropagation(); toggleExpand(task.id); }}
-                        className="mr-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
-                      >
-                        {task.isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="w-5 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1 overflow-hidden">
-                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
-                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
-                      </p>
-                    </div>
-                    <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
-                      {task.actualProgress}%
-                    </span>
-                    {delayDays > 0 && (
-                      <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
-                        +{delayDays}d
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Fullscreen: Gantt chart */}
-          <div className="min-w-0 flex-1">
-            <GanttChart
-              tasks={filteredFlatTasks}
-              allTasks={tasks}
-              selectedTaskId={resolvedSelectedTaskId}
-              onTaskClick={(task) => setSelectedTaskId(task.id)}
-              weeksToShow={weeksToShow}
-              dayWidth={fullscreenDayWidth}
-              rowHeight={rowHeight}
-              highlightWeekends={highlightWeekends}
-              onVerticalScroll={handleFsGanttScroll}
-              externalScrollTop={fsGanttScrollTop}
-              onToolbarHeightChange={setFsGanttToolbarHeight}
-            />
-          </div>
-
-          {/* Fullscreen: Quick edit panel */}
-          {selectedTask && (
-            <div
-              className="flex flex-shrink-0 flex-col border-l border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
-              style={{ width: fullscreenEditorWidth }}
-            >
-              <div className="border-b border-[var(--border-color)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">빠른 편집</p>
-                <p className="mt-1 truncate text-sm font-semibold text-[color:var(--text-primary)]">{selectedTask.name || '이름 없음'}</p>
-              </div>
-              <div className="flex-1 overflow-auto scrollbar-visible p-4 space-y-3">
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">상태</label>
-                  <select
-                    value={selectedTask.status}
-                    onChange={(e) => handleTaskFieldChange(selectedTask.id, 'status', e.target.value as Task['status'])}
-                    disabled={isReadOnly}
-                    className={cn('field-select mt-1', isReadOnly && 'cursor-not-allowed opacity-60')}
-                  >
-                    {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 공정율</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={selectedTask.actualProgress}
-                      onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualProgress', Math.min(100, Math.max(0, Number(e.target.value))))}
-                      disabled={isReadOnly}
-                      className="progress-slider flex-1"
-                    />
-                    <span className="w-10 text-right text-sm font-semibold text-[color:var(--text-primary)]">{selectedTask.actualProgress}%</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">계획 시작</label>
-                    <input type="date" value={selectedTask.planStart || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'planStart', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">계획 종료</label>
-                    <input type="date" value={selectedTask.planEnd || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'planEnd', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 시작</label>
-                    <input type="date" value={selectedTask.actualStart || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualStart', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">실적 종료</label>
-                    <input type="date" value={selectedTask.actualEnd || ''} onChange={(e) => handleTaskFieldChange(selectedTask.id, 'actualEnd', e.target.value || null)} disabled={isReadOnly} className={cn('field-input mt-1 !text-xs !py-1.5', isReadOnly && 'cursor-not-allowed opacity-60')} />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">담당자</label>
-                  <select
-                    value={selectedTask.assigneeId || ''}
-                    onChange={(e) => handleTaskFieldChange(selectedTask.id, 'assigneeId', e.target.value || null)}
-                    disabled={isReadOnly}
-                    className={cn('field-select mt-1', isReadOnly && 'cursor-not-allowed opacity-60')}
-                  >
-                    <option value="">미지정</option>
-                    {members.map((member) => (
-                      <option key={member.id} value={member.id}>{member.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleManualSave}
-                  disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
-                  className="w-full"
-                >
-                  {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  저장
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }

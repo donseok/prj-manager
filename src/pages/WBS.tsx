@@ -15,7 +15,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Maximize2,
+  ExternalLink,
   Sparkles,
   FileText,
   Wand2,
@@ -46,6 +46,7 @@ import { syncTaskField, isSyncableField } from '../lib/taskFieldSync';
 import { autoFillTasks } from '../lib/taskAutoFill';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { openPopup } from '../lib/popupWindow';
 import type { Task, TaskStatus, ProjectMember } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
@@ -79,7 +80,6 @@ export default function WBS() {
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'child' | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState('steel-project');
   const [draftPrompt, setDraftPrompt] = useState('');
@@ -92,8 +92,8 @@ export default function WBS() {
   );
   const dragOverCounterRef = useRef(0);
   const tableScrollRef = useRef<HTMLDivElement>(null);
-  const popupScrollRef = useRef<HTMLDivElement>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const isInPopup = window.location.pathname.startsWith('/popup/');
   const templates = listTaskTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
 
@@ -1067,8 +1067,7 @@ export default function WBS() {
     return { columns, stickyLefts, tableWidth };
   }, [getResponsiveWidth, viewportWidth]);
 
-  const baseWbsLayout = useMemo(() => getWbsLayout(false), [getWbsLayout]);
-  const fullscreenWbsLayout = useMemo(() => getWbsLayout(true), [getWbsLayout]);
+  const baseWbsLayout = useMemo(() => getWbsLayout(isInPopup), [getWbsLayout, isInPopup]);
 
   const renderWbsTable = (layout: ReturnType<typeof getWbsLayout>) => (
     <table className="app-table wbs-fixed-table" style={{ width: layout.tableWidth }}>
@@ -1327,144 +1326,17 @@ export default function WBS() {
       </section>
 
       <div className="app-panel relative flex-1 overflow-hidden">
-        <button
-          onClick={() => setIsPopupOpen(true)}
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-          title="크게 보기"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </button>
+        {!isInPopup && projectId && (
+          <button
+            onClick={() => openPopup({ projectId, page: 'wbs' })}
+            className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+            title="새 창에서 열기"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        )}
         <div ref={tableScrollRef} className="h-full overflow-auto scrollbar-visible">
           {renderWbsTable(baseWbsLayout)}
-          {false && (
-          <table className="hidden app-table wbs-fixed-table" style={{ width: 1732 }}>
-            <thead>
-              <tr>
-                <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
-                <th className="w-[100px] text-center sticky-col sticky-col-1">구분</th>
-                <th className="w-[260px] text-center sticky-col sticky-col-2">작업명</th>
-                <th className="w-[140px] text-center sticky-col sticky-col-3">산출물</th>
-                <th className="w-[120px] text-center whitespace-nowrap sticky-col sticky-col-4">담당자</th>
-                <th className="w-[88px] text-center whitespace-nowrap sticky-col sticky-col-5">가중치</th>
-                <th className="w-[128px] text-center whitespace-nowrap">계획시작</th>
-                <th className="w-[128px] text-center whitespace-nowrap">계획종료</th>
-                <th className="w-[108px] text-center whitespace-nowrap">계획공정율</th>
-                <th className="w-[128px] text-center whitespace-nowrap">실적시작</th>
-                <th className="w-[128px] text-center whitespace-nowrap">실적종료</th>
-                <th className="w-[108px] text-center whitespace-nowrap">실적공정율</th>
-                <th className="w-[104px] text-center whitespace-nowrap">상태</th>
-                <th className="w-[120px] text-center">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flatTasks.map((task, idx) => {
-                // 다음 행의 레벨을 확인해서 그룹 마지막인지 판별
-                const nextTask = flatTasks[idx + 1];
-                const isLastChildOfPhase = task.level >= 2 && (!nextTask || nextTask.level <= 1);
-                const isLastChildOfActivity = task.level >= 3 && (!nextTask || nextTask.level <= 2);
-                const addLabel = isLastChildOfActivity ? 'Task' : isLastChildOfPhase ? 'Activity' : null;
-                const addParentId = isLastChildOfActivity
-                  ? task.parentId || undefined
-                  : isLastChildOfPhase
-                    ? tasks.find((t) => t.id === task.parentId)?.parentId || undefined
-                    : undefined;
-                const addLevel = isLastChildOfActivity ? 3 : isLastChildOfPhase ? 2 : 0;
-
-                return (
-                  <React.Fragment key={task.id}>
-                    <tr
-                      data-testid={`wbs-row-${task.id}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, task)}
-                      onDragLeave={() => {
-                        if (dropTargetId === task.id) {
-                          setDropTargetId(null);
-                          setDropPosition(null);
-                        }
-                      }}
-                      onDrop={(e) => handleDrop(e, task)}
-                      onClick={() => useTaskStore.getState().selectTask(task.id)}
-                      onContextMenu={(e) => handleContextMenu(e, task)}
-                      className={cn(
-                        task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
-                        dragTaskId === task.id && 'opacity-40',
-                        dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
-                        dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
-                        dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
-                      )}
-                    >
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-0">
-                        <div className="flex items-center">
-                          <span className="cursor-grab active:cursor-grabbing text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] mr-0.5">
-                            <GripVertical className="w-3.5 h-3.5" />
-                          </span>
-                          {renderCell(task, 'expand')}
-                        </div>
-                      </td>
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-1">
-                        {renderCell(task, 'level')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-2">
-                        <div className="flex items-center">
-                          {renderCell(task, 'name')}
-                        </div>
-                      </td>
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-3">
-                        {renderCell(task, 'output')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-4">
-                        {renderCell(task, 'assignee')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)] sticky-col sticky-col-5">
-                        {renderCell(task, 'weight')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'planStart')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'planEnd')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'planProgress')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'actualStart')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'actualEnd')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'actualProgress')}
-                      </td>
-                      <td className="border-r border-[var(--border-color)]">
-                        {renderCell(task, 'status')}
-                      </td>
-                      <td>
-                        {renderCell(task, 'actions')}
-                      </td>
-                    </tr>
-                    {addLabel && (
-                      <tr className="group/add">
-                        <td colSpan={14} className="!p-0">
-                          <button
-                            onClick={() => handleAddTask(addParentId, addLevel)}
-                            className="flex w-full items-center gap-1.5 py-1 text-xs text-[color:var(--text-muted)] opacity-0 transition-opacity group-hover/add:opacity-100 hover:text-[color:var(--accent-primary)]"
-                            style={{ paddingLeft: `${addLevel * 24 + 12}px` }}
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            {addLabel} 추가
-                          </button>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          )}
 
           {flatTasks.length === 0 && (
             <div className="empty-state px-6 py-12">
@@ -1477,66 +1349,6 @@ export default function WBS() {
           )}
         </div>
       </div>
-
-      <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="WBS 전체 보기" size="fullscreen">
-        <div ref={popupScrollRef} className="h-full overflow-auto scrollbar-visible">
-          {renderWbsTable(fullscreenWbsLayout)}
-          {false && (
-          <table className="hidden app-table wbs-fixed-table" style={{ width: 1732 }}>
-            <thead>
-              <tr>
-                <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
-                <th className="w-[100px] text-center sticky-col sticky-col-1">구분</th>
-                <th className="w-[260px] text-center sticky-col sticky-col-2">작업명</th>
-                <th className="w-[140px] text-center sticky-col sticky-col-3">산출물</th>
-                <th className="w-[120px] text-center whitespace-nowrap sticky-col sticky-col-4">담당자</th>
-                <th className="w-[88px] text-center whitespace-nowrap sticky-col sticky-col-5">가중치</th>
-                <th className="w-[128px] text-center whitespace-nowrap">계획시작</th>
-                <th className="w-[128px] text-center whitespace-nowrap">계획종료</th>
-                <th className="w-[108px] text-center whitespace-nowrap">계획공정율</th>
-                <th className="w-[128px] text-center whitespace-nowrap">실적시작</th>
-                <th className="w-[128px] text-center whitespace-nowrap">실적종료</th>
-                <th className="w-[108px] text-center whitespace-nowrap">실적공정율</th>
-                <th className="w-[104px] text-center whitespace-nowrap">상태</th>
-                <th className="w-[120px] text-center">액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flatTasks.map((task) => (
-                <tr
-                  key={task.id}
-                  onContextMenu={(e) => handleContextMenu(e, task)}
-                  className={cn(
-                    task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
-                  )}
-                >
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-0">
-                    <div className="flex items-center">
-                      {renderCell(task, 'expand')}
-                    </div>
-                  </td>
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-1">{renderCell(task, 'level')}</td>
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-2">
-                    <div className="flex items-center">{renderCell(task, 'name')}</div>
-                  </td>
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-3">{renderCell(task, 'output')}</td>
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-4">{renderCell(task, 'assignee')}</td>
-                  <td className="border-r border-[var(--border-color)] sticky-col sticky-col-5">{renderCell(task, 'weight')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planStart')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planEnd')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'planProgress')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualStart')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualEnd')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'actualProgress')}</td>
-                  <td className="border-r border-[var(--border-color)]">{renderCell(task, 'status')}</td>
-                  <td>{renderCell(task, 'actions')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          )}
-        </div>
-      </Modal>
 
       <Modal
         isOpen={isTemplateModalOpen}

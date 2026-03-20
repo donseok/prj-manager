@@ -1,5 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
@@ -8,6 +8,7 @@ import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
 import { PROJECT_STATUS_COLORS } from '../../types';
 import { loadPendingCount } from '../../lib/supabase';
+import { openPopup } from '../../lib/popupWindow';
 
 // ─── Nav item definitions ────────────────────────────────────
 
@@ -18,13 +19,14 @@ interface NavItem {
   end?: boolean;
   adminOnly?: boolean;
   badge?: number;
+  popupPage?: 'wbs' | 'gantt';
 }
 
 function getProjectNavItems(projectId: string): NavItem[] {
   return [
     { to: `/projects/${projectId}`, icon: LayoutDashboard, label: '대시보드', end: true },
-    { to: `/projects/${projectId}/wbs`, icon: ListTree, label: 'WBS' },
-    { to: `/projects/${projectId}/gantt`, icon: Calendar, label: '간트 차트' },
+    { to: `/projects/${projectId}/wbs`, icon: ListTree, label: 'WBS', popupPage: 'wbs' },
+    { to: `/projects/${projectId}/gantt`, icon: Calendar, label: '간트 차트', popupPage: 'gantt' },
     { to: `/projects/${projectId}/members`, icon: Users, label: '멤버' },
     { to: `/projects/${projectId}/settings`, icon: Settings, label: '설정' },
   ];
@@ -46,33 +48,49 @@ function SidebarNav({
   collapsed,
   isAdmin,
   navLinkClass,
+  projectId,
 }: {
   items: NavItem[];
   collapsed: boolean;
   isAdmin: boolean;
   navLinkClass: (props: { isActive: boolean }) => string;
+  projectId?: string;
 }) {
   const visibleItems = items.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <nav className="space-y-2">
       {visibleItems.map((item) => (
-        <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClass} title={collapsed ? item.label : undefined}>
-          <div className="relative">
-            <item.icon className="w-5 h-5" />
-            {collapsed && item.badge != null && item.badge > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+        <div key={item.to} className="group/nav relative">
+          <NavLink to={item.to} end={item.end} className={navLinkClass} title={collapsed ? item.label : undefined}>
+            <div className="relative">
+              <item.icon className="w-5 h-5" />
+              {collapsed && item.badge != null && item.badge > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+            {!collapsed && item.label}
+            {!collapsed && item.badge != null && item.badge > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
                 {item.badge}
               </span>
             )}
-          </div>
-          {!collapsed && item.label}
-          {!collapsed && item.badge != null && item.badge > 0 && (
-            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
-              {item.badge}
-            </span>
+          </NavLink>
+          {!collapsed && item.popupPage && projectId && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openPopup({ projectId, page: item.popupPage! });
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-white/0 transition-all group-hover/nav:text-white/60 hover:!bg-white/14 hover:!text-white"
+              title={`${item.label} 새 창에서 열기`}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
           )}
-        </NavLink>
+        </div>
       ))}
     </nav>
   );
@@ -144,7 +162,7 @@ export default function Sidebar() {
 
             <div className="w-full border-t border-white/10" />
 
-            <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} />
+            <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} />
 
             <NavLink
               to="/projects/new"
@@ -263,7 +281,7 @@ export default function Sidebar() {
               </NavLink>
             </div>
 
-            <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} />
+            <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} />
           </div>
 
           <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">

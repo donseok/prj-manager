@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Project, ProjectMember } from '../types';
+import { broadcastProjectUpdate, onProjectUpdated } from '../lib/broadcastSync';
 
 function sortProjectsByUpdatedAt(projects: Project[]) {
   return [...projects].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
@@ -15,7 +16,7 @@ interface ProjectState {
   // Actions
   setProjects: (projects: Project[]) => void;
   addProject: (project: Project) => void;
-  updateProject: (id: string, updates: Partial<Project>) => void;
+  updateProject: (id: string, updates: Partial<Project>, options?: { _fromRemote?: boolean }) => void;
   deleteProject: (id: string) => void;
   setCurrentProject: (project: Project | null) => void;
 
@@ -42,7 +43,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
       projects: sortProjectsByUpdatedAt([...state.projects, project]),
     })),
 
-  updateProject: (id, updates) =>
+  updateProject: (id, updates, options) => {
     set((state) => ({
       projects: sortProjectsByUpdatedAt(
         state.projects.map((p) => (p.id === id ? { ...p, ...updates } : p))
@@ -51,7 +52,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
         state.currentProject?.id === id
           ? { ...state.currentProject, ...updates }
           : state.currentProject,
-    })),
+    }));
+    if (!options?._fromRemote) {
+      broadcastProjectUpdate(id, updates);
+    }
+  },
 
   deleteProject: (id) =>
     set((state) => ({
@@ -84,3 +89,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
   setLoading: (isLoading) => set({ isLoading }),
 }));
+
+// Subscribe to cross-window project updates
+onProjectUpdated((projectId, updates) => {
+  useProjectStore.getState().updateProject(projectId, updates, { _fromRemote: true });
+});
