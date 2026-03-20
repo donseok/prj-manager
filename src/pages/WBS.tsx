@@ -174,8 +174,13 @@ export default function WBS() {
   const saveTasks = useCallback(
     async (data: Task[]) => {
       if (!projectId || !currentProject) return;
-      const { project } = await syncProjectWorkspace(currentProject, data);
-      updateProject(project.id, project);
+      try {
+        const { project } = await syncProjectWorkspace(currentProject, data);
+        updateProject(project.id, project);
+      } catch (error) {
+        console.error('WBS 자동 저장 실패:', error);
+        throw error;
+      }
     },
     [currentProject, projectId, updateProject]
   );

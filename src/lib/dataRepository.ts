@@ -90,44 +90,37 @@ export async function upsertProject(project: Project): Promise<Project> {
   }
   const row = toProjectRow(project);
 
-  // 기존 프로젝트 존재 여부 확인 후 insert/update 분리
-  // upsert는 RLS INSERT 정책을 먼저 체크하므로, owner가 아닌 admin 멤버가 수정 시 실패할 수 있음
-  const { count } = await supabase
+  // 기존 프로젝트면 UPDATE, 신규면 INSERT (upsert는 RLS INSERT 정책을 먼저 체크하므로 분리)
+  const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
+  const { data: updated, error: updateError } = await supabase
     .from('projects')
-    .select('id', { count: 'exact', head: true })
-    .eq('id', project.id);
+    .update(updateFields)
+    .eq('id', project.id)
+    .select()
+    .single();
 
-  if (count && count > 0) {
-    // 기존 프로젝트 수정 → UPDATE (RLS: owner 또는 admin 멤버 허용)
-    const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updateFields)
-      .eq('id', project.id)
-      .select()
-      .single();
+  if (!updateError && updated) {
+    return mapProjectRow(updated as ProjectRow);
+  }
 
-    if (error) {
-      console.error('Failed to update project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
-      throw new Error(`프로젝트 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
-    }
-
-    return mapProjectRow(data as ProjectRow);
-  } else {
-    // 새 프로젝트 생성 → INSERT (RLS: owner만 허용)
-    const { data, error } = await supabase
+  // UPDATE 실패 시 (행이 없는 경우 등) INSERT 시도
+  if (updateError?.code === 'PGRST116') {
+    const { data: inserted, error: insertError } = await supabase
       .from('projects')
       .insert(row)
       .select()
       .single();
 
-    if (error) {
-      console.error('Failed to insert project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
-      throw new Error(`프로젝트 생성 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+    if (insertError) {
+      console.error('Failed to insert project:', { code: insertError.code, message: insertError.message, details: insertError.details, hint: insertError.hint });
+      throw new Error(`프로젝트 생성 실패 [${insertError.code}]: ${insertError.message}${insertError.hint ? ` (${insertError.hint})` : ''}`);
     }
 
-    return mapProjectRow(data as ProjectRow);
+    return mapProjectRow(inserted as ProjectRow);
   }
+
+  console.error('Failed to update project:', { code: updateError?.code, message: updateError?.message, details: updateError?.details, hint: updateError?.hint });
+  throw new Error(`프로젝트 저장 실패 [${updateError?.code}]: ${updateError?.message}${updateError?.hint ? ` (${updateError.hint})` : ''}`);
 }
 
 export async function deleteProjectById(projectId: string) {
