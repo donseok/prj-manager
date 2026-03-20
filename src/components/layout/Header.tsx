@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useEffect, useRef, useState } from 'react';
-import { signOutSupabase } from '../../lib/supabase';
+import { signOutSupabase, loadPendingCount } from '../../lib/supabase';
 
 export default function Header() {
   const { user, isAdmin, logout } = useAuthStore();
@@ -20,11 +20,23 @@ export default function Header() {
     day: 'numeric',
     weekday: 'short',
   }).format(new Date());
-  const handleLogout = async () => {
-    await signOutSupabase();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // 관리자인 경우 승인 대기 수를 주기적으로 조회
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchCount = () => void loadPendingCount().then(setPendingCount);
+    fetchCount();
+    const interval = setInterval(fetchCount, 30_000); // 30초마다
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  const handleLogout = () => {
     logout();
     setShowUserMenu(false);
     navigate('/login');
+    // Supabase 세션 정리는 백그라운드로 처리 (UI 블로킹 방지)
+    void signOutSupabase();
   };
 
   useEffect(() => {
@@ -101,8 +113,13 @@ export default function Header() {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="group flex items-center gap-3 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all group-hover:scale-[1.03]">
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all group-hover:scale-[1.03]">
                 <User className="w-4 h-4 text-white" />
+                {pendingCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1 text-[10px] font-bold text-white ring-2 ring-[color:var(--bg-elevated)]">
+                    {pendingCount}
+                  </span>
+                )}
               </div>
               <div className="hidden sm:block">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
@@ -135,6 +152,11 @@ export default function Header() {
                   >
                     <Users className="w-4 h-4" />
                     사용자 관리
+                    {pendingCount > 0 && (
+                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1.5 text-[11px] font-bold text-white">
+                        {pendingCount}
+                      </span>
+                    )}
                   </Link>
                 )}
                 <Link

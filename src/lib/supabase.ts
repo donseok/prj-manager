@@ -114,6 +114,16 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
   }));
 }
 
+export async function loadPendingCount(): Promise<number> {
+  if (!isSupabaseConfigured) return 0;
+  const { count, error } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_status', 'pending');
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
   if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
   const { error } = await supabase

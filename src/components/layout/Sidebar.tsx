@@ -1,11 +1,13 @@
 import { NavLink, useParams } from 'react-router-dom';
 import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { cn } from '../../lib/utils';
 import { PROJECT_STATUS_COLORS } from '../../types';
+import { loadPendingCount } from '../../lib/supabase';
 
 // ─── Nav item definitions ────────────────────────────────────
 
@@ -15,6 +17,7 @@ interface NavItem {
   label: string;
   end?: boolean;
   adminOnly?: boolean;
+  badge?: number;
 }
 
 function getProjectNavItems(projectId: string): NavItem[] {
@@ -27,12 +30,14 @@ function getProjectNavItems(projectId: string): NavItem[] {
   ];
 }
 
-const GLOBAL_NAV_ITEMS: NavItem[] = [
-  { to: '/', icon: LayoutDashboard, label: '홈', end: true },
-  { to: '/projects', icon: FolderOpen, label: '전체 프로젝트' },
-  { to: '/admin/users', icon: ShieldCheck, label: '사용자 관리', adminOnly: true },
-  { to: '/manual', icon: BookOpen, label: '사용자 매뉴얼' },
-];
+function getGlobalNavItems(pendingBadge: number): NavItem[] {
+  return [
+    { to: '/', icon: LayoutDashboard, label: '홈', end: true },
+    { to: '/projects', icon: FolderOpen, label: '전체 프로젝트' },
+    { to: '/admin/users', icon: ShieldCheck, label: '사용자 관리', adminOnly: true, badge: pendingBadge },
+    { to: '/manual', icon: BookOpen, label: '사용자 매뉴얼' },
+  ];
+}
 
 // ─── Shared nav link renderer ────────────────────────────────
 
@@ -53,8 +58,20 @@ function SidebarNav({
     <nav className="space-y-2">
       {visibleItems.map((item) => (
         <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClass} title={collapsed ? item.label : undefined}>
-          <item.icon className="w-5 h-5" />
+          <div className="relative">
+            <item.icon className="w-5 h-5" />
+            {collapsed && item.badge != null && item.badge > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {item.badge}
+              </span>
+            )}
+          </div>
           {!collapsed && item.label}
+          {!collapsed && item.badge != null && item.badge > 0 && (
+            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+              {item.badge}
+            </span>
+          )}
         </NavLink>
       ))}
     </nav>
@@ -69,6 +86,15 @@ export default function Sidebar() {
   const { isAdmin } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const activeProjects = projects.filter((project) => project.status === 'active').length;
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchCount = () => void loadPendingCount().then(setPendingCount);
+    fetchCount();
+    const interval = setInterval(fetchCount, 30_000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -79,7 +105,7 @@ export default function Sidebar() {
         : 'text-white/84 hover:bg-white/10 hover:text-white'
     );
 
-  const navItems = projectId ? getProjectNavItems(projectId) : GLOBAL_NAV_ITEMS;
+  const navItems = projectId ? getProjectNavItems(projectId) : getGlobalNavItems(pendingCount);
 
   if (sidebarCollapsed) {
     return (
