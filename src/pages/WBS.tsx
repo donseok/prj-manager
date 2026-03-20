@@ -961,132 +961,135 @@ export default function WBS() {
         />
       )}
 
-      <section className="app-panel relative overflow-hidden p-6">
+      <section className="app-panel relative overflow-hidden px-5 py-4">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-80" style={{ backgroundColor: projectTone?.accent || 'var(--accent-primary)' }} />
-        <div
-          className="pointer-events-none absolute -right-8 top-[-2.5rem] h-24 w-24 rounded-full blur-3xl opacity-70"
-          style={{ backgroundColor: `${projectTone?.accent || '#18a79b'}14` }}
-        />
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="page-kicker">Structured Work Breakdown</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+
+        {/* Row 1: Title + Save/Status */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="truncate text-xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
               {currentProject?.name || '프로젝트'} WBS
             </h1>
             {projectTone && (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ borderColor: `${projectTone.accent}22`, backgroundColor: `${projectTone.accent}10`, color: projectTone.accent }}>
-                {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" /> : null}
+              <div className="hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] sm:inline-flex" style={{ borderColor: `${projectTone.accent}22`, backgroundColor: `${projectTone.accent}10`, color: projectTone.accent }}>
+                {ToneIcon ? <ToneIcon className="h-3 w-3" /> : null}
                 {projectTone.label}
               </div>
             )}
-            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              {projectTone ? `${projectTone.note} 흐름을 반영해 계층형 작업 구조를 더 또렷하게 정리했습니다.` : '계층형 작업 구조를 유지하면서 입력 컨트롤과 표면 질감을 모두 정리해 더 또렷하게 읽히도록 구성했습니다.'}
-            </p>
+            <div className="surface-badge shrink-0 !py-1 !px-2.5 !text-[11px]">
+              {tasks.length}개 작업
+            </div>
           </div>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => handleAddTask(undefined, 1)} size="sm">
-                <Plus className="w-4 h-4" />
-                Phase 추가
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const phases = tasks.filter((t) => t.level === 1);
-                  if (phases.length === 0) return;
-                  const lastPhase = phases.reduce((a, b) => (a.orderIndex > b.orderIndex ? a : b));
-                  handleAddTask(lastPhase.id, 2);
-                }}
-                disabled={tasks.filter((t) => t.level === 1).length === 0}
-              >
-                <Plus className="w-4 h-4" />
-                Activity 추가
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
-                <Sparkles className="w-4 h-4" />
-                WBS 초안 생성
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleAutoSchedule} disabled={tasks.length === 0}>
-                일정 자동 계산
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleBuildDependencies} disabled={tasks.length === 0}>
-                선후행 연결
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleAutoFill} disabled={tasks.length === 0}>
-                <Wand2 className="w-4 h-4" />
-                자동채움
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsQuickProgressOpen(true)} disabled={tasks.length === 0}>
-                <ClipboardList className="w-4 h-4" />
-                빠른 실적 입력
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
-                <FileText className="w-4 h-4" />
-                주간보고
-              </Button>
-              <Button variant="outline" size="sm" onClick={expandAll}>
-                <ExpandIcon className="w-4 h-4" />
-                전체 펼침
-              </Button>
-              <Button variant="outline" size="sm" onClick={collapseAll}>
-                <ShrinkIcon className="w-4 h-4" />
-                전체 접기
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={tasks.length === 0}>
-                <Download className="w-4 h-4" />
-                엑셀 다운로드
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualSave}
-                disabled={!currentProject || saveStatus === 'saving'}
-                data-testid="wbs-save-button"
-              >
-                {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                저장
-              </Button>
-              <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex <= 0}>
-                <Undo2 className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={redo} disabled={historyIndex >= history.length - 1}>
-                <Redo2 className="w-4 h-4" />
-              </Button>
-              <div className="surface-badge shrink-0">
-                총 {tasks.length}개 작업
-              </div>
-              <div className={cn(
-                'surface-badge shrink-0',
-                saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
-              )}>
-                {saveStatus === 'pending' && '변경사항 저장 대기'}
-                {saveStatus === 'saving' && (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    저장중...
-                  </>
-                )}
-                {saveStatus === 'saved' && (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
-                    {formatSaveStatus(lastSavedAt)}
-                  </>
-                )}
-                {saveStatus === 'error' && (
-                  <>
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    저장 실패
-                  </>
-                )}
-                {saveStatus === 'idle' && '자동 저장 준비'}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualSave}
+              disabled={!currentProject || saveStatus === 'saving'}
+              data-testid="wbs-save-button"
+            >
+              {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex <= 0}>
+              <Undo2 className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={redo} disabled={historyIndex >= history.length - 1}>
+              <Redo2 className="w-4 h-4" />
+            </Button>
+            <div className={cn(
+              'surface-badge shrink-0 !py-1 !px-2.5 !text-[11px]',
+              saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
+            )}>
+              {saveStatus === 'pending' && '저장 대기'}
+              {saveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  저장중
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-[color:var(--accent-success)]" />
+                  {formatSaveStatus(lastSavedAt)}
+                </>
+              )}
+              {saveStatus === 'error' && (
+                <>
+                  <AlertCircle className="h-3 w-3" />
+                  실패
+                </>
+              )}
+              {saveStatus === 'idle' && '준비'}
               </div>
             </div>
           </div>
+
+        {/* Row 2: Action buttons — single compact row */}
+        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {/* Primary actions */}
+          <Button onClick={() => handleAddTask(undefined, 1)} size="sm">
+            <Plus className="w-3.5 h-3.5" />
+            Phase
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const phases = tasks.filter((t) => t.level === 1);
+              if (phases.length === 0) return;
+              const lastPhase = phases.reduce((a, b) => (a.orderIndex > b.orderIndex ? a : b));
+              handleAddTask(lastPhase.id, 2);
+            }}
+            disabled={tasks.filter((t) => t.level === 1).length === 0}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Activity
+          </Button>
+
+          <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
+
+          {/* Generation & scheduling */}
+          <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
+            <Sparkles className="w-3.5 h-3.5" />
+            초안 생성
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleAutoSchedule} disabled={tasks.length === 0}>
+            일정계산
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleBuildDependencies} disabled={tasks.length === 0}>
+            선후행
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleAutoFill} disabled={tasks.length === 0}>
+            <Wand2 className="w-3.5 h-3.5" />
+            자동채움
+          </Button>
+
+          <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
+
+          {/* Progress & reports */}
+          <Button variant="outline" size="sm" onClick={() => setIsQuickProgressOpen(true)} disabled={tasks.length === 0}>
+            <ClipboardList className="w-3.5 h-3.5" />
+            실적 입력
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
+            <FileText className="w-3.5 h-3.5" />
+            주간보고
+          </Button>
+
+          <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
+
+          {/* View & export */}
+          <Button variant="ghost" size="sm" onClick={expandAll}>
+            <ExpandIcon className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={collapseAll}>
+            <ShrinkIcon className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={tasks.length === 0}>
+            <Download className="w-3.5 h-3.5" />
+            엑셀
+          </Button>
         </div>
       </section>
 

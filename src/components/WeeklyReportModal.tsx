@@ -1,6 +1,6 @@
 /**
  * WeeklyReportModal.tsx
- * 주간보고 미리보기 및 내보내기 모달
+ * 주간보고 미리보기 및 내보내기 모달 — Premium Redesign
  */
 
 import { useState, useMemo } from 'react';
@@ -12,8 +12,15 @@ import {
   CheckCircle2,
   Clock,
   TrendingUp,
-  TrendingDown,
   Save,
+  Calendar,
+  FileBarChart,
+  BarChart3,
+  Users,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from 'lucide-react';
 import Modal from './common/Modal';
 import Button from './common/Button';
@@ -21,6 +28,7 @@ import { cn } from '../lib/utils';
 import {
   generateWeeklyReport,
   type WeeklyReportSection,
+  type WeeklyReportTask,
 } from '../lib/weeklyReport';
 import { exportWeeklyReportExcel } from '../lib/exportWeeklyReport';
 import {
@@ -50,6 +58,8 @@ export default function WeeklyReportModal({
   members,
 }: WeeklyReportModalProps) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [activeTab, setActiveTab] = useState<'overview' | 'detail'>('overview');
+  const [snapshotSaved, setSnapshotSaved] = useState(false);
 
   const baseDate = useMemo(() => {
     return addWeeks(new Date(), weekOffset);
@@ -79,177 +89,464 @@ export default function WeeklyReportModal({
 
   const handleSaveSnapshot = () => {
     saveSnapshot(projectId, report);
+    setSnapshotSaved(true);
+    setTimeout(() => setSnapshotSaved(false), 2500);
   };
+
+  // 담당자별 작업 분포 계산
+  const assigneeStats = useMemo(() => {
+    const allTasks = [
+      ...report.thisWeekActual.tasks,
+      ...report.nextWeekPlan.tasks,
+    ];
+    const map = new Map<string, { name: string; count: number; completed: number }>();
+    allTasks.forEach((t) => {
+      const key = t.assigneeName || '미지정';
+      const prev = map.get(key) || { name: key, count: 0, completed: 0 };
+      prev.count += 1;
+      if (t.status === 'completed') prev.completed += 1;
+      map.set(key, prev);
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [report]);
+
+  const progressGap = report.summary.overallPlanProgress - report.summary.overallActualProgress;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="주간보고" size="xl">
-      <div className="p-6">
-        {/* 주차 네비게이션 */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setWeekOffset((o) => o - 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-[200px] text-center text-sm font-semibold text-[color:var(--text-primary)]">
-              {report.weekLabel}
-            </span>
-            <button
-              onClick={() => setWeekOffset((o) => o + 1)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            {weekOffset !== 0 && (
+      <div className="weekly-report-modal">
+        {/* 헤더 + 주차 네비게이션 */}
+        <div className="weekly-report-header">
+          <div className="weekly-report-header-bg" />
+          <div className="weekly-report-header-content">
+            <div className="flex items-center gap-3">
+              <div className="weekly-report-icon-wrapper">
+                <FileBarChart className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold tracking-[-0.03em] text-white">
+                  {report.projectName}
+                </h2>
+                <p className="mt-0.5 text-xs text-white/70">
+                  주간보고 · {report.generatedAt} 기준
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setWeekOffset(0)}
-                className="ml-1 text-xs text-[color:var(--accent-primary)] hover:underline"
+                onClick={() => setWeekOffset((o) => o - 1)}
+                className="weekly-report-nav-btn"
               >
-                이번 주로
+                <ChevronLeft className="h-4 w-4" />
               </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleSaveSnapshot}>
-              <Save className="h-4 w-4" />
-              스냅샷 저장
-            </Button>
-            <Button size="sm" onClick={handleExport}>
-              <Download className="h-4 w-4" />
-              엑셀 내보내기
-            </Button>
-          </div>
-        </div>
-
-        {/* 요약 카드 */}
-        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <SummaryCard
-            label="전체 작업"
-            value={`${report.summary.totalLeafTasks}건`}
-            icon={<Clock className="h-4 w-4" />}
-            accent="primary"
-          />
-          <SummaryCard
-            label="완료"
-            value={`${report.summary.completedTasks}건`}
-            delta={comparison.completedDelta}
-            icon={<CheckCircle2 className="h-4 w-4" />}
-            accent="success"
-          />
-          <SummaryCard
-            label="실적 공정율"
-            value={`${Math.round(report.summary.overallActualProgress)}%`}
-            delta={comparison.progressDelta}
-            icon={<TrendingUp className="h-4 w-4" />}
-            accent="primary"
-            deltaUnit="%p"
-          />
-          <SummaryCard
-            label="지연"
-            value={`${report.summary.delayedTasks}건`}
-            delta={comparison.delayedDelta}
-            icon={<AlertTriangle className="h-4 w-4" />}
-            accent="danger"
-            inverseDelta
-          />
-        </div>
-
-        {/* 이슈/리스크 */}
-        {report.issues.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-[rgba(203,109,55,0.22)] bg-[rgba(203,109,55,0.06)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--accent-warning)]">
-              이슈 / 리스크
-            </p>
-            <ul className="mt-2 space-y-1">
-              {report.issues.map((issue, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[color:var(--text-primary)]">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[color:var(--accent-warning)]" />
-                  {issue}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* 섹션들 */}
-        <div className="space-y-4">
-          <ReportSection section={report.thisWeekActual} accentColor="var(--accent-primary)" />
-          <ReportSection section={report.completedThisWeek} accentColor="var(--accent-success)" />
-          <ReportSection section={report.nextWeekPlan} accentColor="#6366f1" />
-          <ReportSection section={report.delayed} accentColor="var(--accent-danger)" />
-        </div>
-
-        {/* 스냅샷 히스토리 */}
-        {snapshots.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
-              저장된 스냅샷
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {snapshots.map((snap) => (
-                <span
-                  key={snap.id}
-                  className="surface-badge text-xs"
-                >
-                  {snap.weekLabel}
+              <div className="weekly-report-week-label">
+                <Calendar className="h-3.5 w-3.5 text-white/60" />
+                <span className="text-sm font-semibold text-white">
+                  {report.weekLabel}
                 </span>
-              ))}
+              </div>
+              <button
+                onClick={() => setWeekOffset((o) => o + 1)}
+                className="weekly-report-nav-btn"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              {weekOffset !== 0 && (
+                <button
+                  onClick={() => setWeekOffset(0)}
+                  className="ml-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/90 hover:bg-white/20 transition-colors"
+                >
+                  이번 주
+                </button>
+              )}
             </div>
           </div>
-        )}
+
+          {/* 하단 버튼 */}
+          <div className="weekly-report-header-actions">
+            <button
+              onClick={handleSaveSnapshot}
+              className={cn(
+                'weekly-report-action-btn',
+                snapshotSaved && 'weekly-report-action-btn-success'
+              )}
+            >
+              {snapshotSaved ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              {snapshotSaved ? '저장됨' : '스냅샷 저장'}
+            </button>
+            <button
+              onClick={handleExport}
+              className="weekly-report-action-btn weekly-report-action-btn-primary"
+            >
+              <Download className="h-3.5 w-3.5" />
+              엑셀 내보내기
+            </button>
+          </div>
+        </div>
+
+        {/* 탭 */}
+        <div className="weekly-report-tabs">
+          <button
+            className={cn(
+              'weekly-report-tab',
+              activeTab === 'overview' && 'weekly-report-tab-active'
+            )}
+            onClick={() => setActiveTab('overview')}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            요약 현황
+          </button>
+          <button
+            className={cn(
+              'weekly-report-tab',
+              activeTab === 'detail' && 'weekly-report-tab-active'
+            )}
+            onClick={() => setActiveTab('detail')}
+          >
+            <Target className="h-3.5 w-3.5" />
+            상세 작업
+          </button>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        <div className="weekly-report-body">
+          {activeTab === 'overview' ? (
+            <OverviewTab
+              report={report}
+              comparison={comparison}
+              progressGap={progressGap}
+              assigneeStats={assigneeStats}
+              snapshots={snapshots}
+            />
+          ) : (
+            <DetailTab report={report} />
+          )}
+        </div>
       </div>
     </Modal>
   );
 }
 
-// ── Sub Components ───────────────────────────────────────────
+// ── Overview Tab ──────────────────────────────────────────────
 
-function SummaryCard({
+interface OverviewTabProps {
+  report: ReturnType<typeof generateWeeklyReport>;
+  comparison: ReturnType<typeof compareSnapshots>;
+  progressGap: number;
+  assigneeStats: { name: string; count: number; completed: number }[];
+  snapshots: ReturnType<typeof getSnapshots>;
+}
+
+function OverviewTab({
+  report,
+  comparison,
+  progressGap,
+  assigneeStats,
+  snapshots,
+}: OverviewTabProps) {
+  return (
+    <div className="space-y-5">
+      {/* 요약 KPI 카드 */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard
+          label="전체 작업"
+          value={report.summary.totalLeafTasks}
+          unit="건"
+          icon={<Clock className="h-4 w-4" />}
+          gradient="from-[#0f766e] to-[#2fa67c]"
+        />
+        <KpiCard
+          label="완료"
+          value={report.summary.completedTasks}
+          unit="건"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          gradient="from-[#1fa37a] to-[#34c997]"
+          delta={comparison.completedDelta}
+          deltaUnit="건"
+        />
+        <KpiCard
+          label="실적 공정율"
+          value={Math.round(report.summary.overallActualProgress)}
+          unit="%"
+          icon={<TrendingUp className="h-4 w-4" />}
+          gradient="from-[#5B8DEF] to-[#A78BFA]"
+          delta={comparison.progressDelta}
+          deltaUnit="%p"
+        />
+        <KpiCard
+          label="지연"
+          value={report.summary.delayedTasks}
+          unit="건"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          gradient="from-[#cb4b5f] to-[#ff738a]"
+          delta={comparison.delayedDelta}
+          deltaUnit="건"
+          inverseDelta
+        />
+      </div>
+
+      {/* 계획 vs 실적 비교 */}
+      <div className="weekly-report-progress-compare">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+            계획 vs 실적
+          </p>
+          <span className={cn(
+            'rounded-full px-2.5 py-1 text-[10px] font-bold',
+            progressGap <= 0
+              ? 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]'
+              : progressGap <= 5
+                ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
+                : 'bg-[rgba(203,75,95,0.12)] text-[color:var(--accent-danger)]'
+          )}>
+            {progressGap <= 0 ? '정상' : `${Math.round(progressGap)}%p 미달`}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between text-sm mb-1.5">
+              <span className="text-[color:var(--text-secondary)]">계획 공정율</span>
+              <span className="font-semibold text-[color:var(--text-primary)]">
+                {Math.round(report.summary.overallPlanProgress)}%
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-[rgba(91,141,239,0.1)]">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#5B8DEF,#A78BFA)] transition-all duration-700"
+                style={{ width: `${report.summary.overallPlanProgress}%` }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between text-sm mb-1.5">
+              <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
+              <span className="font-semibold text-[color:var(--text-primary)]">
+                {Math.round(report.summary.overallActualProgress)}%
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+              <div
+                className="h-full rounded-full bg-[image:var(--gradient-primary)] transition-all duration-700"
+                style={{ width: `${report.summary.overallActualProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 이슈 / 리스크 */}
+      {report.issues.length > 0 && (
+        <div className="weekly-report-issue-panel">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-[color:var(--accent-warning)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--accent-warning)]">
+              이슈 / 리스크
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {report.issues.map((issue, i) => (
+              <li key={i} className="weekly-report-issue-item">
+                <span className="weekly-report-issue-number">{i + 1}</span>
+                <span className="text-sm text-[color:var(--text-primary)]">{issue}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 담당자별 작업 현황 */}
+      {assigneeStats.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              담당자별 작업 현황
+            </p>
+          </div>
+          <div className="space-y-2.5">
+            {assigneeStats.map((stat) => (
+              <div key={stat.name} className="flex items-center gap-3">
+                <div className="weekly-report-assignee-avatar">
+                  {stat.name.slice(0, 1)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-[color:var(--text-primary)] truncate">
+                      {stat.name}
+                    </span>
+                    <span className="text-xs text-[color:var(--text-secondary)]">
+                      {stat.completed}/{stat.count}건
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+                    <div
+                      className="h-full rounded-full bg-[image:var(--gradient-primary)] transition-all duration-500"
+                      style={{ width: `${stat.count > 0 ? (stat.completed / stat.count) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 섹션 요약 리본 */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <SectionRibbon
+          label="금주 실적"
+          count={report.thisWeekActual.tasks.length}
+          color="var(--accent-primary)"
+        />
+        <SectionRibbon
+          label="금주 완료"
+          count={report.completedThisWeek.tasks.length}
+          color="var(--accent-success)"
+        />
+        <SectionRibbon
+          label="차주 계획"
+          count={report.nextWeekPlan.tasks.length}
+          color="#6366f1"
+        />
+        <SectionRibbon
+          label="지연 작업"
+          count={report.delayed.tasks.length}
+          color="var(--accent-danger)"
+        />
+      </div>
+
+      {/* 스냅샷 히스토리 */}
+      {snapshots.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)] mb-3">
+            저장된 스냅샷
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {snapshots.map((snap) => (
+              <span
+                key={snap.id}
+                className="weekly-report-snapshot-badge"
+              >
+                {snap.weekLabel}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Detail Tab ──────────────────────────────────────────────
+
+function DetailTab({ report }: { report: ReturnType<typeof generateWeeklyReport> }) {
+  return (
+    <div className="space-y-4">
+      <ReportSection section={report.thisWeekActual} accentColor="var(--accent-primary)" />
+      <ReportSection section={report.completedThisWeek} accentColor="var(--accent-success)" />
+      <ReportSection section={report.nextWeekPlan} accentColor="#6366f1" />
+      <ReportSection section={report.delayed} accentColor="var(--accent-danger)" />
+    </div>
+  );
+}
+
+// ── Sub Components ──────────────────────────────────────────
+
+function KpiCard({
   label,
   value,
-  delta,
+  unit,
   icon,
-  accent,
+  gradient,
+  delta,
   deltaUnit = '건',
   inverseDelta = false,
 }: {
   label: string;
-  value: string;
-  delta?: number;
+  value: number;
+  unit: string;
   icon: React.ReactNode;
-  accent: 'primary' | 'success' | 'danger';
+  gradient: string;
+  delta?: number;
   deltaUnit?: string;
   inverseDelta?: boolean;
 }) {
-  const accentVar = {
-    primary: 'var(--accent-primary)',
-    success: 'var(--accent-success)',
-    danger: 'var(--accent-danger)',
-  }[accent];
-
   const hasDelta = delta !== undefined && delta !== 0;
   const isPositive = inverseDelta ? (delta ?? 0) < 0 : (delta ?? 0) > 0;
 
   return (
-    <div className="rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-      <div className="flex items-center gap-2 text-[color:var(--text-secondary)]">
-        <span style={{ color: accentVar }}>{icon}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">{label}</span>
+    <div className="weekly-report-kpi">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
+          {label}
+        </span>
+        <div
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg',
+            gradient
+          )}
+        >
+          {icon}
+        </div>
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-        {value}
-      </p>
+      <div className="flex items-baseline gap-1">
+        <span className="text-2xl font-bold tracking-[-0.04em] text-[color:var(--text-primary)]">
+          {value}
+        </span>
+        <span className="text-sm text-[color:var(--text-secondary)]">{unit}</span>
+      </div>
       {hasDelta && (
-        <div className={cn(
-          'mt-1 flex items-center gap-1 text-xs font-medium',
-          isPositive ? 'text-[color:var(--accent-success)]' : 'text-[color:var(--accent-danger)]'
-        )}>
-          {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {delta! > 0 ? '+' : ''}{delta}{deltaUnit} vs 전주
+        <div
+          className={cn(
+            'mt-2 flex items-center gap-1 text-[11px] font-semibold',
+            isPositive
+              ? 'text-[color:var(--accent-success)]'
+              : 'text-[color:var(--accent-danger)]'
+          )}
+        >
+          {isPositive ? (
+            <ArrowUpRight className="h-3 w-3" />
+          ) : (delta ?? 0) === 0 ? (
+            <Minus className="h-3 w-3" />
+          ) : (
+            <ArrowDownRight className="h-3 w-3" />
+          )}
+          {delta! > 0 ? '+' : ''}
+          {delta}
+          {deltaUnit} vs 전주
         </div>
       )}
+    </div>
+  );
+}
+
+function SectionRibbon({
+  label,
+  count,
+  color,
+}: {
+  label: string;
+  count: number;
+  color: string;
+}) {
+  return (
+    <div className="weekly-report-ribbon">
+      <div className="weekly-report-ribbon-indicator" style={{ backgroundColor: color }} />
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+          {label}
+        </p>
+        <p className="mt-1 text-lg font-bold tracking-[-0.04em] text-[color:var(--text-primary)]">
+          {count}<span className="text-xs font-medium text-[color:var(--text-secondary)] ml-0.5">건</span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -264,21 +561,24 @@ function ReportSection({
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <div className="rounded-2xl border border-[var(--border-color)] overflow-hidden">
+    <div className="weekly-report-detail-section">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[color:var(--bg-tertiary)]"
+        className="weekly-report-detail-section-header"
       >
         <div className="flex items-center gap-3">
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
+          <div
+            className="h-2.5 w-2.5 rounded-full shadow-sm"
+            style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}40` }}
+          />
           <span className="text-sm font-semibold text-[color:var(--text-primary)]">
             {section.title}
           </span>
-          <span className="surface-badge text-xs">{section.tasks.length}건</span>
+          <span className="weekly-report-count-badge">{section.tasks.length}건</span>
         </div>
         <ChevronRight
           className={cn(
-            'h-4 w-4 text-[color:var(--text-secondary)] transition-transform',
+            'h-4 w-4 text-[color:var(--text-secondary)] transition-transform duration-200',
             isExpanded && 'rotate-90'
           )}
         />
@@ -287,77 +587,24 @@ function ReportSection({
       {isExpanded && (
         <div className="border-t border-[var(--border-color)]">
           {section.tasks.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-[color:var(--text-muted)]">해당 작업 없음</p>
+            <p className="px-5 py-4 text-sm text-[color:var(--text-muted)] italic">
+              해당 작업 없음
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[color:var(--bg-tertiary)]">
-                    <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      작업명
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      담당자
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      상태
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      실적
-                    </th>
-                    <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      지연
-                    </th>
+                  <tr className="weekly-report-table-header">
+                    <th className="px-4 py-2.5 text-left">작업명</th>
+                    <th className="px-4 py-2.5 text-center">담당자</th>
+                    <th className="px-4 py-2.5 text-center">상태</th>
+                    <th className="px-4 py-2.5 text-center">실적</th>
+                    <th className="px-4 py-2.5 text-center">지연</th>
                   </tr>
                 </thead>
                 <tbody>
                   {section.tasks.map((task) => (
-                    <tr key={task.id} className="border-t border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)]">
-                      <td className="px-3 py-2">
-                        <div>
-                          <p className="font-medium text-[color:var(--text-primary)]">{task.name}</p>
-                          {task.parentName && (
-                            <p className="text-xs text-[color:var(--text-muted)]">{task.parentName}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-center text-[color:var(--text-secondary)]">
-                        {task.assigneeName}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <span
-                          className={cn(
-                            'inline-block rounded-full px-2 py-0.5 text-xs font-semibold',
-                            task.status === 'completed' && 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
-                            task.status === 'in_progress' && 'bg-[rgba(15,118,110,0.1)] text-[color:var(--accent-primary)]',
-                            task.status === 'pending' && 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
-                            task.status === 'on_hold' && 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]',
-                          )}
-                        >
-                          {task.statusLabel}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
-                            <div
-                              className="h-full rounded-full bg-[image:linear-gradient(135deg,#1fa37a,#34c997)]"
-                              style={{ width: `${task.actualProgress}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-[color:var(--text-secondary)]">{task.actualProgress}%</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {task.delayDays > 0 ? (
-                          <span className="text-xs font-semibold text-[color:var(--accent-danger)]">
-                            {task.delayDays}일
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[color:var(--text-muted)]">-</span>
-                        )}
-                      </td>
-                    </tr>
+                    <TaskRow key={task.id} task={task} />
                   ))}
                 </tbody>
               </table>
@@ -366,5 +613,64 @@ function ReportSection({
         </div>
       )}
     </div>
+  );
+}
+
+function TaskRow({ task }: { task: WeeklyReportTask }) {
+  return (
+    <tr className="weekly-report-task-row">
+      <td className="px-4 py-3">
+        <div>
+          <p className="font-medium text-[color:var(--text-primary)]">{task.name}</p>
+          {task.parentName && (
+            <p className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">{task.parentName}</p>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="weekly-report-assignee-dot">
+            {task.assigneeName.slice(0, 1)}
+          </span>
+          <span className="text-[color:var(--text-secondary)]">{task.assigneeName}</span>
+        </span>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <span
+          className={cn(
+            'inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold',
+            task.status === 'completed' && 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
+            task.status === 'in_progress' && 'bg-[rgba(15,118,110,0.1)] text-[color:var(--accent-primary)]',
+            task.status === 'pending' && 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
+            task.status === 'on_hold' && 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
+          )}
+        >
+          {task.statusLabel}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-center">
+        <div className="flex items-center justify-center gap-2">
+          <div className="h-1.5 w-14 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+            <div
+              className="h-full rounded-full bg-[image:linear-gradient(135deg,#1fa37a,#34c997)] transition-all duration-500"
+              style={{ width: `${task.actualProgress}%` }}
+            />
+          </div>
+          <span className="text-xs font-semibold text-[color:var(--text-secondary)] w-8 text-right">
+            {task.actualProgress}%
+          </span>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-center">
+        {task.delayDays > 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--accent-danger)]">
+            <AlertTriangle className="h-3 w-3" />
+            {task.delayDays}일
+          </span>
+        ) : (
+          <span className="text-xs text-[color:var(--text-muted)]">—</span>
+        )}
+      </td>
+    </tr>
   );
 }
