@@ -227,33 +227,32 @@ export async function updateAccountStatus(userId: string, status: AccountStatus)
 
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {
   let systemRole: SystemRole = 'user';
-  let accountStatus: AccountStatus = 'active'; // 컬럼 없으면 active로 기본 처리
+  let accountStatus: AccountStatus = 'active';
 
-  // account_status 포함하여 조회 시도
   const { data, error } = await supabase
     .from('profiles')
     .select('system_role, account_status')
     .eq('id', user.id)
     .single();
 
-  if (error && error.message.includes('account_status')) {
-    // account_status 컬럼이 없는 경우 → system_role만 조회
-    const { data: fallback } = await supabase
+  if (error) {
+    console.error('[toAppUser] profiles 조회 실패:', error.code, error.message);
+    // 폴백: system_role만 조회
+    const { data: fallback, error: fallbackErr } = await supabase
       .from('profiles')
       .select('system_role')
       .eq('id', user.id)
       .single();
+    console.log('[toAppUser] 폴백 결과:', fallback, fallbackErr?.message);
     if (fallback?.system_role) {
       systemRole = fallback.system_role as SystemRole;
     }
-    // accountStatus는 'active' 유지 (마이그레이션 전 기존 사용자)
+  } else if (data) {
+    systemRole = (data.system_role as SystemRole) || 'user';
+    accountStatus = (data.account_status as AccountStatus) || 'active';
+    console.log('[toAppUser] profiles 조회 성공:', { systemRole, accountStatus });
   } else {
-    if (data?.system_role) {
-      systemRole = data.system_role as SystemRole;
-    }
-    if (data?.account_status) {
-      accountStatus = data.account_status as AccountStatus;
-    }
+    console.warn('[toAppUser] profiles 데이터 없음 (user.id:', user.id, ')');
   }
 
   return {
