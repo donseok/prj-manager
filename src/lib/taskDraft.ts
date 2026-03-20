@@ -22,12 +22,41 @@ export interface TaskDraftResult {
 }
 
 const TEMPLATE_KEYWORDS: Record<string, string[]> = {
+  'steel-project': ['철강', '냉연', '열연', '도금', '설비', '플랜트', '제철', '제선', '제강', '압연', '코일', '계량대', '소둔', '조질압연', '정정', '포장', '연주', '전로', '고로'],
   'web-launch': ['웹', '홈페이지', '사이트', '쇼핑몰', '리뉴얼', '랜딩', '브랜드'],
   'mobile-app': ['앱', 'ios', 'android', '모바일', '스토어', '앱출시'],
-  'internal-system': ['erp', '백오피스', '내부', '어드민', '관리시스템', '업무시스템', '운영시스템'],
+  'internal-system': ['erp', '백오피스', '내부', '어드민', '관리시스템', '업무시스템', '운영시스템', 'mes', 'scada'],
 };
 
 const DRAFT_RULES: DraftKeywordRule[] = [
+  {
+    keywords: ['시운전', '커미셔닝', '성능시험', '부하운전', '통합테스트'],
+    templateBoosts: {
+      'steel-project': 3,
+    },
+    additions: [
+      {
+        phase: '테스트',
+        activity: '통합테스트',
+        name: '현장 적용 검증',
+        output: '현장 검증 보고서',
+      },
+    ],
+  },
+  {
+    keywords: ['안전', '환경', '인허가', '허가'],
+    templateBoosts: {
+      'steel-project': 2,
+    },
+    additions: [
+      {
+        phase: '분석',
+        activity: '타당성 검토',
+        name: '환경·안전 인허가 확인',
+        output: '인허가 체크리스트',
+      },
+    ],
+  },
   {
     keywords: ['디자인', 'ux', 'ui', '와이어', '시안'],
     templateBoosts: {
@@ -36,10 +65,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     },
     additions: [
       {
-        phase: 'Design',
-        activity: 'UX/UI',
-        name: 'Design review',
-        output: 'Review notes',
+        phase: '디자인',
+        activity: 'UX/UI 설계',
+        name: '디자인 리뷰',
+        output: '리뷰 노트',
       },
     ],
   },
@@ -51,10 +80,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     },
     additions: [
       {
-        phase: 'Build',
-        activity: 'Implementation',
-        name: 'Frontend integration polish',
-        output: 'UI refinement list',
+        phase: '개발',
+        activity: '구현',
+        name: '프론트엔드 통합 검증',
+        output: 'UI 개선 목록',
       },
     ],
   },
@@ -67,16 +96,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     },
     additions: [
       {
-        phase: 'Development',
-        activity: 'Backend',
-        name: 'Backend readiness review',
-        output: 'API readiness checklist',
-      },
-      {
-        phase: 'Build',
-        activity: 'Implementation',
-        name: 'Backend contract verification',
-        output: 'API contract checklist',
+        phase: '개발',
+        activity: '백엔드',
+        name: '백엔드 준비 상태 점검',
+        output: 'API 준비 체크리스트',
       },
     ],
   },
@@ -84,45 +107,33 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     keywords: ['qa', '테스트', '검수', '품질'],
     additions: [
       {
-        phase: 'Build',
-        activity: 'Quality',
-        name: 'Acceptance testing',
-        output: 'Acceptance checklist',
+        phase: '개발',
+        activity: '품질 관리',
+        name: '인수 테스트',
+        output: '인수 체크리스트',
       },
       {
-        phase: 'Validation',
-        activity: 'Test',
-        name: 'Regression test pass',
-        output: 'Regression report',
-      },
-      {
-        phase: 'Implementation',
-        activity: 'Core build',
-        name: 'Integrated QA support',
-        output: 'Defect backlog',
+        phase: '검증',
+        activity: '테스트',
+        name: '회귀 테스트',
+        output: '회귀 테스트 보고서',
       },
     ],
   },
   {
-    keywords: ['배포', '오픈', '런칭', 'release', 'go-live'],
+    keywords: ['배포', '오픈', '런칭', '출시', '릴리스'],
     additions: [
       {
-        phase: 'Launch',
-        activity: 'Release',
-        name: 'Launch checklist review',
-        output: 'Go-live checklist',
+        phase: '오픈',
+        activity: '릴리스',
+        name: '오픈 체크리스트 점검',
+        output: '오픈 체크리스트',
       },
       {
-        phase: 'Release',
-        activity: 'Go-live',
-        name: 'Launch communication',
-        output: 'Release communication',
-      },
-      {
-        phase: 'Adoption',
-        activity: 'Enablement',
-        name: 'Post-launch support window',
-        output: 'Support plan',
+        phase: '출시',
+        activity: '릴리스',
+        name: '출시 커뮤니케이션',
+        output: '출시 안내문',
       },
     ],
   },
@@ -133,10 +144,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     },
     additions: [
       {
-        phase: 'Migration',
-        activity: 'Data cutover',
-        name: 'Source data validation',
-        output: 'Data validation report',
+        phase: '데이터 이관',
+        activity: '이관 작업',
+        name: '원천 데이터 검증',
+        output: '데이터 검증 보고서',
       },
     ],
   },
@@ -144,13 +155,14 @@ const DRAFT_RULES: DraftKeywordRule[] = [
     keywords: ['교육', '매뉴얼', '전파'],
     templateBoosts: {
       'internal-system': 2,
+      'steel-project': 1,
     },
     additions: [
       {
-        phase: 'Adoption',
-        activity: 'Enablement',
-        name: 'User manual finalization',
-        output: 'User manual',
+        phase: '안정화',
+        activity: '정착 지원',
+        name: '사용자 매뉴얼 완성',
+        output: '사용자 매뉴얼',
       },
     ],
   },
@@ -179,7 +191,7 @@ function scoreTemplates(prompt: string) {
   });
 
   const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1]);
-  return ranked[0]?.[1] && ranked[0][1] > 0 ? ranked[0][0] : 'web-launch';
+  return ranked[0]?.[1] && ranked[0][1] > 0 ? ranked[0][0] : 'steel-project';
 }
 
 function findTaskByName(tasks: Task[], name: string, level?: number, parentId?: string | null) {
@@ -312,7 +324,7 @@ export function generateTasksFromPrompt(params: {
     reason:
       matchedKeywords.length > 0
         ? `키워드 ${matchedKeywords.join(', ')} 기준으로 가장 가까운 템플릿을 선택했습니다.`
-        : '입력 문장이 짧아 기본 Website Launch 템플릿을 기준으로 초안을 생성했습니다.',
+        : '입력 문장이 짧아 기본 철강 프로젝트 템플릿을 기준으로 초안을 생성했습니다.',
     matchedKeywords,
     tasks: baseTasks,
   };

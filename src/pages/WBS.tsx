@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Plus,
@@ -37,7 +37,7 @@ import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { syncProjectMembers } from '../lib/dataRepository';
 import { autoScheduleTasks, buildSequentialDependencies } from '../lib/taskScheduler';
-import { generateTasksFromPrompt, type TaskDraftResult } from '../lib/taskDraft';
+import { generateTasksFromPrompt } from '../lib/taskDraft';
 import { generateTasksFromTemplate, getTaskTemplate, listTaskTemplates } from '../lib/taskTemplates';
 import { syncTaskField, isSyncableField } from '../lib/taskFieldSync';
 import { autoFillTasks } from '../lib/taskAutoFill';
@@ -78,9 +78,8 @@ export default function WBS() {
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('web-launch');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('steel-project');
   const [draftPrompt, setDraftPrompt] = useState('');
-  const [draftResult, setDraftResult] = useState<TaskDraftResult | null>(null);
   const [isWeeklyReportOpen, setIsWeeklyReportOpen] = useState(false);
   const dragOverCounterRef = useRef(0);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
@@ -211,9 +210,42 @@ export default function WBS() {
   }, [redo, saveNow, undo]);
 
   // 새 작업 추가
+  const suggestOutput = (parentId: string | undefined, level: number): string | undefined => {
+    if (level < 3) return undefined;
+    // Phase 이름 기반으로 산출물 제안
+    let phaseParentId = parentId;
+    let current = tasks.find((t) => t.id === phaseParentId);
+    while (current && current.level > 1) {
+      phaseParentId = current.parentId || undefined;
+      current = tasks.find((t) => t.id === phaseParentId);
+    }
+    const phaseName = current?.name || '';
+    const outputMap: Record<string, string> = {
+      '분석': '분석 보고서',
+      '설계': '설계서',
+      '개발': '개발 결과물',
+      '테스트': '테스트 보고서',
+      '적용': '적용 결과 보고서',
+      '안정화': '안정화 보고서',
+      '기획': '기획서',
+      '디자인': '디자인 산출물',
+      '구현': '구현 결과물',
+      '검증': '검증 보고서',
+      '출시': '출시 보고서',
+      '착수': '착수 보고서',
+      '오픈': '오픈 체크리스트',
+      '이관': '이관 결과서',
+    };
+    for (const [key, value] of Object.entries(outputMap)) {
+      if (phaseName.includes(key)) return value;
+    }
+    return undefined;
+  };
+
   const handleAddTask = (parentId?: string, level: number = 1) => {
     const siblings = tasks.filter((t) => t.parentId === parentId);
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((t) => t.orderIndex)) : -1;
+    const output = suggestOutput(parentId, level);
 
     const newTask: Task = {
       id: generateId(),
@@ -222,6 +254,7 @@ export default function WBS() {
       level,
       orderIndex: maxOrder + 1,
       name: '',
+      output,
       weight: 0,
       durationDays: level >= 3 ? 2 : null,
       predecessorIds: [],
@@ -258,25 +291,18 @@ export default function WBS() {
 
     setTasks(generatedTasks, undefined, { recordHistory: true });
     setIsTemplateModalOpen(false);
+    setDraftPrompt('');
     showFeedback({
       tone: 'success',
-      title: '템플릿 적용 완료',
-      message: `${selectedTemplate.name} 템플릿으로 ${generatedTasks.length}개 작업 초안을 생성했습니다.`,
+      title: 'WBS 초안 생성 완료',
+      message: `"${selectedTemplate.name}" 템플릿으로 ${generatedTasks.length}개 작업을 생성했습니다.`,
     });
   };
 
-  const handleGenerateDraft = () => {
+  const handleSmartMatch = () => {
     if (!projectId) return;
-
     const trimmedPrompt = draftPrompt.trim();
-    if (!trimmedPrompt) {
-      showFeedback({
-        tone: 'info',
-        title: '설명 입력 필요',
-        message: '프로젝트 설명을 한 줄로 입력하면 빠른 초안을 생성할 수 있습니다.',
-      });
-      return;
-    }
+    if (!trimmedPrompt) return;
 
     const result = generateTasksFromPrompt({
       prompt: trimmedPrompt,
@@ -285,24 +311,6 @@ export default function WBS() {
     });
 
     setSelectedTemplateId(result.templateId);
-    setDraftResult(result);
-    showFeedback({
-      tone: 'success',
-      title: '빠른 초안 생성 완료',
-      message: `${result.templateName} 기반으로 ${result.tasks.length}개 작업 초안을 준비했습니다.`,
-    });
-  };
-
-  const handleApplyDraft = () => {
-    if (!draftResult) return;
-
-    setTasks(draftResult.tasks, undefined, { recordHistory: true });
-    setIsTemplateModalOpen(false);
-    showFeedback({
-      tone: 'success',
-      title: '빠른 초안 반영 완료',
-      message: `${draftResult.templateName} 기반 초안을 WBS에 반영했습니다.`,
-    });
   };
 
   const handleAutoSchedule = () => {
@@ -610,25 +618,40 @@ export default function WBS() {
           </select>
         );
 
-      case 'actions':
+      case 'actions': {
+        const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : null;
+        const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : null;
         return (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleAddTask(task.id, task.level + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
-              title="하위 작업 추가"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-0.5">
+            {childLabel && (
+              <button
+                onClick={() => handleAddTask(task.id, task.level + 1)}
+                className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
+                title={`${childLabel} 추가`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {childLabel}
+              </button>
+            )}
+            {siblingLabel && (
+              <button
+                onClick={() => handleAddTask(task.parentId || undefined, task.level)}
+                className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
+                title={`같은 레벨 ${siblingLabel} 추가`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={() => handleDeleteTask(task.id)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
               title="삭제"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         );
+      }
 
       default:
         return null;
@@ -675,12 +698,23 @@ export default function WBS() {
                 <Plus className="w-4 h-4" />
                 Phase 추가
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
-                빠른 초안 생성
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const phases = tasks.filter((t) => t.level === 1);
+                  if (phases.length === 0) return;
+                  const lastPhase = phases.reduce((a, b) => (a.orderIndex > b.orderIndex ? a : b));
+                  handleAddTask(lastPhase.id, 2);
+                }}
+                disabled={tasks.filter((t) => t.level === 1).length === 0}
+              >
+                <Plus className="w-4 h-4" />
+                Activity 추가
               </Button>
               <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
                 <Sparkles className="w-4 h-4" />
-                템플릿 적용
+                WBS 초안 생성
               </Button>
               <Button variant="outline" size="sm" onClick={handleAutoSchedule} disabled={tasks.length === 0}>
                 일정 자동 계산
@@ -789,80 +823,109 @@ export default function WBS() {
               </tr>
             </thead>
             <tbody>
-              {flatTasks.map((task) => (
-                <tr
-                  key={task.id}
-                  data-testid={`wbs-row-${task.id}`}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={(e) => handleDragOver(e, task)}
-                  onDragLeave={() => {
-                    if (dropTargetId === task.id) {
-                      setDropTargetId(null);
-                      setDropPosition(null);
-                    }
-                  }}
-                  onDrop={(e) => handleDrop(e, task)}
-                  className={cn(
-                    task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
-                    dragTaskId === task.id && 'opacity-40',
-                    dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
-                    dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
-                    dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
-                  )}
-                >
-                  <td className="border-r border-[var(--border-color)]">
-                    <div className="flex items-center">
-                      <span className="cursor-grab active:cursor-grabbing text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] mr-0.5">
-                        <GripVertical className="w-3.5 h-3.5" />
-                      </span>
-                      {renderCell(task, 'expand')}
-                    </div>
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'level')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    <div className="flex items-center">
-                      {renderCell(task, 'name')}
-                    </div>
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'output')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'assignee')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'weight')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'planStart')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'planEnd')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'planProgress')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'actualStart')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'actualEnd')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'actualProgress')}
-                  </td>
-                  <td className="border-r border-[var(--border-color)]">
-                    {renderCell(task, 'status')}
-                  </td>
-                  <td>
-                    {renderCell(task, 'actions')}
-                  </td>
-                </tr>
-              ))}
+              {flatTasks.map((task, idx) => {
+                // 다음 행의 레벨을 확인해서 그룹 마지막인지 판별
+                const nextTask = flatTasks[idx + 1];
+                const isLastChildOfPhase = task.level >= 2 && (!nextTask || nextTask.level <= 1);
+                const isLastChildOfActivity = task.level >= 3 && (!nextTask || nextTask.level <= 2);
+                const addLabel = isLastChildOfActivity ? 'Task' : isLastChildOfPhase ? 'Activity' : null;
+                const addParentId = isLastChildOfActivity
+                  ? task.parentId || undefined
+                  : isLastChildOfPhase
+                    ? tasks.find((t) => t.id === task.parentId)?.parentId || undefined
+                    : undefined;
+                const addLevel = isLastChildOfActivity ? 3 : isLastChildOfPhase ? 2 : 0;
+
+                return (
+                  <React.Fragment key={task.id}>
+                    <tr
+                      data-testid={`wbs-row-${task.id}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, task)}
+                      onDragLeave={() => {
+                        if (dropTargetId === task.id) {
+                          setDropTargetId(null);
+                          setDropPosition(null);
+                        }
+                      }}
+                      onDrop={(e) => handleDrop(e, task)}
+                      className={cn(
+                        task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
+                        dragTaskId === task.id && 'opacity-40',
+                        dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
+                        dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
+                        dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
+                      )}
+                    >
+                      <td className="border-r border-[var(--border-color)]">
+                        <div className="flex items-center">
+                          <span className="cursor-grab active:cursor-grabbing text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] mr-0.5">
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </span>
+                          {renderCell(task, 'expand')}
+                        </div>
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'level')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        <div className="flex items-center">
+                          {renderCell(task, 'name')}
+                        </div>
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'output')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'assignee')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'weight')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'planStart')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'planEnd')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'planProgress')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'actualStart')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'actualEnd')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'actualProgress')}
+                      </td>
+                      <td className="border-r border-[var(--border-color)]">
+                        {renderCell(task, 'status')}
+                      </td>
+                      <td>
+                        {renderCell(task, 'actions')}
+                      </td>
+                    </tr>
+                    {addLabel && (
+                      <tr className="group/add">
+                        <td colSpan={14} className="!p-0">
+                          <button
+                            onClick={() => handleAddTask(addParentId, addLevel)}
+                            className="flex w-full items-center gap-1.5 py-1 text-xs text-[color:var(--text-muted)] opacity-0 transition-opacity group-hover/add:opacity-100 hover:text-[color:var(--accent-primary)]"
+                            style={{ paddingLeft: `${addLevel * 24 + 12}px` }}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            {addLabel} 추가
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
 
@@ -937,167 +1000,92 @@ export default function WBS() {
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        title="템플릿으로 WBS 시작"
+        title="WBS 초안 생성"
         size="xl"
       >
-        <div className="p-6">
-          <div className="mb-6 rounded-[28px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="page-kicker">Quick Draft</p>
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                  한 줄 설명으로 WBS 초안 만들기
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                  프로젝트 설명을 입력하면 키워드 기반으로 템플릿을 추론하고 필요한 작업을 추가합니다.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setDraftPrompt('쇼핑몰 리뉴얼 / 6월 오픈 / 디자인, 프론트, 백엔드, QA 필요')}>
-                  예시 채우기
-                </Button>
-                <Button onClick={handleGenerateDraft}>
-                  빠른 초안 생성
-                </Button>
-              </div>
-            </div>
-
-            <textarea
+        <div className="p-6 space-y-5">
+          {/* 키워드 자동 매칭 입력 */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
               value={draftPrompt}
               onChange={(event) => setDraftPrompt(event.target.value)}
-              placeholder="예: 쇼핑몰 리뉴얼 / 6월 오픈 / 디자인, 프론트, 백엔드, QA 필요"
-              className="mt-4 min-h-[110px] w-full rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+              onKeyDown={(event) => { if (event.key === 'Enter') handleSmartMatch(); }}
+              placeholder="프로젝트 설명을 입력하면 최적 템플릿을 자동 선택합니다 (예: 냉연 설비 계량대 재구축)"
+              className="flex-1 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
+            <Button size="sm" onClick={handleSmartMatch} disabled={!draftPrompt.trim()}>
+              자동 선택
+            </Button>
+          </div>
 
-            {draftResult && (
-              <div className="mt-4 grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
-                <div className="rounded-[20px] border border-[rgba(15,118,110,0.2)] bg-[rgba(15,118,110,0.08)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-primary)]">
-                    추천 결과
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
-                    {draftResult.templateName}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                    {draftResult.reason}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--text-secondary)]">
-                    <span className="surface-badge">Tasks {draftResult.tasks.length}</span>
-                    {draftResult.matchedKeywords.map((keyword) => (
-                      <span key={keyword} className="surface-badge">
-                        {keyword}
+          {/* 템플릿 카드 목록 */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {templates.map((template) => {
+              const isSelected = template.id === selectedTemplate?.id;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => setSelectedTemplateId(template.id)}
+                  className={cn(
+                    'rounded-[22px] border p-4 text-left transition-all',
+                    isSelected
+                      ? 'border-[rgba(15,118,110,0.4)] bg-[rgba(15,118,110,0.08)] shadow-[0_20px_40px_-28px_rgba(15,118,110,0.5)]'
+                      : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                      {template.name}
+                    </p>
+                    {isSelected && (
+                      <span className="shrink-0 rounded-full bg-[rgba(15,118,110,0.14)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--accent-primary)]">
+                        선택됨
                       </span>
-                    ))}
+                    )}
                   </div>
+                  <p className="mt-1.5 text-sm leading-6 text-[color:var(--text-secondary)]">
+                    {template.description}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
+                    <span className="surface-badge">{template.audience}</span>
+                    <span className="surface-badge">{template.phases}개 Phase</span>
+                    <span className="surface-badge">{template.taskCount}건</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 선택된 템플릿 요약 + 적용 */}
+          {selectedTemplate && (
+            <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                    {selectedTemplate.name}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
+                    <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
+                    <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
+                    현재 WBS를 초안으로 교체합니다. 적용 후 편집기에서 바로 수정 가능합니다.
+                  </p>
                 </div>
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-                    반영 방식
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                    생성된 초안이 현재 WBS를 교체합니다. 반영 후에는 기존 표 편집기로 바로 수정할 수 있습니다.
-                  </p>
-                  <Button className="mt-4 w-full" onClick={handleApplyDraft}>
-                    초안 바로 반영
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
+                    취소
+                  </Button>
+                  <Button onClick={handleApplyTemplate}>
+                    <Sparkles className="w-4 h-4" />
+                    초안 생성
                   </Button>
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="space-y-3">
-              {templates.map((template) => {
-                const isSelected = template.id === selectedTemplate?.id;
-                return (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => setSelectedTemplateId(template.id)}
-                    className={cn(
-                      'w-full rounded-[24px] border p-5 text-left transition-all',
-                      isSelected
-                        ? 'border-[rgba(15,118,110,0.34)] bg-[rgba(15,118,110,0.08)] shadow-[0_24px_50px_-34px_rgba(15,118,110,0.5)]'
-                        : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                          {template.name}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                          {template.description}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <span className="rounded-full bg-[rgba(15,118,110,0.14)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-primary)]">
-                          선택됨
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--text-secondary)]">
-                      <span className="surface-badge">{template.audience}</span>
-                      <span className="surface-badge">Phase {template.phases}</span>
-                      <span className="surface-badge">Tasks {template.taskCount}</span>
-                    </div>
-                  </button>
-                );
-              })}
             </div>
-
-            <div className="rounded-[28px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
-              <p className="page-kicker">Template Summary</p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                {selectedTemplate?.name || '템플릿 선택'}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-                {selectedTemplate?.description || '적용할 템플릿을 선택하세요.'}
-              </p>
-
-              <div className="mt-5 grid gap-3">
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-                    대상 프로젝트
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
-                    {currentProject?.name || '현재 프로젝트'}
-                  </p>
-                </div>
-
-                <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-                    시작일 기준
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
-                    {currentProject?.startDate || '프로젝트 시작일 미설정'}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[color:var(--text-secondary)]">
-                    시작일이 있으면 leaf task에 계획 일정을 순차 배치합니다.
-                  </p>
-                </div>
-
-                <div className="rounded-[20px] border border-[rgba(216,139,68,0.22)] bg-[rgba(216,139,68,0.08)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-warning)]">
-                    적용 방식
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-primary)]">
-                    현재 WBS 작업을 템플릿 초안으로 교체합니다. 적용 후에는 기존 편집기에서 바로 수정할 수 있습니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
-                  취소
-                </Button>
-                <Button onClick={handleApplyTemplate} disabled={!selectedTemplate}>
-                  <Sparkles className="w-4 h-4" />
-                  템플릿 적용
-                </Button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </Modal>
 

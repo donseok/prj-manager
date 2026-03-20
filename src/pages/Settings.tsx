@@ -99,6 +99,13 @@ export default function Settings() {
       await deleteProjectById(projectId);
       deleteProject(projectId);
       navigate('/projects');
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      showFeedback({
+        tone: 'error',
+        title: '프로젝트 삭제 실패',
+        message: error instanceof Error ? error.message : '프로젝트를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      });
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);

@@ -1,5 +1,11 @@
 import type { Project, ProjectMember, Task } from '../types';
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { storage } from './utils';
+
+// ─── localStorage keys ──────────────────────────────────────
+function lsProjectsKey() { return 'dk_projects'; }
+function lsMembersKey(pid: string) { return `dk_members_${pid}`; }
+function lsTasksKey(pid: string) { return `dk_tasks_${pid}`; }
 
 // ─── Row interfaces (DB snake_case) ─────────────────────────
 
@@ -59,6 +65,7 @@ export async function loadInitialProjects(): Promise<Project[]> {
 }
 
 export async function loadProjects(): Promise<Project[]> {
+  if (!isSupabaseConfigured) return storage.get<Project[]>(lsProjectsKey(), []);
   const { data, error } = await supabase
     .from('projects')
     .select('*')
@@ -74,35 +81,80 @@ export async function loadProjects(): Promise<Project[]> {
 }
 
 export async function upsertProject(project: Project): Promise<Project> {
-  const row = toProjectRow(project);
-  console.log('[dataRepository] upsertProject row:', JSON.stringify(row));
-
-  const { data, error } = await supabase
-    .from('projects')
-    .upsert(row, { onConflict: 'id' })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Failed to save project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
-    throw new Error(`프로젝트 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  if (!isSupabaseConfigured) {
+    const projects = storage.get<Project[]>(lsProjectsKey(), []);
+    const idx = projects.findIndex((p) => p.id === project.id);
+    if (idx >= 0) projects[idx] = project; else projects.unshift(project);
+    storage.set(lsProjectsKey(), projects);
+    return project;
   }
+  const row = toProjectRow(project);
 
-  return mapProjectRow(data as ProjectRow);
+  // 기존 프로젝트 존재 여부 확인 후 insert/update 분리
+  // upsert는 RLS INSERT 정책을 먼저 체크하므로, owner가 아닌 admin 멤버가 수정 시 실패할 수 있음
+  const { count } = await supabase
+    .from('projects')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', project.id);
+
+  if (count && count > 0) {
+    // 기존 프로젝트 수정 → UPDATE (RLS: owner 또는 admin 멤버 허용)
+    const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
+    const { data, error } = await supabase
+      .from('projects')
+      .update(updateFields)
+      .eq('id', project.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to update project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+      throw new Error(`프로젝트 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+    }
+
+    return mapProjectRow(data as ProjectRow);
+  } else {
+    // 새 프로젝트 생성 → INSERT (RLS: owner만 허용)
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to insert project:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+      throw new Error(`프로젝트 생성 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+    }
+
+    return mapProjectRow(data as ProjectRow);
+  }
 }
 
 export async function deleteProjectById(projectId: string) {
-  const { error } = await supabase.from('projects').delete().eq('id', projectId);
+  if (!isSupabaseConfigured) {
+    const projects = storage.get<Project[]>(lsProjectsKey(), []);
+    storage.set(lsProjectsKey(), projects.filter((p) => p.id !== projectId));
+    return;
+  }
+  const { error, count } = await supabase
+    .from('projects')
+    .delete({ count: 'exact' })
+    .eq('id', projectId);
 
   if (error) {
     console.error('Failed to delete project:', error);
     throw new Error(`프로젝트 삭제 실패: ${error.message}`);
+  }
+
+  if (count === 0) {
+    throw new Error('프로젝트 삭제 권한이 없거나 프로젝트를 찾을 수 없습니다.');
   }
 }
 
 // ─── Project Members ─────────────────────────────────────────
 
 export async function loadProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  if (!isSupabaseConfigured) return storage.get<ProjectMember[]>(lsMembersKey(projectId), []);
   const { data, error } = await supabase
     .from('project_members')
     .select('*')
@@ -118,6 +170,7 @@ export async function loadProjectMembers(projectId: string): Promise<ProjectMemb
 }
 
 export async function syncProjectMembers(projectId: string, members: ProjectMember[]) {
+  if (!isSupabaseConfigured) { storage.set(lsMembersKey(projectId), members); return; }
   const rows = members.map(toProjectMemberRow);
   const currentIds = new Set(rows.map((row) => row.id));
 
@@ -163,6 +216,7 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
 // ─── Tasks ───────────────────────────────────────────────────
 
 export async function loadProjectTasks(projectId: string): Promise<Task[]> {
+  if (!isSupabaseConfigured) return storage.get<Task[]>(lsTasksKey(projectId), []);
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
@@ -179,6 +233,7 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
 }
 
 export async function syncProjectTasks(projectId: string, tasks: Task[]) {
+  if (!isSupabaseConfigured) { storage.set(lsTasksKey(projectId), tasks); return; }
   const rows = tasks
     .map(toTaskRow)
     .sort((a, b) => a.level - b.level || a.order_index - b.order_index);
