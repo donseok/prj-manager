@@ -12,8 +12,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Maximize2,
+  CalendarClock,
+  Users,
 } from 'lucide-react';
-import { differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart, { HEADER_HEIGHT } from '../components/wbs/GanttChart';
@@ -154,6 +156,53 @@ export default function Gantt() {
   const delayedCount = tasks.filter((task) => getDelayDays(task) > 0).length;
   const activeCount = tasks.filter((task) => task.status !== 'completed').length;
 
+  // 마감 임박 작업 (leaf tasks only, sorted by planEnd ascending)
+  const upcomingDeadlines = useMemo(() => {
+    const today = new Date();
+    const leafTasks = tasks.filter((t) => !tasks.some((c) => c.parentId === t.id));
+    return leafTasks
+      .filter((t) => t.status !== 'completed' && t.planEnd)
+      .sort((a, b) => {
+        const da = parseISO(a.planEnd!);
+        const db = parseISO(b.planEnd!);
+        return da.getTime() - db.getTime();
+      })
+      .slice(0, 5)
+      .map((t) => {
+        const endDate = parseISO(t.planEnd!);
+        const daysLeft = differenceInCalendarDays(endDate, today);
+        return { ...t, daysLeft };
+      });
+  }, [tasks]);
+
+  // 담당자별 워크로드
+  const assigneeWorkload = useMemo(() => {
+    const leafTasks = tasks.filter((t) => !tasks.some((c) => c.parentId === t.id));
+    const activeTasks = leafTasks.filter((t) => t.status !== 'completed');
+    const countMap = new Map<string, { name: string; total: number; delayed: number }>();
+
+    for (const t of activeTasks) {
+      const key = t.assigneeId || '__unassigned__';
+      const entry = countMap.get(key) || {
+        name: t.assigneeId
+          ? members.find((m) => m.id === t.assigneeId)?.name || '미지정'
+          : '미배정',
+        total: 0,
+        delayed: 0,
+      };
+      entry.total += 1;
+      if (getDelayDays(t) > 0) entry.delayed += 1;
+      countMap.set(key, entry);
+    }
+
+    return [...countMap.values()].sort((a, b) => b.total - a.total).slice(0, 6);
+  }, [tasks, members]);
+
+  const maxWorkload = useMemo(
+    () => Math.max(...assigneeWorkload.map((a) => a.total), 1),
+    [assigneeWorkload]
+  );
+
   const saveTasks = useCallback(
     async (data: Task[]) => {
       if (!currentProject) return;
@@ -286,6 +335,80 @@ export default function Gantt() {
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{delayedCount}</p>
                 <p className="mt-1 text-sm text-white/88">즉시 확인이 필요한 일정</p>
+              </div>
+            </div>
+
+            {/* 마감 임박 작업 + 담당자별 워크로드 */}
+            <div className="mt-6 grid gap-5 lg:grid-cols-2">
+              {/* 마감 임박 작업 */}
+              <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-white/70" />
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">마감 임박</p>
+                </div>
+                {upcomingDeadlines.length > 0 ? (
+                  <ul className="mt-4 space-y-2.5">
+                    {upcomingDeadlines.map((t) => (
+                      <li
+                        key={t.id}
+                        className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-white/[0.06]"
+                        onClick={() => setSelectedTaskId(t.id)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-white/95">{t.name}</p>
+                          <p className="mt-0.5 text-xs text-white/55">{formatDate(t.planEnd, 'M/d (EEE)')}</p>
+                        </div>
+                        <span className={cn(
+                          'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                          t.daysLeft < 0
+                            ? 'bg-red-500/20 text-red-300'
+                            : t.daysLeft <= 3
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'bg-white/10 text-white/70'
+                        )}>
+                          {t.daysLeft < 0 ? `${Math.abs(t.daysLeft)}일 초과` : t.daysLeft === 0 ? '오늘' : `D-${t.daysLeft}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-white/50">예정된 마감 작업이 없습니다.</p>
+                )}
+              </div>
+
+              {/* 담당자별 워크로드 */}
+              <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-white/70" />
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">담당자별 워크로드</p>
+                </div>
+                {assigneeWorkload.length > 0 ? (
+                  <ul className="mt-4 space-y-3">
+                    {assigneeWorkload.map((a, i) => (
+                      <li key={i}>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="truncate text-white/90">{a.name}</span>
+                          <span className="ml-2 shrink-0 text-xs text-white/60">
+                            {a.total}건{a.delayed > 0 && <span className="ml-1 text-red-400">({a.delayed} 지연)</span>}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${(a.total / maxWorkload) * 100}%`,
+                              background: a.delayed > 0
+                                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                                : 'linear-gradient(90deg, #1fa37a, #34c997)',
+                            }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-white/50">배정된 작업이 없습니다.</p>
+                )}
               </div>
             </div>
           </div>
