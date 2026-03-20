@@ -40,8 +40,8 @@ export { HEADER_HEIGHT };
 
 export default function GanttChart({
   tasks,
-  // allTasks reserved for future use (e.g., cross-filter dependency resolution)
-  allTasks: _allTasks = [],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  allTasks: _allTasks,
   selectedTaskId = null,
   startDate: propStartDate,
   weeksToShow = 12,
