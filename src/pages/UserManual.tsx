@@ -177,10 +177,21 @@ export default function UserManual() {
       icon: <FolderOpen className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
+          <SectionCard title="프로젝트 목록">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">프로젝트 목록 페이지에서 등록된 프로젝트를 탐색하고 관리할 수 있습니다:</p>
+            <InfoTable headers={['기능', '설명']} rows={[
+              ['상태 필터 탭', '전체 / 준비 / 진행 / 완료 탭으로 프로젝트를 상태별 필터링 (각 탭에 건수 표시)'],
+              ['검색', '프로젝트 이름으로 실시간 검색'],
+              ['컨텍스트 메뉴', '각 프로젝트 카드의 ⋮ 버튼으로 상태 변경(관리자) 및 삭제 가능'],
+            ]} />
+          </SectionCard>
           <SectionCard title="프로젝트 생성">
             <StepList steps={[
-              '홈 화면의 새 프로젝트 시작 버튼 또는 사이드바의 + 버튼을 클릭합니다.',
-              '프로젝트명(필수), 설명, 시작일/종료일을 입력합니다.',
+              '홈 화면의 새 프로젝트 시작 버튼 또는 프로젝트 목록의 새 프로젝트 버튼을 클릭합니다.',
+              '프로젝트명(필수), 설명을 입력합니다.',
+              '시작 방식을 선택합니다: 빈 프로젝트(기본) 또는 기존 프로젝트 복제.',
+              '복제를 선택하면 원본 프로젝트의 WBS와 멤버 구성이 복사되고, 진행 상태와 실적은 초기화됩니다.',
+              '시작일/종료일을 입력한 후 생성 버튼을 클릭합니다.',
               '생성 후 자동으로 프로젝트 대시보드로 이동합니다.',
             ]} />
           </SectionCard>
@@ -220,11 +231,14 @@ export default function UserManual() {
               ['지연', '계획 종료일을 초과한 작업 수'],
               ['실적 공정율', '전체 프로젝트의 실적 진행률 (프로그레스 바 표시)'],
               ['계획 공정율', '전체 프로젝트의 계획 진행률'],
+              ['진행중 작업', '현재 진행중 상태인 리프 작업 수'],
+              ['완료 작업', '완료된 리프 작업 수'],
+              ['리스크 작업', '지연된 작업 수 (지연 카드)'],
             ]} />
           </SectionCard>
           <SectionCard title="차트 섹션">
             <InfoTable headers={['차트', '설명']} rows={[
-              ['상태별 분포', '대기/진행중/완료/보류 작업 비율 (파이/바 차트)'],
+              ['상태별 분포', '대기/진행중/완료/보류 각 상태의 작업 수와 비율 (프로그레스 바 카드)'],
               ['담당자별 진행률', '각 담당자의 작업 완료/잔여 현황 (수평 막대 그래프)'],
               ['Phase별 진행률', '단계별 계획 vs 실적 공정율 비교 (막대 그래프)'],
               ['프로젝트 일정 요약', '시작일, 종료일, 일정 경과율, 총/경과/잔여일'],
@@ -275,7 +289,7 @@ export default function UserManual() {
             <InfoTable headers={['컬럼', '편집 방식']} rows={[
               ['작업명', '클릭 후 텍스트 입력 → Enter로 확정'],
               ['산출물', '클릭 후 텍스트 입력'],
-              ['담당자', '드롭다운에서 멤버 선택'],
+              ['담당자', '드롭다운에서 멤버 선택 (목록에 없으면 새 멤버를 바로 생성 가능)'],
               ['가중치', '클릭 후 숫자 입력 (소수점 지원)'],
               ['계획/실적 일정', '날짜 선택기로 입력'],
               ['계획/실적 공정율', '클릭 후 0~100 숫자 입력'],
@@ -300,6 +314,13 @@ export default function UserManual() {
           <SectionCard title="도구 모음">
             <InfoTable headers={['기능', '설명']} rows={[
               ['Phase 추가', '최상위 Phase 작업 추가'],
+              ['Activity 추가', '마지막 Phase 하위에 Activity 추가 (Phase 존재 시 활성)'],
+              ['초안 생성', '템플릿 기반 WBS 초안을 자동 생성 (아래 별도 설명 참조)'],
+              ['일정계산', '작업 기간과 선후행 관계를 기반으로 계획 일정을 자동 산출'],
+              ['선후행', '같은 상위 작업 내 리프 작업들을 순차적으로 연결'],
+              ['자동채움', '산출물 제안, 담당자 라운드로빈 배정, 가중치 자동 계산을 한 번에 실행'],
+              ['실적 입력', '리프 작업의 실적 공정율을 일괄 입력하는 빠른 입력 화면'],
+              ['주간보고', '주간 현황 보기 (아래 별도 설명 참조)'],
               ['전체 펼침 / 전체 접기', '모든 작업 트리 확장/축소'],
               ['저장', '수동 저장 (Ctrl+S)'],
               ['되돌리기 / 다시하기', 'Ctrl+Z / Ctrl+Y (최대 50단계)'],
@@ -308,19 +329,15 @@ export default function UserManual() {
             ]} />
           </SectionCard>
           <SectionCard title="WBS 초안 생성">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">WBS가 비어 있을 때 표시되는 빈 상태 화면에서 WBS 초안을 자동 생성할 수 있습니다:</p>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">도구 모음의 초안 생성 버튼을 클릭하면 템플릿 기반으로 WBS를 자동 생성할 수 있습니다:</p>
             <InfoTable headers={['기능', '설명']} rows={[
               ['템플릿 선택', '4종 기본 템플릿 (철강 프로젝트, 웹 런칭, 모바일 앱, 사내 시스템) 중 선택'],
-              ['AI 스마트 매칭', '프로젝트 설명을 입력하면 가장 적합한 템플릿을 자동 추천'],
-              ['템플릿 미리보기', '선택한 템플릿의 Phase 수, 작업 수를 사전 확인'],
+              ['스마트 매칭', '프로젝트 설명을 입력하면 가장 적합한 템플릿을 자동 추천'],
+              ['템플릿 미리보기', '선택한 템플릿의 Phase 수, 작업 수, 대상 분야를 사전 확인'],
             ]} />
-          </SectionCard>
-          <SectionCard title="자동화 도구">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['자동채움', '산출물 제안, 담당자 라운드로빈 배정, 가중치 자동 계산을 한 번에 실행'],
-              ['일정 자동 계산', '작업 기간과 선후행 관계를 기반으로 계획 일정을 자동 산출'],
-              ['선후행 연결', '같은 상위 작업 내 리프 작업들을 순차적으로 연결'],
-            ]} />
+            <div className="mt-4">
+              <Tip type="warning">초안 생성 시 기존 작업이 있으면 덮어쓰여집니다. 중요한 데이터가 있는 경우 먼저 엑셀로 내보내기하세요.</Tip>
+            </div>
           </SectionCard>
           <SectionCard title="주간보고">
             <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">WBS 도구 모음의 주간보고 버튼을 클릭하면 주간 현황을 확인할 수 있습니다:</p>
@@ -347,6 +364,8 @@ export default function UserManual() {
           <SectionCard title="화면 구성">
             <InfoTable headers={['영역', '설명']} rows={[
               ['상단 히어로', '표시 작업 수, 오픈(미완료) 작업 수, 지연 작업 수'],
+              ['마감 임박', '종료일이 가장 가까운 미완료 작업 5개 목록 (초과 시 빨간색, 임박 시 주황색 표시)'],
+              ['담당자별 워크로드', '각 담당자의 활성 작업 수와 지연 작업 수를 상위 6명까지 표시'],
               ['작업 포커스 카드', '선택한 작업의 상세 정보 (기간, 공정율, 지연 등)'],
               ['필터/검색 바', '작업 검색, 상태 필터, 뷰 옵션 설정'],
               ['간트 차트', '좌측 작업 목록 + 우측 타임라인 바'],
@@ -380,6 +399,13 @@ export default function UserManual() {
               ['보기 범위', '4주 / 8주 / 12주 중 선택'],
               ['행 밀도', 'Compact (조밀) / Comfortable (여유)'],
               ['주말 강조', '타임라인에서 주말 영역 강조 On/Off'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="타임라인 내비게이션">
+            <InfoTable headers={['버튼', '설명']} rows={[
+              ['← / →', '이전/다음 기간으로 타임라인 이동'],
+              ['오늘', '오늘 날짜로 타임라인 이동'],
+              ['일정에 맞춤', '모든 작업 일정 범위에 맞게 자동 이동'],
             ]} />
           </SectionCard>
           <SectionCard title="차트 범례">
@@ -473,8 +499,8 @@ export default function UserManual() {
               <Tip type="warning">엑셀 가져오기 시 기존 작업이 있으면 덮어쓰기 확인 대화상자가 표시됩니다. 중요한 데이터는 미리 엑셀로 내보내기하여 백업하세요.</Tip>
             </div>
           </SectionCard>
-          <SectionCard title="위험 영역 (소유자 전용)">
-            <Tip type="warning">프로젝트 삭제 시 모든 관련 데이터(작업, 멤버 등)가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</Tip>
+          <SectionCard title="위험 영역 (삭제 권한 필요)">
+            <Tip type="warning">프로젝트 삭제 시 모든 관련 데이터(작업, 멤버 등)가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 프로젝트 소유자만 삭제할 수 있습니다.</Tip>
           </SectionCard>
         </div>
       ),
@@ -487,6 +513,15 @@ export default function UserManual() {
         <div className="space-y-6">
           <SectionCard>
             <Tip type="warning">이 메뉴는 시스템 관리자(admin) 권한 사용자에게만 표시됩니다. 사이드바 또는 헤더 사용자 메뉴에서 접근합니다.</Tip>
+          </SectionCard>
+          <SectionCard title="요약 카드">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">페이지 상단에 4개의 요약 카드가 표시됩니다:</p>
+            <InfoTable headers={['카드', '설명']} rows={[
+              ['전체 사용자', '시스템에 등록된 총 사용자 수'],
+              ['승인 대기', '가입 후 관리자 승인을 기다리는 사용자 수'],
+              ['활성', '정상적으로 사용 중인 사용자 수'],
+              ['정지', '사용이 정지된 사용자 수'],
+            ]} />
           </SectionCard>
           <SectionCard title="사용자 목록">
             <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">시스템에 가입한 모든 사용자를 관리할 수 있습니다. 이름이나 이메일로 검색하고, 탭으로 상태별 필터링이 가능합니다.</p>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Plus,
@@ -87,12 +87,21 @@ export default function WBS() {
   const [isQuickProgressOpen, setIsQuickProgressOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: Task } | null>(null);
   const [copiedTask, setCopiedTask] = useState<Task | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth
+  );
   const dragOverCounterRef = useRef(0);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const popupScrollRef = useRef<HTMLDivElement>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const templates = listTaskTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDragTaskId(taskId);
@@ -950,6 +959,230 @@ export default function WBS() {
     }
   };
 
+  const getResponsiveWidth = useCallback((basis: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, Math.round(basis)));
+  }, []);
+
+  const getWbsLayout = useCallback((fullscreen: boolean) => {
+    const workspaceWidth = Math.max(
+      fullscreen ? viewportWidth - 120 : viewportWidth - 460,
+      fullscreen ? 1280 : 1024
+    );
+
+    const columns = [
+      { key: 'handle', label: '', width: 72, sticky: true, className: 'text-center' },
+      {
+        key: 'level',
+        label: '구분',
+        width: getResponsiveWidth(workspaceWidth * 0.06, 100, fullscreen ? 132 : 112),
+        sticky: true,
+        className: 'text-center',
+      },
+      {
+        key: 'name',
+        label: '작업명',
+        width: getResponsiveWidth(workspaceWidth * 0.22, 260, fullscreen ? 520 : 420),
+        sticky: true,
+        className: 'text-center',
+      },
+      {
+        key: 'output',
+        label: '산출물',
+        width: getResponsiveWidth(workspaceWidth * 0.12, 140, fullscreen ? 260 : 210),
+        sticky: true,
+        className: 'text-center',
+      },
+      {
+        key: 'assignee',
+        label: '담당자',
+        width: getResponsiveWidth(workspaceWidth * 0.095, 120, fullscreen ? 190 : 160),
+        sticky: true,
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'weight',
+        label: '가중치',
+        width: getResponsiveWidth(workspaceWidth * 0.055, 88, fullscreen ? 120 : 104),
+        sticky: true,
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'planStart',
+        label: '계획시작',
+        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'planEnd',
+        label: '계획종료',
+        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'planProgress',
+        label: '계획공정율',
+        width: getResponsiveWidth(workspaceWidth * 0.078, 108, fullscreen ? 150 : 132),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'actualStart',
+        label: '실적시작',
+        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'actualEnd',
+        label: '실적종료',
+        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'actualProgress',
+        label: '실적공정율',
+        width: getResponsiveWidth(workspaceWidth * 0.078, 108, fullscreen ? 150 : 132),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'status',
+        label: '상태',
+        width: getResponsiveWidth(workspaceWidth * 0.07, 104, fullscreen ? 150 : 128),
+        className: 'text-center whitespace-nowrap',
+      },
+      {
+        key: 'actions',
+        label: '액션',
+        width: getResponsiveWidth(workspaceWidth * 0.09, 120, fullscreen ? 180 : 152),
+        className: 'text-center',
+      },
+    ];
+
+    const stickyLefts = columns.reduce<number[]>((acc, _column, index) => {
+      const previous = index === 0 ? 0 : acc[index - 1] + columns[index - 1].width;
+      acc.push(previous);
+      return acc;
+    }, []);
+
+    const tableWidth = columns.reduce((total, column) => total + column.width, 0);
+
+    return { columns, stickyLefts, tableWidth };
+  }, [getResponsiveWidth, viewportWidth]);
+
+  const baseWbsLayout = useMemo(() => getWbsLayout(false), [getWbsLayout]);
+  const fullscreenWbsLayout = useMemo(() => getWbsLayout(true), [getWbsLayout]);
+
+  const renderWbsTable = (layout: ReturnType<typeof getWbsLayout>) => (
+    <table className="app-table wbs-fixed-table" style={{ width: layout.tableWidth }}>
+      <thead>
+        <tr>
+          {layout.columns.map((column, index) => (
+            <th
+              key={column.key}
+              className={cn(column.className, column.sticky && `sticky-col sticky-col-${index}`)}
+              style={{
+                width: column.width,
+                minWidth: column.width,
+                ...(column.sticky ? { left: layout.stickyLefts[index] } : {}),
+              }}
+            >
+              {column.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {flatTasks.map((task, idx) => {
+          const nextTask = flatTasks[idx + 1];
+          const isLastChildOfPhase = task.level >= 2 && (!nextTask || nextTask.level <= 1);
+          const isLastChildOfActivity = task.level >= 3 && (!nextTask || nextTask.level <= 2);
+          const addLabel = isLastChildOfActivity ? 'Task' : isLastChildOfPhase ? 'Activity' : null;
+          const addParentId = isLastChildOfActivity
+            ? task.parentId || undefined
+            : isLastChildOfPhase
+              ? tasks.find((t) => t.id === task.parentId)?.parentId || undefined
+              : undefined;
+          const addLevel = isLastChildOfActivity ? 3 : isLastChildOfPhase ? 2 : 0;
+
+          return (
+            <React.Fragment key={task.id}>
+              <tr
+                data-testid={`wbs-row-${task.id}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, task.id)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, task)}
+                onDragLeave={() => {
+                  if (dropTargetId === task.id) {
+                    setDropTargetId(null);
+                    setDropPosition(null);
+                  }
+                }}
+                onDrop={(e) => handleDrop(e, task)}
+                onClick={() => useTaskStore.getState().selectTask(task.id)}
+                onContextMenu={(e) => handleContextMenu(e, task)}
+                className={cn(
+                  task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
+                  dragTaskId === task.id && 'opacity-40',
+                  dropTargetId === task.id && dropPosition === 'before' && 'border-t-2 !border-t-[var(--accent-primary)]',
+                  dropTargetId === task.id && dropPosition === 'after' && 'border-b-2 !border-b-[var(--accent-primary)]',
+                  dropTargetId === task.id && dropPosition === 'child' && 'bg-[rgba(15,118,110,0.08)]',
+                )}
+              >
+                {layout.columns.map((column, index) => {
+                  const cellClassName = cn(
+                    column.key !== 'actions' && 'border-r border-[var(--border-color)]',
+                    column.sticky && `sticky-col sticky-col-${index}`,
+                  );
+                  const stickyStyle = column.sticky ? { left: layout.stickyLefts[index] } : undefined;
+
+                  if (column.key === 'handle') {
+                    return (
+                      <td key={column.key} className={cellClassName} style={stickyStyle}>
+                        <div className="flex items-center">
+                          <span className="mr-0.5 cursor-grab text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] active:cursor-grabbing">
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </span>
+                          {renderCell(task, 'expand')}
+                        </div>
+                      </td>
+                    );
+                  }
+
+                  if (column.key === 'name') {
+                    return (
+                      <td key={column.key} className={cellClassName} style={stickyStyle}>
+                        <div className="flex items-center">{renderCell(task, column.key)}</div>
+                      </td>
+                    );
+                  }
+
+                  return (
+                    <td key={column.key} className={cellClassName} style={stickyStyle}>
+                      {renderCell(task, column.key)}
+                    </td>
+                  );
+                })}
+              </tr>
+              {addLabel && (
+                <tr className="group/add">
+                  <td colSpan={layout.columns.length} className="!p-0">
+                    <button
+                      onClick={() => handleAddTask(addParentId, addLevel)}
+                      className="flex w-full items-center gap-1.5 py-1 text-xs text-[color:var(--text-muted)] opacity-0 transition-opacity group-hover/add:opacity-100 hover:text-[color:var(--accent-primary)]"
+                      style={{ paddingLeft: `${addLevel * 24 + 12}px` }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      {addLabel} 추가
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
   return (
     <div className="flex h-full flex-col gap-6">
       {feedback && (
@@ -1102,7 +1335,9 @@ export default function WBS() {
           <Maximize2 className="h-4 w-4" />
         </button>
         <div ref={tableScrollRef} className="h-full overflow-auto scrollbar-visible">
-          <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
+          {renderWbsTable(baseWbsLayout)}
+          {false && (
+          <table className="hidden app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
                 <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
@@ -1229,6 +1464,7 @@ export default function WBS() {
               })}
             </tbody>
           </table>
+          )}
 
           {flatTasks.length === 0 && (
             <div className="empty-state px-6 py-12">
@@ -1244,7 +1480,9 @@ export default function WBS() {
 
       <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="WBS 전체 보기" size="fullscreen">
         <div ref={popupScrollRef} className="h-full overflow-auto scrollbar-visible">
-          <table className="app-table wbs-fixed-table" style={{ width: 1732 }}>
+          {renderWbsTable(fullscreenWbsLayout)}
+          {false && (
+          <table className="hidden app-table wbs-fixed-table" style={{ width: 1732 }}>
             <thead>
               <tr>
                 <th className="w-[72px] text-center sticky-col sticky-col-0"></th>
@@ -1296,6 +1534,7 @@ export default function WBS() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </Modal>
 

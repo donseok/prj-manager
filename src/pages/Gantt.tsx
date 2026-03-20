@@ -62,6 +62,9 @@ export default function Gantt() {
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth
+  );
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { isReadOnly } = useProjectPermission();
 
@@ -70,6 +73,47 @@ export default function Gantt() {
   const [ganttToolbarHeight, setGanttToolbarHeight] = useState(52);
   const [ganttScrollTop, setGanttScrollTop] = useState<number | undefined>(undefined);
   const rowHeight = density === 'compact' ? 34 : 42;
+
+  useEffect(() => {
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const getResponsiveWidth = useCallback((basis: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, Math.round(basis)));
+  }, []);
+
+  const mainLeftPanelWidth = useMemo(
+    () => getResponsiveWidth(viewportWidth * 0.22, 300, 440),
+    [getResponsiveWidth, viewportWidth]
+  );
+  const fullscreenLeftPanelWidth = useMemo(
+    () => getResponsiveWidth(viewportWidth * 0.18, 280, 380),
+    [getResponsiveWidth, viewportWidth]
+  );
+  const fullscreenEditorWidth = useMemo(
+    () => getResponsiveWidth(viewportWidth * 0.2, 300, 420),
+    [getResponsiveWidth, viewportWidth]
+  );
+  const mainDayWidth = useMemo(
+    () =>
+      getResponsiveWidth(
+        viewportWidth * (density === 'compact' ? 0.02 : 0.024),
+        density === 'compact' ? 32 : 44,
+        density === 'compact' ? 42 : 54
+      ),
+    [density, getResponsiveWidth, viewportWidth]
+  );
+  const fullscreenDayWidth = useMemo(
+    () =>
+      getResponsiveWidth(
+        viewportWidth * (density === 'compact' ? 0.023 : 0.028),
+        density === 'compact' ? 36 : 48,
+        density === 'compact' ? 50 : 64
+      ),
+    [density, getResponsiveWidth, viewportWidth]
+  );
 
   const taskMap = useMemo(
     () => Object.fromEntries(tasks.map((task) => [task.id, task])),
@@ -811,7 +855,10 @@ export default function Gantt() {
           <Maximize2 className="h-4 w-4" />
         </button>
         <div className="flex min-h-0 flex-1 gap-0 overflow-hidden rounded-[28px]">
-          <div className="flex w-[360px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+          <div
+            className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+            style={{ width: mainLeftPanelWidth }}
+          >
             <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
               {/* Combined header matching GanttChart toolbar + date header */}
               <div
@@ -896,7 +943,7 @@ export default function Gantt() {
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
               weeksToShow={weeksToShow}
-              dayWidth={density === 'compact' ? 32 : 44}
+              dayWidth={mainDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
               onVerticalScroll={handleGanttScroll}
@@ -929,7 +976,10 @@ export default function Gantt() {
       <Modal isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="간트 차트 전체 보기" size="fullscreen">
         <div className="flex h-full w-full overflow-hidden">
           {/* Fullscreen: Left task list */}
-          <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+          <div
+            className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+            style={{ width: fullscreenLeftPanelWidth }}
+          >
             <div className="border-b border-[var(--border-color)] px-4 py-3">
               <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
               <span className="ml-2 text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개</span>
@@ -968,7 +1018,7 @@ export default function Gantt() {
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
               weeksToShow={weeksToShow}
-              dayWidth={density === 'compact' ? 32 : 44}
+              dayWidth={fullscreenDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
             />
@@ -976,7 +1026,10 @@ export default function Gantt() {
 
           {/* Fullscreen: Quick edit panel */}
           {selectedTask && (
-            <div className="flex w-[300px] flex-shrink-0 flex-col border-l border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
+            <div
+              className="flex flex-shrink-0 flex-col border-l border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+              style={{ width: fullscreenEditorWidth }}
+            >
               <div className="border-b border-[var(--border-color)] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">빠른 편집</p>
                 <p className="mt-1 truncate text-sm font-semibold text-[color:var(--text-primary)]">{selectedTask.name || '이름 없음'}</p>
