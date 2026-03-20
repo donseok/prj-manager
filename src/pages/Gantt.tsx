@@ -24,6 +24,7 @@ import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { exportGanttWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
+import { isSyncableField, syncTaskField } from '../lib/taskFieldSync';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
@@ -209,7 +210,29 @@ export default function Gantt() {
   };
 
   const handleTaskFieldChange = (taskId: string, field: keyof Task, value: Task[keyof Task]) => {
+    const task = tasks.find((item) => item.id === taskId);
+    const hasChildren = task ? tasks.some((item) => item.parentId === taskId) : false;
+
+    if (task && !hasChildren && isSyncableField(field)) {
+      const { updates, changed } = syncTaskField(
+        { ...task, [field]: value },
+        field,
+        value
+      );
+
+      if (changed) {
+        updateTask(taskId, { [field]: value, ...updates, updatedAt: new Date().toISOString() });
+        return;
+      }
+    }
+
     updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() });
+  };
+
+  const handleManualSave = () => {
+    requestAnimationFrame(() => {
+      void saveNow(useTaskStore.getState().tasks);
+    });
   };
 
   return (
@@ -368,7 +391,7 @@ export default function Gantt() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => void saveNow()}
+                      onClick={handleManualSave}
                       disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
                       data-testid="gantt-save-button"
                     >
@@ -597,7 +620,7 @@ export default function Gantt() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void saveNow()}
+              onClick={handleManualSave}
               disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

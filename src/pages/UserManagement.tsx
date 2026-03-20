@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock } from 'lucide-react';
+import FeedbackNotice from '../components/common/FeedbackNotice';
+import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAllProfiles, updateUserSystemRole, updateAccountStatus } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import type { AccountStatus, SystemRole } from '../types';
@@ -32,6 +34,7 @@ const STATUS_BADGE: Record<AccountStatus, { label: string; className: string }> 
 
 export default function UserManagement() {
   const { user } = useAuthStore();
+  const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -76,6 +79,12 @@ export default function UserManagement() {
       setProfiles((prev) =>
         prev.map((p) => (p.id === userId ? { ...p, systemRole: newRole } : p))
       );
+    } else {
+      showFeedback({
+        tone: 'error',
+        title: '??븷 蹂寃??ㅽ뙣',
+        message: error,
+      });
     }
     setUpdating(null);
   };
@@ -88,6 +97,12 @@ export default function UserManagement() {
       setProfiles((prev) =>
         prev.map((p) => (p.id === userId ? { ...p, accountStatus: newStatus } : p))
       );
+    } else {
+      showFeedback({
+        tone: 'error',
+        title: '怨꾩젙 ?곹깭 蹂寃??ㅽ뙣',
+        message: error,
+      });
     }
     setUpdating(null);
   };
@@ -101,6 +116,15 @@ export default function UserManagement() {
 
   return (
     <section className="app-panel p-6">
+      {feedback && (
+        <FeedbackNotice
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+          onClose={clearFeedback}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

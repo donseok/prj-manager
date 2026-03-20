@@ -189,6 +189,12 @@ export default function WBS() {
     loadedProjectId,
   });
 
+  const handleManualSave = () => {
+    requestAnimationFrame(() => {
+      void saveNow(useTaskStore.getState().tasks);
+    });
+  };
+
   // 키보드 단축키
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -204,7 +210,7 @@ export default function WBS() {
             break;
           case 's':
             e.preventDefault();
-            void saveNow();
+            handleManualSave();
             break;
         }
       }
@@ -755,7 +761,7 @@ export default function WBS() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => void saveNow()}
+                onClick={handleManualSave}
                 disabled={!currentProject || saveStatus === 'saving'}
                 data-testid="wbs-save-button"
               >

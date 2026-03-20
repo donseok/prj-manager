@@ -44,6 +44,12 @@ export default function Members() {
     delay: 500,
   });
 
+  const handleManualSave = () => {
+    requestAnimationFrame(() => {
+      void saveNow(useProjectStore.getState().members);
+    });
+  };
+
   const resetBulkForm = () => {
     setSingleRole('member');
     setSingleName('');
@@ -241,7 +247,7 @@ export default function Members() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void saveNow()}
+              onClick={handleManualSave}
               disabled={!projectId || saveStatus === 'saving'}
               data-testid="members-save-button"
             >

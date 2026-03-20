@@ -28,7 +28,7 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <div className="space-y-5 p-6">
+      <div className="space-y-5 p-6" data-testid="confirm-modal">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]">
             {icon || <AlertTriangle className="h-5 w-5" />}
@@ -36,10 +36,15 @@ export default function ConfirmModal({
           <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{description}</p>
         </div>
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading} data-testid="confirm-modal-cancel-button">
             취소
           </Button>
-          <Button variant={confirmVariant} onClick={onConfirm} isLoading={isLoading}>
+          <Button
+            variant={confirmVariant}
+            onClick={onConfirm}
+            isLoading={isLoading}
+            data-testid="confirm-modal-confirm-button"
+          >
             {confirmLabel}
           </Button>
         </div>
