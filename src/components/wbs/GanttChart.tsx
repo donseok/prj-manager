@@ -224,7 +224,9 @@ export default function GanttChart({
   };
 
   const handleGoToToday = () => {
-    setManualViewStartDate(startOfWeek(addDays(new Date(), -7), { weekStartsOn: 1 }));
+    // 오늘 날짜가 화면 왼쪽 1/4 지점에 오도록 설정
+    const offsetDays = Math.floor(weeksToShow * 7 * 0.25);
+    setManualViewStartDate(startOfWeek(addDays(new Date(), -offsetDays), { weekStartsOn: 1 }));
   };
 
   const handleFitToTasks = () => {

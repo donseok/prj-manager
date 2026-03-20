@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
-import type { SystemRole, User } from '../types';
+import type { AccountStatus, SystemRole, User } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -92,11 +92,11 @@ export async function signOutSupabase() {
 
 // ─── Profiles ────────────────────────────────────────────────
 
-export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; createdAt: string }>> {
+export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; accountStatus: AccountStatus; createdAt: string }>> {
   if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, name, system_role, created_at')
+    .select('id, email, name, system_role, account_status, created_at')
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -109,6 +109,7 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
     email: row.email || '',
     name: row.name || '',
     systemRole: row.system_role as SystemRole,
+    accountStatus: (row.account_status as AccountStatus) || 'pending',
     createdAt: row.created_at,
   }));
 }
@@ -128,19 +129,38 @@ export async function updateUserSystemRole(userId: string, role: SystemRole): Pr
   return { error: null };
 }
 
+export async function updateAccountStatus(userId: string, status: AccountStatus): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
+  const { error } = await supabase
+    .from('profiles')
+    .update({ account_status: status })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Failed to update account status:', error);
+    return { error: '계정 상태 변경에 실패했습니다.' };
+  }
+
+  return { error: null };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {
   let systemRole: SystemRole = 'user';
+  let accountStatus: AccountStatus = 'pending';
 
   const { data } = await supabase
     .from('profiles')
-    .select('system_role')
+    .select('system_role, account_status')
     .eq('id', user.id)
     .single();
 
   if (data?.system_role) {
     systemRole = data.system_role as SystemRole;
+  }
+  if (data?.account_status) {
+    accountStatus = data.account_status as AccountStatus;
   }
 
   return {
@@ -151,6 +171,7 @@ async function toAppUser(user: SupabaseAuthUser): Promise<User> {
       (user.email ? user.email.split('@')[0] : '익명 사용자'),
     avatarUrl: typeof user.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : undefined,
     systemRole,
+    accountStatus,
     createdAt: user.created_at,
   };
 }

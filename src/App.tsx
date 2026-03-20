@@ -9,6 +9,7 @@ import Gantt from './pages/Gantt';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import PendingApproval from './pages/PendingApproval';
 import UserManagement from './pages/UserManagement';
 import UserManual from './pages/UserManual';
 import { useProjectStore } from './store/projectStore';
@@ -19,7 +20,7 @@ import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib
 
 // 인증 라우트 가드
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, isPending, isSuspended } = useAuthStore();
 
   if (isLoading) {
     return (
@@ -31,6 +32,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (isPending || isSuspended) {
+    return <Navigate to="/pending" replace />;
   }
 
   return <>{children}</>;
@@ -62,6 +67,7 @@ function App() {
           email: 'local@localhost',
           name: '로컬 사용자',
           systemRole: 'admin' as const,
+          accountStatus: 'active' as const,
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
@@ -106,6 +112,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/pending" element={<PendingApproval />} />
         <Route
           path="/"
           element={

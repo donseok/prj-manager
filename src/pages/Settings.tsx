@@ -19,11 +19,13 @@ import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { getProjectVisualTone } from '../lib/projectVisuals';
+import { cn } from '../lib/utils';
 import { deleteProjectById, upsertProject } from '../lib/dataRepository';
 import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useProjectPermission } from '../hooks/useProjectPermission';
 import type { ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
@@ -43,6 +45,7 @@ export default function Settings() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isStatusModeSaving, setIsStatusModeSaving] = useState(false);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const { canEditProject, canDeleteProject, isReadOnly } = useProjectPermission();
 
   const [formData, setFormData] = useState<{
     name?: string;
@@ -300,10 +303,15 @@ export default function Settings() {
               프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button onClick={handleSave} isLoading={isSaving}>
+              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject}>
                 <Save className="w-4 h-4" />
                 저장
               </Button>
+              {isReadOnly && (
+                <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
+                  읽기 전용
+                </span>
+              )}
               {currentProject && (
                 <span
                   className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold"
@@ -364,7 +372,8 @@ export default function Settings() {
                 type="text"
                 value={resolvedFormData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                className="field-input"
+                disabled={!canEditProject}
+                className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
               />
             </div>
 
@@ -373,7 +382,8 @@ export default function Settings() {
               <textarea
                 value={resolvedFormData.description}
                 onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                className="field-textarea"
+                disabled={!canEditProject}
+                className={cn('field-textarea', !canEditProject && 'cursor-not-allowed opacity-60')}
                 rows={5}
               />
             </div>
@@ -385,7 +395,8 @@ export default function Settings() {
                   type="date"
                   value={resolvedFormData.startDate}
                   onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
-                  className="field-input"
+                  disabled={!canEditProject}
+                  className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
                 />
               </div>
               <div>
@@ -394,7 +405,8 @@ export default function Settings() {
                   type="date"
                   value={resolvedFormData.endDate}
                   onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
-                  className="field-input"
+                  disabled={!canEditProject}
+                  className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
                 />
               </div>
             </div>
@@ -405,7 +417,8 @@ export default function Settings() {
                 type="date"
                 value={resolvedFormData.baseDate}
                 onChange={(event) => setFormData({ ...formData, baseDate: event.target.value })}
-                className="field-input"
+                disabled={!canEditProject}
+                className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
               />
               <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
                 공정율 계산의 기준이 되는 날짜입니다.
@@ -413,7 +426,7 @@ export default function Settings() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSave} isLoading={isSaving}>
+              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject}>
                 <Save className="w-4 h-4" />
                 저장
               </Button>
@@ -561,7 +574,7 @@ export default function Settings() {
             </div>
           </div>
 
-          {isAdmin && (
+          {canDeleteProject && (
             <div className="rounded-[30px] border border-[rgba(203,75,95,0.16)] bg-[linear-gradient(180deg,rgba(255,244,245,0.88),rgba(255,248,244,0.72))] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)] dark:bg-[linear-gradient(180deg,rgba(49,20,28,0.66),rgba(23,16,20,0.72))]">
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
                 <AlertTriangle className="w-5 h-5" />

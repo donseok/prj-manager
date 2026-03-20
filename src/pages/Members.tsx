@@ -11,6 +11,7 @@ import { cn, generateId } from '../lib/utils';
 import { syncProjectMembers } from '../lib/dataRepository';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useProjectPermission } from '../hooks/useProjectPermission';
 import type { ProjectMember } from '../types';
 
 export default function Members() {
@@ -24,12 +25,14 @@ export default function Members() {
   const [pendingDeleteMember, setPendingDeleteMember] = useState<ProjectMember | null>(null);
 
   // 일괄 등록 상태
-  const [bulkMode, setBulkMode] = useState<'rows' | 'paste'>('rows');
-  const [bulkRows, setBulkRows] = useState<{ name: string; role: ProjectMember['role'] }[]>([{ name: '', role: 'member' }]);
+  const [bulkMode, setBulkMode] = useState<'single' | 'paste'>('single');
+  const [singleRole, setSingleRole] = useState<ProjectMember['role']>('member');
+  const [singleName, setSingleName] = useState('');
   const [pasteText, setPasteText] = useState('');
-  const lastRowRef = useRef<HTMLInputElement>(null);
+  const singleNameRef = useRef<HTMLInputElement>(null);
 
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const { canManageMembers, isReadOnly } = useProjectPermission();
 
   const saveMembers = useCallback(
     (data: ProjectMember[]) => syncProjectMembers(projectId!, data),
@@ -42,15 +45,34 @@ export default function Members() {
   });
 
   const resetBulkForm = () => {
-    setBulkRows([{ name: '', role: 'member' }]);
+    setSingleRole('member');
+    setSingleName('');
     setPasteText('');
-    setBulkMode('rows');
+    setBulkMode('single');
   };
 
-  const getValidBulkMembers = (): { name: string; role: ProjectMember['role'] }[] => {
-    if (bulkMode === 'rows') {
-      return bulkRows.filter((r) => r.name.trim());
-    }
+  const handleSingleAdd = () => {
+    const trimmed = singleName.trim();
+    if (!trimmed) return;
+
+    addMember({
+      id: generateId(),
+      projectId: projectId!,
+      name: trimmed,
+      role: singleRole,
+      createdAt: new Date().toISOString(),
+    });
+
+    showFeedback({
+      tone: 'success',
+      title: '멤버 추가 완료',
+      message: `"${trimmed}" 멤버를 추가했습니다.`,
+    });
+    setSingleName('');
+    requestAnimationFrame(() => singleNameRef.current?.focus());
+  };
+
+  const getValidPasteMembers = (): { name: string; role: ProjectMember['role'] }[] => {
     return pasteText
       .split('\n')
       .map((line) => line.trim())
@@ -58,8 +80,8 @@ export default function Members() {
       .map((name) => ({ name, role: 'member' as const }));
   };
 
-  const handleBulkAdd = () => {
-    const validMembers = getValidBulkMembers();
+  const handlePasteAdd = () => {
+    const validMembers = getValidPasteMembers();
     if (validMembers.length === 0) return;
 
     for (const { name, role } of validMembers) {
@@ -166,11 +188,18 @@ export default function Members() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
               참여자를 단순 목록이 아니라 역할과 편집 상태가 명확하게 보이는 팀 보드 형태로 정리했습니다.
             </p>
-            <div className="mt-8">
-              <Button onClick={() => setShowAddModal(true)}>
-                <Plus className="w-4 h-4" />
-                멤버 추가
-              </Button>
+            <div className="mt-8 flex items-center gap-3">
+              {canManageMembers && (
+                <Button onClick={() => setShowAddModal(true)}>
+                  <Plus className="w-4 h-4" />
+                  멤버 추가
+                </Button>
+              )}
+              {isReadOnly && (
+                <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
+                  읽기 전용
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -244,10 +273,12 @@ export default function Members() {
               )}
               {saveStatus === 'idle' && '자동 저장 준비'}
             </div>
-            <Button variant="outline" onClick={() => setShowAddModal(true)} data-testid="members-add-button">
-              <Plus className="w-4 h-4" />
-              멤버 추가
-            </Button>
+            {canManageMembers && (
+              <Button variant="outline" onClick={() => setShowAddModal(true)} data-testid="members-add-button">
+                <Plus className="w-4 h-4" />
+                멤버 추가
+              </Button>
+            )}
           </div>
         </div>
 
@@ -316,7 +347,8 @@ export default function Members() {
                   <select
                     value={member.role}
                     onChange={(event) => handleRoleChange(member.id, event.target.value as ProjectMember['role'])}
-                    className="field-select w-auto min-w-[8rem] py-2"
+                    disabled={!canManageMembers}
+                    className={cn('field-select w-auto min-w-[8rem] py-2', !canManageMembers && 'cursor-not-allowed opacity-60')}
                   >
                     {Object.entries(roleLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -326,7 +358,7 @@ export default function Members() {
                   </select>
                 </div>
 
-                {editingId !== member.id && (
+                {editingId !== member.id && canManageMembers && (
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleStartEdit(member)}
@@ -356,10 +388,12 @@ export default function Members() {
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
               첫 멤버를 추가하면 역할 관리와 이름 편집이 같은 카드 안에서 바로 가능해집니다.
             </p>
-            <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="w-4 h-4" />
-              첫 멤버 추가
-            </Button>
+            {canManageMembers && (
+              <Button onClick={() => setShowAddModal(true)}>
+                <Plus className="w-4 h-4" />
+                첫 멤버 추가
+              </Button>
+            )}
           </div>
         )}
       </section>
@@ -374,10 +408,10 @@ export default function Members() {
           {/* 모드 전환 탭 */}
           <div className="mb-5 flex rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-tertiary)] p-1">
             <button
-              onClick={() => setBulkMode('rows')}
+              onClick={() => setBulkMode('single')}
               className={cn(
                 'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
-                bulkMode === 'rows'
+                bulkMode === 'single'
                   ? 'bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-sm'
                   : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
               )}
@@ -399,65 +433,53 @@ export default function Members() {
             </button>
           </div>
 
-          {bulkMode === 'rows' ? (
-            <div className="space-y-3">
-              <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
-                {bulkRows.map((row, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      ref={idx === bulkRows.length - 1 ? lastRowRef : undefined}
-                      type="text"
-                      value={row.name}
-                      onChange={(e) => {
-                        const next = [...bulkRows];
-                        next[idx] = { ...next[idx], name: e.target.value };
-                        setBulkRows(next);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          setBulkRows([...bulkRows, { name: '', role: 'member' }]);
-                          requestAnimationFrame(() => lastRowRef.current?.focus());
-                        }
-                      }}
-                      className="field-input flex-1 py-2.5"
-                      placeholder="멤버 이름을 입력하세요"
-                      autoFocus={idx === 0}
-                    />
-                    <select
-                      value={row.role}
-                      onChange={(e) => {
-                        const next = [...bulkRows];
-                        next[idx] = { ...next[idx], role: e.target.value as ProjectMember['role'] };
-                        setBulkRows(next);
-                      }}
-                      className="field-select w-auto min-w-[6rem] py-2.5"
-                    >
-                      <option value="member">멤버</option>
-                      <option value="admin">관리자</option>
-                      <option value="viewer">뷰어</option>
-                    </select>
-                    {bulkRows.length > 1 && (
-                      <button
-                        onClick={() => setBulkRows(bulkRows.filter((_, i) => i !== idx))}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+          {bulkMode === 'single' ? (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">역할</label>
+                <select
+                  value={singleRole}
+                  onChange={(e) => setSingleRole(e.target.value as ProjectMember['role'])}
+                  className="field-select w-full py-2.5"
+                  data-testid="member-role-select"
+                >
+                  <option value="member">멤버</option>
+                  <option value="admin">관리자</option>
+                  <option value="viewer">뷰어</option>
+                </select>
               </div>
-              <button
-                onClick={() => {
-                  setBulkRows([...bulkRows, { name: '', role: 'member' }]);
-                  requestAnimationFrame(() => lastRowRef.current?.focus());
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-color)] py-2.5 text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)] hover:text-[color:var(--accent-primary)]"
-              >
-                <Plus className="h-4 w-4" />
-                행 추가
-              </button>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">이름</label>
+                <input
+                  ref={singleNameRef}
+                  type="text"
+                  value={singleName}
+                  onChange={(e) => setSingleName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSingleAdd();
+                    }
+                  }}
+                  className="field-input w-full py-2.5"
+                  placeholder="멤버 이름을 입력하세요"
+                  autoFocus
+                  data-testid="member-name-input"
+                />
+              </div>
+              <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">
+                <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
+                  닫기
+                </Button>
+                <Button
+                  onClick={handleSingleAdd}
+                  disabled={!singleName.trim()}
+                  data-testid="members-confirm-add-button"
+                >
+                  <Plus className="h-4 w-4" />
+                  추가
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
@@ -471,26 +493,25 @@ export default function Members() {
                 placeholder={"홍길동\n김철수\n이영희"}
                 autoFocus
               />
+              <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">
+                <span className="text-sm text-[color:var(--text-secondary)]">
+                  {getValidPasteMembers().length > 0 && `${getValidPasteMembers().length}명`}
+                </span>
+                <div className="flex gap-3">
+                  <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
+                    취소
+                  </Button>
+                  <Button
+                    onClick={handlePasteAdd}
+                    disabled={getValidPasteMembers().length === 0}
+                    data-testid="members-paste-add-button"
+                  >
+                    {getValidPasteMembers().length > 0 ? `${getValidPasteMembers().length}명 추가` : '추가'}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
-
-          <div className="mt-5 flex items-center justify-between border-t border-[var(--border-color)] pt-5">
-            <span className="text-sm text-[color:var(--text-secondary)]">
-              {getValidBulkMembers().length > 0 && `${getValidBulkMembers().length}명`}
-            </span>
-            <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
-                취소
-              </Button>
-              <Button
-                onClick={handleBulkAdd}
-                disabled={getValidBulkMembers().length === 0}
-                data-testid="members-confirm-add-button"
-              >
-                {getValidBulkMembers().length > 0 ? `${getValidBulkMembers().length}명 추가` : '추가'}
-              </Button>
-            </div>
-          </div>
         </div>
       </Modal>
 

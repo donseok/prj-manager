@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, Sparkles, Sun, Moon } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, Sparkles, Sun, Moon } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -8,16 +8,22 @@ import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
 import { loadInitialProjects } from '../lib/dataRepository';
 import { useProjectStore } from '../store/projectStore';
 export default function Login() {
-  const { isAuthenticated, setUser } = useAuthStore();
+  const { isAuthenticated, setUser, isPending, isSuspended } = useAuthStore();
   const { setProjects } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  if (isAuthenticated && (isPending || isSuspended)) {
+    return <Navigate to="/pending" replace />;
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -26,6 +32,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
@@ -37,6 +44,10 @@ export default function Login() {
         }
         if (result.user) {
           setUser(result.user);
+          if (result.user.accountStatus === 'pending' || result.user.accountStatus === 'suspended') {
+            navigate('/pending', { replace: true });
+            return;
+          }
           const projects = await loadInitialProjects();
           setProjects(projects);
         }
@@ -52,8 +63,11 @@ export default function Login() {
         }
         if (result.user) {
           setUser(result.user);
-          const projects = await loadInitialProjects();
-          setProjects(projects);
+          setSuccessMessage('회원가입이 완료되었습니다. 관리자 승인 후 이용 가능합니다.');
+          setMode('login');
+          setEmail('');
+          setPassword('');
+          setName('');
         }
       }
     } finally {
@@ -157,7 +171,7 @@ export default function Login() {
             {/* 탭 */}
             <div className="mb-6 flex rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-1">
               <button
-                onClick={() => { setMode('login'); setError(null); }}
+                onClick={() => { setMode('login'); setError(null); setSuccessMessage(null); }}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                   mode === 'login'
                     ? 'bg-[color:var(--bg-secondary-solid)] shadow-sm text-[color:var(--text-primary)]'
@@ -168,7 +182,7 @@ export default function Login() {
                 로그인
               </button>
               <button
-                onClick={() => { setMode('signup'); setError(null); }}
+                onClick={() => { setMode('signup'); setError(null); setSuccessMessage(null); }}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                   mode === 'signup'
                     ? 'bg-[color:var(--bg-secondary-solid)] shadow-sm text-[color:var(--text-primary)]'
@@ -231,6 +245,13 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+
+              {successMessage && (
+                <div className="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800/40 dark:bg-green-900/20 dark:text-green-400">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  {successMessage}
+                </div>
+              )}
 
               {error && (
                 <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-400">

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '../types';
+import type { AccountStatus, User } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -9,6 +9,9 @@ interface AuthState {
 
   // Computed-like
   isAdmin: boolean;
+  accountStatus: AccountStatus | null;
+  isPending: boolean;
+  isSuspended: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -23,12 +26,18 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
       isAdmin: false,
+      accountStatus: null,
+      isPending: false,
+      isSuspended: false,
 
       setUser: (user) =>
         set({
           user,
           isAuthenticated: !!user,
           isAdmin: user?.systemRole === 'admin',
+          accountStatus: user?.accountStatus ?? null,
+          isPending: user?.accountStatus === 'pending',
+          isSuspended: user?.accountStatus === 'suspended',
           isLoading: false,
         }),
 
@@ -39,6 +48,9 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           isAdmin: false,
+          accountStatus: null,
+          isPending: false,
+          isSuspended: false,
           isLoading: false,
         }),
     }),
@@ -54,6 +66,9 @@ export const useAuthStore = create<AuthState>()(
           user,
           isAuthenticated: !!user,
           isAdmin: user?.systemRole === 'admin',
+          accountStatus: user?.accountStatus ?? null,
+          isPending: user?.accountStatus === 'pending',
+          isSuspended: user?.accountStatus === 'suspended',
           isLoading: false,
         };
       },

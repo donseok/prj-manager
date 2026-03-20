@@ -26,6 +26,7 @@ import { exportGanttWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useProjectPermission } from '../hooks/useProjectPermission';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 
@@ -39,7 +40,7 @@ const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
   { value: 'completed', label: '완료' },
 ];
 
-const VIEW_OPTIONS = [6, 12, 24] as const;
+const VIEW_OPTIONS = [4, 8, 12] as const;
 const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
   { value: 'compact', label: 'Compact' },
   { value: 'comfortable', label: 'Comfortable' },
@@ -54,11 +55,12 @@ export default function Gantt() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(12);
+  const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(8);
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const { isReadOnly } = useProjectPermission();
 
   const tableRef = useRef<HTMLDivElement>(null);
   const scrollSourceRef = useRef<'left' | 'right' | null>(null);
@@ -358,11 +360,16 @@ export default function Gantt() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {isReadOnly && (
+                      <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
+                        읽기 전용
+                      </span>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => void saveNow()}
-                      disabled={!currentProject || saveStatus === 'saving'}
+                      disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
                       data-testid="gantt-save-button"
                     >
                       {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -403,8 +410,9 @@ export default function Gantt() {
                       type="text"
                       value={selectedTask.name}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'name', event.target.value)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-name"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -414,8 +422,9 @@ export default function Gantt() {
                       type="text"
                       value={selectedTask.output || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'output', event.target.value)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-output"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -424,8 +433,9 @@ export default function Gantt() {
                     <select
                       value={selectedTask.assigneeId || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'assigneeId', event.target.value || null)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-assignee"
-                      className="field-select"
+                      className={cn('field-select', isReadOnly && 'cursor-not-allowed opacity-60')}
                     >
                       <option value="">미지정</option>
                       {members.map((member) => (
@@ -441,8 +451,9 @@ export default function Gantt() {
                     <select
                       value={selectedTask.status}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'status', event.target.value as Task['status'])}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-status"
-                      className="field-select"
+                      className={cn('field-select', isReadOnly && 'cursor-not-allowed opacity-60')}
                     >
                       {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -458,8 +469,9 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.planStart || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planStart', event.target.value || null)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-plan-start"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -469,8 +481,9 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.planEnd || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'planEnd', event.target.value || null)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-plan-end"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -480,8 +493,9 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.actualStart || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualStart', event.target.value || null)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-actual-start"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -491,8 +505,9 @@ export default function Gantt() {
                       type="date"
                       value={selectedTask.actualEnd || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'actualEnd', event.target.value || null)}
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-actual-end"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -510,8 +525,9 @@ export default function Gantt() {
                           Math.min(100, Math.max(0, Number(event.target.value) || 0))
                         )
                       }
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-actual-progress"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
 
@@ -529,8 +545,9 @@ export default function Gantt() {
                           Math.min(100, Math.max(0, Number(event.target.value) || 0))
                         )
                       }
+                      disabled={isReadOnly}
                       data-testid="gantt-edit-plan-progress"
-                      className="field-input"
+                      className={cn('field-input', isReadOnly && 'cursor-not-allowed opacity-60')}
                     />
                   </div>
                 </div>
@@ -581,7 +598,7 @@ export default function Gantt() {
               variant="outline"
               size="sm"
               onClick={() => void saveNow()}
-              disabled={!currentProject || saveStatus === 'saving'}
+              disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               저장

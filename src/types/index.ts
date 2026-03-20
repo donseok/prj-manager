@@ -1,5 +1,6 @@
 // 사용자 타입
 export type SystemRole = 'admin' | 'user';
+export type AccountStatus = 'pending' | 'active' | 'suspended';
 
 export interface User {
   id: string;
@@ -7,6 +8,7 @@ export interface User {
   name: string;
   avatarUrl?: string;
   systemRole: SystemRole;
+  accountStatus: AccountStatus;
   createdAt: string;
 }
 
