@@ -100,8 +100,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   addTask: (task) => {
-    const { tasks } = get();
+    const { tasks, expandedIds } = get();
     const newTasks = [...tasks, { ...task, isExpanded: true }];
+    // 부모가 접힌 상태면 펼쳐서 새 자식이 보이도록 보장
+    if (task.parentId && !expandedIds.has(task.parentId)) {
+      const newExpanded = new Set(expandedIds);
+      newExpanded.add(task.parentId);
+      set({ expandedIds: newExpanded });
+    }
     get().setTasks(newTasks, undefined, { recordHistory: true });
   },
 
