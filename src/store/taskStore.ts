@@ -152,36 +152,41 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     findDescendants(taskId);
 
-    // 같은 부모 내 형제 (이동 대상 제외) 정렬
+    // 같은 부모 내 형제 (이동 대상 제외) 정렬 → 새 위치에 삽입 → 연속 orderIndex 부여
     const siblings = tasks
       .filter((t) => t.parentId === newParentId && t.id !== taskId)
       .sort((a, b) => a.orderIndex - b.orderIndex);
 
+    const clampedIndex = Math.max(0, Math.min(newIndex, siblings.length));
+    const orderedSiblings = [
+      ...siblings.slice(0, clampedIndex),
+      { id: taskId },
+      ...siblings.slice(clampedIndex),
+    ];
+    const orderMap = new Map(orderedSiblings.map((s, i) => [s.id, i]));
+
+    const now = new Date().toISOString();
     const newTasks = tasks.map((t) => {
       if (t.id === taskId) {
         return {
           ...t,
           parentId: newParentId,
-          orderIndex: newIndex,
+          orderIndex: orderMap.get(taskId)!,
           level: newLevel,
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         };
       }
 
       // 자식 작업 레벨 조정
       if (descendantIds.has(t.id)) {
-        return {
-          ...t,
-          level: t.level + levelDiff,
-          updatedAt: new Date().toISOString(),
-        };
+        return { ...t, level: t.level + levelDiff, updatedAt: now };
       }
 
-      // 형제 작업의 orderIndex 재배열
-      if (t.parentId === newParentId) {
-        const currentIndex = siblings.findIndex((s) => s.id === t.id);
-        if (currentIndex >= newIndex) {
-          return { ...t, orderIndex: currentIndex + 1 };
+      // 형제 작업의 orderIndex를 연속적으로 재배열
+      if (orderMap.has(t.id)) {
+        const newOrder = orderMap.get(t.id)!;
+        if (t.orderIndex !== newOrder) {
+          return { ...t, orderIndex: newOrder };
         }
       }
 

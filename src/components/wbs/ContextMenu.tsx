@@ -7,6 +7,8 @@ import {
   ClipboardPaste,
   ChevronRight as IndentIcon,
   ChevronLeft as OutdentIcon,
+  ArrowUp,
+  ArrowDown,
   CheckCircle2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -34,10 +36,14 @@ interface ContextMenuProps {
   onPaste: () => void;
   onIndent: () => void;
   onOutdent: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onMarkComplete: () => void;
   canPaste: boolean;
   canIndent: boolean;
   canOutdent: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }
 
 export default function ContextMenu({
@@ -53,10 +59,14 @@ export default function ContextMenu({
   onPaste,
   onIndent,
   onOutdent,
+  onMoveUp,
+  onMoveDown,
   onMarkComplete,
   canPaste,
   canIndent,
   canOutdent,
+  canMoveUp,
+  canMoveDown,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +129,18 @@ export default function ContextMenu({
       icon: <OutdentIcon className="w-3.5 h-3.5" />,
       onClick: onOutdent,
       disabled: !canOutdent,
+    },
+    {
+      label: '위로 이동',
+      icon: <ArrowUp className="w-3.5 h-3.5" />,
+      onClick: onMoveUp,
+      disabled: !canMoveUp,
+    },
+    {
+      label: '아래로 이동',
+      icon: <ArrowDown className="w-3.5 h-3.5" />,
+      onClick: onMoveDown,
+      disabled: !canMoveDown,
       dividerAfter: true,
     },
     {

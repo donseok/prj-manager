@@ -251,6 +251,20 @@ export default function WBS() {
             e.preventDefault();
             handleManualSave();
             break;
+          case 'ArrowUp': {
+            e.preventDefault();
+            const taskId = editingCell?.taskId || useTaskStore.getState().selectedTaskId;
+            const task = taskId ? tasks.find((t) => t.id === taskId) : null;
+            if (task) handleMoveUp(task);
+            break;
+          }
+          case 'ArrowDown': {
+            e.preventDefault();
+            const taskId = editingCell?.taskId || useTaskStore.getState().selectedTaskId;
+            const task = taskId ? tasks.find((t) => t.id === taskId) : null;
+            if (task) handleMoveDown(task);
+            break;
+          }
         }
         return;
       }
@@ -444,6 +458,36 @@ export default function WBS() {
         : t
     );
     setTasks([...updated, newTask], undefined, { recordHistory: true });
+  };
+
+  const handleMoveUp = (task: Task) => {
+    const siblings = tasks
+      .filter((t) => t.parentId === task.parentId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = siblings.findIndex((s) => s.id === task.id);
+    if (idx <= 0) return;
+    const prev = siblings[idx - 1];
+    const updated = tasks.map((t) => {
+      if (t.id === task.id) return { ...t, orderIndex: prev.orderIndex, updatedAt: new Date().toISOString() };
+      if (t.id === prev.id) return { ...t, orderIndex: task.orderIndex, updatedAt: new Date().toISOString() };
+      return t;
+    });
+    setTasks(updated, undefined, { recordHistory: true });
+  };
+
+  const handleMoveDown = (task: Task) => {
+    const siblings = tasks
+      .filter((t) => t.parentId === task.parentId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = siblings.findIndex((s) => s.id === task.id);
+    if (idx < 0 || idx >= siblings.length - 1) return;
+    const next = siblings[idx + 1];
+    const updated = tasks.map((t) => {
+      if (t.id === task.id) return { ...t, orderIndex: next.orderIndex, updatedAt: new Date().toISOString() };
+      if (t.id === next.id) return { ...t, orderIndex: task.orderIndex, updatedAt: new Date().toISOString() };
+      return t;
+    });
+    setTasks(updated, undefined, { recordHistory: true });
   };
 
   const handleIndent = (task: Task) => {
@@ -1103,6 +1147,7 @@ export default function WBS() {
                         }
                       }}
                       onDrop={(e) => handleDrop(e, task)}
+                      onClick={() => useTaskStore.getState().selectTask(task.id)}
                       onContextMenu={(e) => handleContextMenu(e, task)}
                       className={cn(
                         task.level === 1 && 'wbs-level-1 bg-[color:var(--bg-tertiary)]',
@@ -1399,6 +1444,8 @@ export default function WBS() {
           onPaste={() => handlePasteTask(contextMenu.task)}
           onIndent={() => handleIndent(contextMenu.task)}
           onOutdent={() => handleOutdent(contextMenu.task)}
+          onMoveUp={() => handleMoveUp(contextMenu.task)}
+          onMoveDown={() => handleMoveDown(contextMenu.task)}
           onMarkComplete={() => handleMarkComplete(contextMenu.task)}
           canPaste={copiedTask !== null}
           canIndent={(() => {
@@ -1409,6 +1456,19 @@ export default function WBS() {
             return idx > 0 && contextMenu.task.level < 4;
           })()}
           canOutdent={!!contextMenu.task.parentId}
+          canMoveUp={(() => {
+            const siblings = tasks
+              .filter((t) => t.parentId === contextMenu.task.parentId)
+              .sort((a, b) => a.orderIndex - b.orderIndex);
+            return siblings.findIndex((s) => s.id === contextMenu.task.id) > 0;
+          })()}
+          canMoveDown={(() => {
+            const siblings = tasks
+              .filter((t) => t.parentId === contextMenu.task.parentId)
+              .sort((a, b) => a.orderIndex - b.orderIndex);
+            const idx = siblings.findIndex((s) => s.id === contextMenu.task.id);
+            return idx >= 0 && idx < siblings.length - 1;
+          })()}
         />
       )}
     </div>
