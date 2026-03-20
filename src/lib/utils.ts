@@ -140,10 +140,13 @@ export function calculateParentProgress(tasks: Task[], parentId: string): number
   if (children.length === 0) return 0;
 
   const totalWeight = children.reduce((sum, t) => sum + t.weight, 0);
-  if (totalWeight === 0) return 0;
+  // 가중치가 모두 0이면 단순 평균으로 fallback
+  const progress =
+    totalWeight > 0
+      ? children.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
+      : children.reduce((sum, t) => sum + t.actualProgress, 0) / children.length;
 
-  const weightedProgress = children.reduce((sum, t) => sum + t.weight * t.actualProgress, 0);
-  return Math.round((weightedProgress / totalWeight) * 100) / 100;
+  return Math.round(progress * 100) / 100;
 }
 
 // 전체 공정율 계산
@@ -152,10 +155,13 @@ export function calculateOverallProgress(tasks: Task[]): number {
   if (topLevelTasks.length === 0) return 0;
 
   const totalWeight = topLevelTasks.reduce((sum, t) => sum + t.weight, 0);
-  if (totalWeight === 0) return 0;
+  // 가중치가 모두 0이면 단순 평균으로 fallback (주간보고와 동일 기준)
+  const progress =
+    totalWeight > 0
+      ? topLevelTasks.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
+      : topLevelTasks.reduce((sum, t) => sum + t.actualProgress, 0) / topLevelTasks.length;
 
-  const weightedProgress = topLevelTasks.reduce((sum, t) => sum + t.weight * t.actualProgress, 0);
-  return Math.round((weightedProgress / totalWeight) * 100) / 100;
+  return Math.round(progress * 100) / 100;
 }
 
 // 숫자 포맷팅 (퍼센트)

@@ -42,7 +42,9 @@ export function calculateProjectStats(tasks: Task[], baseDate?: Date): ProjectSt
   const planProgress =
     totalPlanWeight > 0
       ? phases.reduce((sum, t) => sum + t.weight * t.planProgress, 0) / totalPlanWeight
-      : 0;
+      : phases.length > 0
+        ? phases.reduce((sum, t) => sum + t.planProgress, 0) / phases.length
+        : 0;
 
   return {
     totalTasks: leafTasks.length,

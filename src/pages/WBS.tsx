@@ -334,7 +334,8 @@ export default function WBS() {
   };
 
   const handleAddTask = (parentId?: string, level: number = 1) => {
-    const siblings = tasks.filter((t) => t.parentId === parentId);
+    const normalizedParentId = parentId || null;
+    const siblings = tasks.filter((t) => (t.parentId || null) === normalizedParentId);
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((t) => t.orderIndex)) : -1;
     const output = suggestOutput(parentId, level);
 

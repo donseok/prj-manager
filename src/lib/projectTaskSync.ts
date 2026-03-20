@@ -167,8 +167,12 @@ function deriveProjectStatus(project: Project, tasks: Task[]): ProjectStatus {
 function buildDerivedProject(project: Project, tasks: Task[]) {
   const now = new Date().toISOString();
   const derivedStatus = deriveProjectStatus(project, tasks);
-  const startDate = getEarliestDate(tasks.flatMap((task) => [task.planStart, task.actualStart]));
-  const endDate = getLatestDate(tasks.flatMap((task) => [task.planEnd, task.actualEnd]));
+  // WBS 작업 기반 일정 산출
+  const taskStartDate = getEarliestDate(tasks.flatMap((task) => [task.planStart, task.actualStart]));
+  const taskEndDate = getLatestDate(tasks.flatMap((task) => [task.planEnd, task.actualEnd]));
+  // 프로젝트 설정 일정과 WBS 일정 중 더 넓은 범위를 사용
+  const startDate = getEarliestDate([taskStartDate, project.startDate]) ?? taskStartDate;
+  const endDate = getLatestDate([taskEndDate, project.endDate]) ?? taskEndDate;
   const completedAt =
     derivedStatus === 'completed'
       ? getLatestDate(tasks.map((task) => task.actualEnd)) ?? project.completedAt ?? now

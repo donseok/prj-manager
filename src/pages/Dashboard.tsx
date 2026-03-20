@@ -96,6 +96,10 @@ export default function Dashboard() {
     : 'metric-card bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,245,241,0.92))] p-5 shadow-[0_24px_48px_-38px_rgba(17,24,39,0.12)]';
 
   const stats = useMemo(() => calculateProjectStats(tasks), [tasks]);
+  const allWeightsZero = useMemo(() => {
+    const phases = tasks.filter((t) => t.level === 1);
+    return phases.length > 0 && phases.every((t) => t.weight === 0);
+  }, [tasks]);
   const statusData = useMemo(() => calculateStatusDistribution(tasks), [tasks]);
   const assigneeData = useMemo(() => calculateAssigneeWorkloads(tasks, members), [tasks, members]);
 
@@ -246,6 +250,12 @@ export default function Dashboard() {
               <span className="text-[color:var(--text-secondary)]">계획 공정율</span>
               <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(stats.planProgress)}</span>
             </div>
+            {allWeightsZero && stats.totalTasks > 0 && (
+              <p className="mt-3 text-xs leading-5 text-[color:var(--accent-warning)]">
+                <AlertTriangle className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
+                Phase 가중치가 모두 0입니다. WBS에서 가중치를 설정하면 더 정확한 공정율이 산출됩니다.
+              </p>
+            )}
           </div>
 
             <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-1">
