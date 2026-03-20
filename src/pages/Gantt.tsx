@@ -710,12 +710,14 @@ export default function Gantt() {
                     key={task.id}
                     data-testid={`gantt-row-${task.id}`}
                     className={cn(
-                      'flex cursor-pointer items-center border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
+                      'flex cursor-pointer items-center overflow-hidden border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
                       isSelected && 'bg-[rgba(15,118,110,0.08)]',
                       task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
                     )}
                     style={{
                       height: rowHeight,
+                      minHeight: rowHeight,
+                      maxHeight: rowHeight,
                       paddingLeft: `${(task.depth || 0) * 16 + 12}px`,
                     }}
                     onClick={() => setSelectedTaskId(task.id)}
@@ -726,41 +728,32 @@ export default function Gantt() {
                           event.stopPropagation();
                           toggleExpand(task.id);
                         }}
-                        className="mr-1 flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
+                        className="mr-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
                       >
                         {task.isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-[color:var(--text-secondary)]" />
+                          <ChevronDown className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-[color:var(--text-secondary)]" />
+                          <ChevronRight className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
                         )}
                       </button>
                     ) : (
-                      <span className="w-7" />
+                      <span className="w-5 flex-shrink-0" />
                     )}
 
-                    <span className="mr-2 w-12 flex-shrink-0 text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
-                      {LEVEL_LABELS[task.level] || `L${task.level}`}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[color:var(--text-primary)]">
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
                         {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">
-                        {formatDate(task.planStart) || '-'} ~ {formatDate(task.planEnd) || '-'}
-                      </p>
                     </div>
 
-                    <div className="ml-3 flex flex-col items-end gap-1">
-                      <span className="text-xs font-semibold text-[color:var(--text-secondary)]">
-                        {task.actualProgress}%
+                    <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
+                      {task.actualProgress}%
+                    </span>
+                    {delayDays > 0 && (
+                      <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
+                        +{delayDays}d
                       </span>
-                      {delayDays > 0 && (
-                        <span className="rounded-full bg-[rgba(203,75,95,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
-                          +{delayDays}d
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
                 );
               })}

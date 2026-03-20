@@ -192,9 +192,9 @@ export default function GanttChart({
   // Measure toolbar height and report to parent
   useEffect(() => {
     if (!toolbarRef.current || !onToolbarHeightChange) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        onToolbarHeightChange(entry.contentRect.height + 24); // + border/padding
+    const observer = new ResizeObserver(() => {
+      if (toolbarRef.current) {
+        onToolbarHeightChange(toolbarRef.current.offsetHeight);
       }
     });
     observer.observe(toolbarRef.current);
@@ -452,7 +452,7 @@ export default function GanttChart({
                     task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
                     isSelected && 'bg-[rgba(15,118,110,0.08)]'
                   )}
-                  style={{ height: rowHeight }}
+                  style={{ height: rowHeight, minHeight: rowHeight, maxHeight: rowHeight }}
                   onClick={() => onTaskClick?.(task)}
                 >
                   {planBar && (
