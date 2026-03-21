@@ -159,10 +159,26 @@ export function calculateWeightDistribution(tasks: Task[]): WeightDataItem[] {
   const phases = tasks.filter((t) => t.level === 1).sort((a, b) => a.orderIndex - b.orderIndex);
   const totalWeight = phases.reduce((sum, p) => sum + p.weight, 0);
   if (totalWeight === 0) return [];
-  return phases.map((phase) => ({
+
+  // Largest Remainder Method: 반올림 합계가 정확히 100%가 되도록 보정
+  const rawPercents = phases.map((p) => (p.weight / totalWeight) * 100);
+  const floored = rawPercents.map((v) => Math.floor(v));
+  let remainder = 100 - floored.reduce((s, v) => s + v, 0);
+
+  // 나머지가 큰 순서대로 +1 배분
+  const indices = rawPercents
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac);
+  for (const { i } of indices) {
+    if (remainder <= 0) break;
+    floored[i] += 1;
+    remainder -= 1;
+  }
+
+  return phases.map((phase, i) => ({
     name: phase.name,
     value: phase.weight,
-    percent: Math.round((phase.weight / totalWeight) * 100),
+    percent: floored[i],
   }));
 }
 

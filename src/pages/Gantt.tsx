@@ -104,7 +104,11 @@ export default function Gantt() {
     [tasks]
   );
 
+  // 직접 필터에 매칭된 Task ID (ancestor-only 구분용)
+  const directMatchIds = useMemo(() => new Set<string>(), []);
+
   const filteredFlatTasks = useMemo(() => {
+    directMatchIds.clear();
     const query = searchQuery.trim().toLowerCase();
     if (!query && filterMode === 'all') return flatTasks;
 
@@ -131,6 +135,7 @@ export default function Gantt() {
     flatTasks.forEach((task) => {
       if (!matchesFilter(task)) return;
 
+      directMatchIds.add(task.id);
       let current: Task | undefined = task;
       while (current) {
         matchedIds.add(current.id);
@@ -139,7 +144,7 @@ export default function Gantt() {
     });
 
     return flatTasks.filter((task) => matchedIds.has(task.id));
-  }, [filterMode, flatTasks, members, searchQuery, taskMap]);
+  }, [directMatchIds, filterMode, flatTasks, members, searchQuery, taskMap]);
 
   const resolvedSelectedTaskId = useMemo(() => {
     if (filteredFlatTasks.length === 0) return null;
@@ -408,13 +413,15 @@ export default function Gantt() {
                 const hasChildren = tasks.some((item) => item.parentId === task.id);
                 const isSelected = resolvedSelectedTaskId === task.id;
                 const delayDays = getDelayDays(task);
+                const isDimmed = filterMode !== 'all' && !directMatchIds.has(task.id);
                 return (
                   <div
                     key={task.id}
                     className={cn(
                       'flex cursor-pointer items-center overflow-hidden border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
                       isSelected && 'bg-[rgba(15,118,110,0.08)]',
-                      task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
+                      task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium',
+                      isDimmed && 'opacity-40'
                     )}
                     style={{
                       height: rowHeight,
