@@ -1,5 +1,5 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
@@ -28,6 +28,7 @@ function getProjectNavItems(projectId: string): NavItem[] {
     { to: `/projects/${projectId}/wbs`, icon: ListTree, label: 'WBS', popupPage: 'wbs' },
     { to: `/projects/${projectId}/gantt`, icon: Calendar, label: '간트 차트', popupPage: 'gantt' },
     { to: `/projects/${projectId}/members`, icon: Users, label: '멤버' },
+    { to: `/projects/${projectId}/attendance`, icon: CalendarCheck, label: '근태현황' },
     { to: `/projects/${projectId}/settings`, icon: Settings, label: '설정' },
   ];
 }

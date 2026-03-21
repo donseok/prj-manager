@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Clock3,
@@ -13,11 +13,13 @@ import {
   TrendingUp,
   PieChart as PieChartIcon,
   CalendarClock,
+  CalendarCheck,
   FileDown,
   Loader2,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
+import { useAttendanceStore } from '../store/attendanceStore';
 import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
 import FeedbackNotice from '../components/common/FeedbackNotice';
@@ -41,6 +43,9 @@ import {
   getRecentlyCompleted,
 } from '../lib/taskAnalytics';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { loadAttendances } from '../lib/dataRepository';
+import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 import {
   BarChart,
   Bar,
@@ -119,6 +124,33 @@ export default function Dashboard() {
   const weightData = useMemo(() => calculateWeightDistribution(tasks), [tasks]);
 
   const recentlyCompleted = useMemo(() => getRecentlyCompleted(tasks), [tasks]);
+
+  // 근태 데이터 로딩
+  const { attendances, setAttendances } = useAttendanceStore();
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    void loadAttendances(projectId).then((data) => {
+      if (!cancelled) setAttendances(data, projectId);
+    });
+    return () => { cancelled = true; };
+  }, [projectId, setAttendances]);
+
+  const weekAttendanceSummary = useMemo(() => {
+    const now = new Date();
+    const ws = startOfWeek(now, { weekStartsOn: 1 });
+    const we = endOfWeek(now, { weekStartsOn: 1 });
+    const wsStr = format(ws, 'yyyy-MM-dd');
+    const weStr = format(we, 'yyyy-MM-dd');
+    const weekRecords = attendances.filter((a) => a.date >= wsStr && a.date <= weStr);
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const todayRecords = attendances.filter((a) => a.date === todayStr);
+    const leaveCount = weekRecords.filter((a) =>
+      ['annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave'].includes(a.type)
+    ).length;
+    const tripCount = weekRecords.filter((a) => a.type === 'business_trip').length;
+    return { total: weekRecords.length, todayCount: todayRecords.length, todayRecords, leaveCount, tripCount };
+  }, [attendances]);
 
   // 보고서 다운로드
   const [isExporting, setIsExporting] = useState(false);
@@ -735,6 +767,67 @@ export default function Dashboard() {
           ) : (
             <div className="empty-state min-h-[14rem]">
               <p>완료된 작업이 없습니다</p>
+            </div>
+          )}
+        </QueueCard>
+
+        {/* 금주 근태현황 */}
+        <QueueCard
+          title="금주 근태현황"
+          subtitle={`${weekAttendanceSummary.total}건 등록`}
+          icon={<CalendarCheck className="h-4 w-4" />}
+          tone="accent"
+        >
+          {weekAttendanceSummary.todayRecords.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[color:var(--text-secondary)]">오늘 등록:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.todayCount}건</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[color:var(--text-secondary)]">금주 휴가:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.leaveCount}건</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[color:var(--text-secondary)]">출장:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.tripCount}건</span>
+                </div>
+              </div>
+              <ul className="space-y-2">
+                {weekAttendanceSummary.todayRecords.slice(0, 5).map((a) => {
+                  const memberName = members.find((m) => m.id === a.memberId)?.name || '알 수 없음';
+                  return (
+                    <li key={a.id} className="flex items-center gap-3 rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
+                      <span className="flex-1 text-sm font-medium text-[color:var(--text-primary)]">{memberName}</span>
+                      <span
+                        className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                        style={{ backgroundColor: `${ATTENDANCE_TYPE_COLORS[a.type]}18`, color: ATTENDANCE_TYPE_COLORS[a.type] }}
+                      >
+                        {ATTENDANCE_TYPE_LABELS[a.type]}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Link
+                to={`/projects/${projectId}/attendance`}
+                className="flex items-center gap-1 text-sm font-medium text-[color:var(--accent-primary)] hover:underline"
+              >
+                전체 근태현황 보기 <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="empty-state min-h-[14rem]">
+              <CalendarCheck className="h-10 w-10 text-[color:var(--text-muted)]" />
+              <p className="text-sm text-[color:var(--text-secondary)]">오늘 등록된 근태가 없습니다</p>
+              <Link
+                to={`/projects/${projectId}/attendance`}
+                className="mt-2 text-sm font-medium text-[color:var(--accent-primary)] hover:underline"
+              >
+                근태 등록하기
+              </Link>
             </div>
           )}
         </QueueCard>

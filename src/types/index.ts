@@ -132,6 +132,53 @@ export const LEVEL_LABELS: Record<number, string> = {
   3: 'Task',
 };
 
+// 근태 타입
+export type AttendanceType =
+  | 'present'
+  | 'annual_leave'
+  | 'half_day_am'
+  | 'half_day_pm'
+  | 'sick_leave'
+  | 'business_trip'
+  | 'late'
+  | 'early_leave'
+  | 'absence';
+
+export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {
+  present: '출근',
+  annual_leave: '연차',
+  half_day_am: '오전반차',
+  half_day_pm: '오후반차',
+  sick_leave: '병가',
+  business_trip: '출장',
+  late: '지각',
+  early_leave: '조퇴',
+  absence: '결근',
+};
+
+export const ATTENDANCE_TYPE_COLORS: Record<AttendanceType, string> = {
+  present: '#22c55e',
+  annual_leave: '#3b82f6',
+  half_day_am: '#06b6d4',
+  half_day_pm: '#06b6d4',
+  sick_leave: '#ef4444',
+  business_trip: '#a855f7',
+  late: '#f97316',
+  early_leave: '#f97316',
+  absence: '#dc2626',
+};
+
+export interface Attendance {
+  id: string;
+  projectId: string;
+  memberId: string;
+  date: string; // YYYY-MM-DD
+  type: AttendanceType;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 간트 차트 관련 타입
 export interface GanttBarData {
   taskId: string;

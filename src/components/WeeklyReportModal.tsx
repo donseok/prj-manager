@@ -36,7 +36,10 @@ import {
   getSnapshotByWeek,
 } from '../lib/weeklySnapshot';
 import { addWeeks, startOfWeek, format } from 'date-fns';
-import type { Task, ProjectMember } from '../types';
+import type { Task, ProjectMember, Attendance } from '../types';
+import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import type { WeeklyAttendanceSummary } from '../lib/weeklyReport';
+import { CalendarCheck } from 'lucide-react';
 
 interface WeeklyReportModalProps {
   isOpen: boolean;
@@ -45,6 +48,7 @@ interface WeeklyReportModalProps {
   projectName: string;
   tasks: Task[];
   members: ProjectMember[];
+  attendances?: Attendance[];
 }
 
 export default function WeeklyReportModal({
@@ -54,6 +58,7 @@ export default function WeeklyReportModal({
   projectName,
   tasks,
   members,
+  attendances,
 }: WeeklyReportModalProps) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'detail'>('overview');
@@ -63,8 +68,8 @@ export default function WeeklyReportModal({
   }, [weekOffset]);
 
   const report = useMemo(() => {
-    return generateWeeklyReport({ projectName, tasks, members, baseDate });
-  }, [projectName, tasks, members, baseDate]);
+    return generateWeeklyReport({ projectName, tasks, members, baseDate, attendances });
+  }, [projectName, tasks, members, baseDate, attendances]);
 
   const previousSnapshot = useMemo(() => {
     const prevWeek = format(
@@ -206,6 +211,7 @@ export default function WeeklyReportModal({
               comparison={comparison}
               progressGap={progressGap}
               assigneeStats={assigneeStats}
+              attendanceSummary={report.attendanceSummary}
             />
           ) : (
             <DetailTab report={report} />
@@ -223,6 +229,7 @@ interface OverviewTabProps {
   comparison: ReturnType<typeof compareSnapshots>;
   progressGap: number;
   assigneeStats: { name: string; count: number; completed: number }[];
+  attendanceSummary?: WeeklyAttendanceSummary[];
 }
 
 function OverviewTab({
@@ -230,6 +237,7 @@ function OverviewTab({
   comparison,
   progressGap,
   assigneeStats,
+  attendanceSummary,
 }: OverviewTabProps) {
   return (
     <div className="space-y-5">
@@ -376,6 +384,67 @@ function OverviewTab({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 근태현황 */}
+      {attendanceSummary && attendanceSummary.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              금주 근태현황
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="weekly-report-table-header">
+                  <th className="px-3 py-2 text-left">담당자</th>
+                  {['월', '화', '수', '목', '금'].map((d) => (
+                    <th key={d} className="px-3 py-2 text-center">{d}</th>
+                  ))}
+                  <th className="px-3 py-2 text-left">소계</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendanceSummary.map((s) => {
+                  const dayMap = new Map(s.records.map((r) => {
+                    const dayOfWeek = new Date(r.date).getDay(); // 1=월 ~ 5=금
+                    return [dayOfWeek, r];
+                  }));
+                  return (
+                    <tr key={s.memberName} className="weekly-report-task-row">
+                      <td className="px-3 py-2 font-medium text-[color:var(--text-primary)]">{s.memberName}</td>
+                      {[1, 2, 3, 4, 5].map((dow) => {
+                        const rec = dayMap.get(dow);
+                        return (
+                          <td key={dow} className="px-3 py-2 text-center">
+                            {rec ? (
+                              <span
+                                className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                style={{
+                                  backgroundColor: `${ATTENDANCE_TYPE_COLORS[rec.type]}18`,
+                                  color: ATTENDANCE_TYPE_COLORS[rec.type],
+                                }}
+                              >
+                                {ATTENDANCE_TYPE_LABELS[rec.type]}
+                              </span>
+                            ) : (
+                              <span className="text-[color:var(--text-muted)]">-</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-xs text-[color:var(--text-secondary)]">
+                        {Object.entries(s.stats).map(([k, v]) => `${k}${v}`).join('/')}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

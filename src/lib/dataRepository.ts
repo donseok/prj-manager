@@ -1,4 +1,4 @@
-import type { Project, ProjectMember, Task } from '../types';
+import type { Project, ProjectMember, Task, Attendance } from '../types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { storage } from './utils';
 
@@ -407,4 +407,86 @@ function toTaskRow(task: Task) {
   if (task.predecessorIds != null) row.predecessor_ids = task.predecessorIds;
   if (task.taskSource != null) row.task_source = task.taskSource;
   return row;
+}
+
+// ─── Attendance ─────────────────────────────────────────────
+
+interface AttendanceRow {
+  id: string;
+  project_id: string;
+  member_id: string;
+  date: string;
+  type: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapAttendanceRow(row: AttendanceRow): Attendance {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    memberId: row.member_id,
+    date: row.date,
+    type: row.type as Attendance['type'],
+    note: row.note || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toAttendanceRow(a: Attendance): AttendanceRow {
+  return {
+    id: a.id,
+    project_id: a.projectId,
+    member_id: a.memberId,
+    date: a.date,
+    type: a.type,
+    note: a.note || null,
+    created_at: a.createdAt,
+    updated_at: a.updatedAt,
+  };
+}
+
+export async function loadAttendances(projectId: string): Promise<Attendance[]> {
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load attendance:', error);
+    return [];
+  }
+
+  return (data as AttendanceRow[]).map(mapAttendanceRow);
+}
+
+export async function upsertAttendance(attendance: Attendance): Promise<Attendance> {
+  const row = toAttendanceRow(attendance);
+  console.log('[attendance] upsert 요청:', row);
+
+  const { data, error } = await supabase
+    .from('attendance')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[attendance] upsert 실패:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    throw new Error(`근태 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  }
+
+  console.log('[attendance] upsert 성공:', data);
+  return mapAttendanceRow(data as AttendanceRow);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function deleteAttendanceById(_projectId: string, id: string): Promise<void> {
+  const { error } = await supabase.from('attendance').delete().eq('id', id);
+  if (error) {
+    console.error('Failed to delete attendance:', error);
+    throw new Error(`근태 삭제 실패: ${error.message}`);
+  }
 }

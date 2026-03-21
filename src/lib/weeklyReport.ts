@@ -15,8 +15,8 @@ import {
   differenceInCalendarDays,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import type { Task, ProjectMember } from '../types';
-import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
+import type { Task, ProjectMember, Attendance, AttendanceType } from '../types';
+import { TASK_STATUS_LABELS, LEVEL_LABELS, ATTENDANCE_TYPE_LABELS } from '../types';
 import { getLeafTasks } from './taskAnalytics';
 import { parseDate } from './utils';
 
@@ -81,6 +81,21 @@ export interface WeeklyReportData {
   completedThisWeek: WeeklyReportSection;
   /** 이슈/리스크 요약 */
   issues: string[];
+  /** 근태현황 (선택적) */
+  attendanceSummary?: WeeklyAttendanceSummary[];
+}
+
+export interface WeeklyAttendanceRecord {
+  date: string;
+  type: AttendanceType;
+  typeLabel: string;
+  note?: string;
+}
+
+export interface WeeklyAttendanceSummary {
+  memberName: string;
+  records: WeeklyAttendanceRecord[];
+  stats: Record<string, number>;
 }
 
 // ── Generator ────────────────────────────────────────────────
@@ -91,6 +106,8 @@ export interface GenerateWeeklyReportOptions {
   members: ProjectMember[];
   /** 기준 날짜 (기본: 오늘) */
   baseDate?: Date;
+  /** 근태 데이터 (선택적) */
+  attendances?: Attendance[];
 }
 
 export function generateWeeklyReport({
@@ -98,6 +115,7 @@ export function generateWeeklyReport({
   tasks,
   members,
   baseDate = new Date(),
+  attendances,
 }: GenerateWeeklyReportOptions): WeeklyReportData {
   const weekStart = startOfWeek(baseDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(baseDate, { weekStartsOn: 1 });
@@ -206,6 +224,41 @@ export function generateWeeklyReport({
     issues.push(`담당자 미지정 작업 ${unassigned.length}건`);
   }
 
+  // 근태 요약 생성
+  let attendanceSummary: WeeklyAttendanceSummary[] | undefined;
+  if (attendances && attendances.length > 0) {
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+    const weekAttendances = attendances.filter(
+      (a) => a.date >= weekStartStr && a.date <= weekEndStr
+    );
+
+    const byMember = new Map<string, Attendance[]>();
+    for (const a of weekAttendances) {
+      const list = byMember.get(a.memberId) || [];
+      list.push(a);
+      byMember.set(a.memberId, list);
+    }
+
+    attendanceSummary = members.map((m) => {
+      const records = (byMember.get(m.id) || [])
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((a) => ({
+          date: a.date,
+          type: a.type,
+          typeLabel: ATTENDANCE_TYPE_LABELS[a.type],
+          note: a.note,
+        }));
+
+      const stats: Record<string, number> = {};
+      for (const r of records) {
+        stats[r.typeLabel] = (stats[r.typeLabel] || 0) + 1;
+      }
+
+      return { memberName: m.name, records, stats };
+    }).filter((s) => s.records.length > 0);
+  }
+
   const weekNum = getWeekNumber(baseDate);
   const year = baseDate.getFullYear();
 
@@ -241,6 +294,7 @@ export function generateWeeklyReport({
       tasks: completedThisWeekTasks.map(toReportTask),
     },
     issues,
+    attendanceSummary,
   };
 }
 

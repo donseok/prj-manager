@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
+import { useAttendanceStore } from '../store/attendanceStore';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
 import Modal from '../components/common/Modal';
@@ -53,6 +54,7 @@ import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
   const { members, currentProject, updateProject, addMember } = useProjectStore();
+  const attendancesForReport = useAttendanceStore((s) => s.attendances);
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
   const {
@@ -1505,6 +1507,7 @@ export default function WBS() {
           projectName={currentProject?.name || '프로젝트'}
           tasks={tasks}
           members={members}
+          attendances={attendancesForReport}
         />
       )}
 

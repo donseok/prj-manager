@@ -8,6 +8,7 @@ import WBS from './pages/WBS';
 import Gantt from './pages/Gantt';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
+import Attendance from './pages/Attendance';
 import Login from './pages/Login';
 import PendingApproval from './pages/PendingApproval';
 import UserManagement from './pages/UserManagement';
@@ -132,6 +133,7 @@ function App() {
             <Route path="wbs" element={<WBS />} />
             <Route path="gantt" element={<Gantt />} />
             <Route path="members" element={<Members />} />
+            <Route path="attendance" element={<Attendance />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="manual" element={<UserManual />} />

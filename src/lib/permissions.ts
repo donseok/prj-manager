@@ -9,6 +9,9 @@ export interface ProjectPermissions {
   canEditTask: boolean;         // owner, admin, member
   canDeleteTask: boolean;       // owner, admin
   canExport: boolean;           // all roles
+  canViewAttendance: boolean;   // all roles
+  canEditOwnAttendance: boolean;  // owner, admin, member
+  canEditAllAttendance: boolean;  // owner, admin
   isReadOnly: boolean;          // viewer only
 }
 
@@ -23,6 +26,9 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
       canEditTask: false,
       canDeleteTask: false,
       canExport: false,
+      canViewAttendance: false,
+      canEditOwnAttendance: false,
+      canEditAllAttendance: false,
       isReadOnly: true,
     };
   }
@@ -38,6 +44,9 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
         canEditTask: true,
         canDeleteTask: true,
         canExport: true,
+        canViewAttendance: true,
+        canEditOwnAttendance: true,
+        canEditAllAttendance: true,
         isReadOnly: false,
       };
     case 'admin':
@@ -50,6 +59,9 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
         canEditTask: true,
         canDeleteTask: true,
         canExport: true,
+        canViewAttendance: true,
+        canEditOwnAttendance: true,
+        canEditAllAttendance: true,
         isReadOnly: false,
       };
     case 'member':
@@ -62,6 +74,9 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
         canEditTask: true,
         canDeleteTask: false,
         canExport: true,
+        canViewAttendance: true,
+        canEditOwnAttendance: true,
+        canEditAllAttendance: false,
         isReadOnly: false,
       };
     case 'viewer':
@@ -74,6 +89,9 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
         canEditTask: false,
         canDeleteTask: false,
         canExport: true,
+        canViewAttendance: true,
+        canEditOwnAttendance: false,
+        canEditAllAttendance: false,
         isReadOnly: true,
       };
   }
