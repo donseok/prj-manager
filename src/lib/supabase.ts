@@ -283,6 +283,66 @@ export async function updateAccountStatus(userId: string, status: AccountStatus)
   return { error: null };
 }
 
+// ─── Account Deletion ────────────────────────────────────────
+
+/**
+ * 회원 탈퇴 처리.
+ * 1) 비밀번호 재확인 (Supabase 모드)
+ * 2) 소유 프로젝트 일괄 삭제
+ * 3) 멤버 참여 내역 제거
+ * 4) 프로필 삭제
+ * 5) Supabase 로그아웃
+ */
+export async function deleteUserAccount(
+  userId: string,
+  email: string,
+  password: string,
+  cascadeFns: {
+    deleteAllOwned: (uid: string) => Promise<void>;
+    removeFromAll: (uid: string) => Promise<void>;
+  }
+): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) {
+    return { error: 'Supabase가 설정되지 않았습니다.' };
+  }
+
+  // 1) 비밀번호 재확인
+  const { error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (authError) {
+    return { error: '비밀번호가 올바르지 않습니다.' };
+  }
+
+  try {
+    // 2) 소유 프로젝트 일괄 삭제 (cascade로 멤버/작업/근태 함께 삭제)
+    await cascadeFns.deleteAllOwned(userId);
+
+    // 3) 다른 프로젝트에서 멤버 참여 내역 제거
+    await cascadeFns.removeFromAll(userId);
+
+    // 4) 프로필 삭제
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      console.error('Failed to delete profile:', profileError);
+    }
+
+    // 5) 로그아웃
+    await signOutSupabase();
+
+    return { error: null };
+  } catch (err) {
+    console.error('Account deletion failed:', err);
+    return { error: err instanceof Error ? err.message : '회원 탈퇴 처리 중 오류가 발생했습니다.' };
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {

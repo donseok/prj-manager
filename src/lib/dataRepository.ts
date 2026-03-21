@@ -490,3 +490,47 @@ export async function deleteAttendanceById(_projectId: string, id: string): Prom
     throw new Error(`근태 삭제 실패: ${error.message}`);
   }
 }
+
+// ─── Account Deletion ───────────────────────────────────────
+
+/** 사용자가 소유한 프로젝트 ID 목록 조회 */
+export async function loadOwnedProjectIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('owner_id', userId)
+    .neq('status', 'deleted');
+
+  if (error) {
+    console.error('Failed to load owned projects:', error);
+    return [];
+  }
+
+  return (data || []).map((row) => row.id);
+}
+
+/** 사용자가 소유한 모든 프로젝트 일괄 삭제 */
+export async function deleteAllOwnedProjects(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('owner_id', userId);
+
+  if (error) {
+    console.error('Failed to delete owned projects:', error);
+    throw new Error(`소유 프로젝트 삭제 실패: ${error.message}`);
+  }
+}
+
+/** 사용자가 멤버로 참여 중인 프로젝트에서 자신을 제거 */
+export async function removeUserFromAllProjects(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('project_members')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Failed to remove user from projects:', error);
+    throw new Error(`프로젝트 멤버 제거 실패: ${error.message}`);
+  }
+}

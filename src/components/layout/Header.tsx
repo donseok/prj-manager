@@ -195,6 +195,17 @@ export default function Header() {
                   <Settings className="h-4 w-4" />
                   설정
                 </Link>
+
+                <div className="my-1 border-t border-[var(--border-color)]" />
+
+                <Link
+                  to="/account"
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
+                  onClick={() => setShowUserMenu(false)}
+                >
+                  <User className="h-4 w-4" />
+                  계정 설정
+                </Link>
               </div>
             )}
           </div>

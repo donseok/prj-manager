@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import PendingApproval from './pages/PendingApproval';
 import UserManagement from './pages/UserManagement';
 import UserManual from './pages/UserManual';
+import AccountSettings from './pages/AccountSettings';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
@@ -136,6 +137,7 @@ function App() {
             <Route path="attendance" element={<Attendance />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route path="account" element={<AccountSettings />} />
           <Route path="manual" element={<UserManual />} />
           <Route
             path="admin/users"
