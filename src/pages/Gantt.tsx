@@ -313,6 +313,175 @@ export default function Gantt() {
     });
   };
 
+  // ── 팝업 모드: 간트 차트만 꽉 차게 표시 ──
+  if (isInPopup) {
+    return (
+      <div className="flex h-full flex-col">
+        {/* 컴팩트 툴바 */}
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2">
+          <div className="relative flex-shrink-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="검색"
+              className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-9 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+            />
+          </div>
+          {FILTER_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setFilterMode(option.value)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                filterMode === option.value
+                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                  : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+          {VIEW_OPTIONS.map((weeks) => (
+            <button
+              key={weeks}
+              onClick={() => setWeeksToShow(weeks)}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                weeksToShow === weeks
+                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                  : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+              )}
+            >
+              {weeks}주
+            </button>
+          ))}
+          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+          {DENSITY_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setDensity(option.value)}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                density === option.value
+                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                  : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setHighlightWeekends((prev) => !prev)}
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+              highlightWeekends
+                ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
+                : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+            )}
+          >
+            주말
+          </button>
+        </div>
+
+        {/* 간트 차트 (좌측 작업목록 + 우측 차트) */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div
+            className="flex flex-shrink-0 flex-col border-r border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+            style={{ width: mainLeftPanelWidth }}
+          >
+            <div
+              className="flex flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] px-4"
+              style={{ height: ganttToolbarHeight }}
+            >
+              <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
+              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개</span>
+            </div>
+            <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
+              <div
+                className="sticky top-0 z-10 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]"
+                style={{ height: HEADER_HEIGHT }}
+              />
+              {filteredFlatTasks.map((task) => {
+                const hasChildren = tasks.some((item) => item.parentId === task.id);
+                const isSelected = resolvedSelectedTaskId === task.id;
+                const delayDays = getDelayDays(task);
+                return (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      'flex cursor-pointer items-center overflow-hidden border-b border-[var(--border-color)] px-3 transition-colors hover:bg-[rgba(15,118,110,0.05)]',
+                      isSelected && 'bg-[rgba(15,118,110,0.08)]',
+                      task.level === 1 && 'bg-[color:var(--bg-tertiary)] font-medium'
+                    )}
+                    style={{
+                      height: rowHeight,
+                      minHeight: rowHeight,
+                      maxHeight: rowHeight,
+                      paddingLeft: `${(task.depth || 0) * 16 + 12}px`,
+                    }}
+                    onClick={() => setSelectedTaskId(task.id)}
+                  >
+                    {hasChildren ? (
+                      <button
+                        onClick={(event) => { event.stopPropagation(); toggleExpand(task.id); }}
+                        className="mr-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[color:var(--bg-tertiary)]"
+                      >
+                        {task.isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
+                        )}
+                      </button>
+                    ) : (
+                      <span className="w-5 flex-shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
+                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
+                      </p>
+                    </div>
+                    <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
+                      {task.actualProgress}%
+                    </span>
+                    {delayDays > 0 && (
+                      <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
+                        +{delayDays}d
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredFlatTasks.length === 0 && (
+                <div className="empty-state min-h-[16rem] px-5">
+                  <p>필터에 맞는 작업이 없습니다</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <GanttChart
+              tasks={filteredFlatTasks}
+              allTasks={tasks}
+              selectedTaskId={resolvedSelectedTaskId}
+              onTaskClick={(task) => setSelectedTaskId(task.id)}
+              weeksToShow={weeksToShow}
+              dayWidth={mainDayWidth}
+              rowHeight={rowHeight}
+              highlightWeekends={highlightWeekends}
+              onVerticalScroll={handleGanttScroll}
+              externalScrollTop={ganttScrollTop}
+              onToolbarHeightChange={setGanttToolbarHeight}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 일반 모드: 전체 대시보드 레이아웃 ──
   return (
     <div className="flex h-full flex-col gap-6">
       {feedback && (
@@ -832,7 +1001,7 @@ export default function Gantt() {
       </section>
 
       <div className="app-panel relative flex min-h-0 flex-1 overflow-hidden">
-        {!isInPopup && currentProject && (
+        {currentProject && (
           <button
             onClick={() => openPopup({ projectId: currentProject.id, page: 'gantt' })}
             className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
