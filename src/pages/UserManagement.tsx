@@ -42,20 +42,21 @@ export default function UserManagement() {
   const [tab, setTab] = useState<TabFilter>('all');
 
   useEffect(() => {
-    void loadAllProfiles().then((data) => {
-      const items: ProfileItem[] = data.map((d) => ({
-        ...d,
-        accountStatus: (d as unknown as { accountStatus?: AccountStatus }).accountStatus ?? 'active',
-      }));
+    let cancelled = false;
+    setLoading(true);
+
+    void loadAllProfiles().then((items) => {
+      if (cancelled) return;
       setProfiles(items);
 
-      // Default to pending tab if there are pending users
       const hasPending = items.some((p) => p.accountStatus === 'pending');
       if (hasPending) setTab('pending');
 
       setLoading(false);
     });
-  }, [user]);
+
+    return () => { cancelled = true; };
+  }, []);
 
   // Counts
   const pendingCount = profiles.filter((p) => p.accountStatus === 'pending').length;

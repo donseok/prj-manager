@@ -196,33 +196,10 @@ export async function signOutSupabase() {
 export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; accountStatus: AccountStatus; createdAt: string }>> {
   if (!isSupabaseConfigured) return [];
 
-  // account_status 포함 조회 시도
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, name, system_role, account_status, created_at')
     .order('created_at', { ascending: true });
-
-  if (error && error.message.includes('account_status')) {
-    // 컬럼 없음 → account_status 없이 조회
-    const { data: fallback, error: fallbackError } = await supabase
-      .from('profiles')
-      .select('id, email, name, system_role, created_at')
-      .order('created_at', { ascending: true });
-
-    if (fallbackError) {
-      console.error('Failed to load profiles:', fallbackError);
-      return [];
-    }
-
-    return (fallback || []).map((row) => ({
-      id: row.id,
-      email: row.email || '',
-      name: row.name || '',
-      systemRole: row.system_role as SystemRole,
-      accountStatus: 'active' as AccountStatus,
-      createdAt: row.created_at,
-    }));
-  }
 
   if (error) {
     console.error('Failed to load profiles:', error);
