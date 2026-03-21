@@ -442,9 +442,15 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
 }
 
 // ── 근태현황 슬라이드 ────────────────────────────────────────
-function addAttendanceSlide(pptx: PptxGenJS, report: WeeklyReportData) {
+function addAttendanceSlide(
+  pptx: PptxGenJS,
+  report: WeeklyReportData,
+  attendanceSummary: import('./weeklyReport').WeeklyAttendanceSummary[],
+  sectionTitle: string,
+  subtitle: string,
+  titleColor: string,
+) {
   const slide = pptx.addSlide();
-  const attendanceSummary = report.attendanceSummary!;
 
   // 헤더 바
   slide.addShape(pptx.ShapeType.rect, {
@@ -457,7 +463,7 @@ function addAttendanceSlide(pptx: PptxGenJS, report: WeeklyReportData) {
     fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
   });
 
-  slide.addText(`근태현황 · ${report.weekLabel}`, {
+  slide.addText(subtitle, {
     x: 0.6, y: 0.65, w: 7, h: 0.3,
     fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
   });
@@ -465,9 +471,9 @@ function addAttendanceSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   // 섹션 제목
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.4, y: 1.45, w: 9.0, h: 0.35,
-    fill: { color: C.primary }, rectRadius: 0.05,
+    fill: { color: titleColor }, rectRadius: 0.05,
   });
-  slide.addText('금주 근태현황', {
+  slide.addText(sectionTitle, {
     x: 0.4, y: 1.45, w: 9.0, h: 0.35,
     fontSize: 11, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
   });
@@ -554,9 +560,14 @@ export async function exportWeeklyReportPptx(report: WeeklyReportData) {
   // 슬라이드 2~: 상세 (좌: 금주실적, 우: 차주계획)
   addDetailSlides(pptx, report);
 
-  // 근태현황 슬라이드
+  // 금주 근태현황 슬라이드
   if (report.attendanceSummary && report.attendanceSummary.length > 0) {
-    addAttendanceSlide(pptx, report);
+    addAttendanceSlide(pptx, report, report.attendanceSummary, '금주 근태현황', `근태현황 · ${report.weekLabel}`, C.primary);
+  }
+
+  // 차주 근태현황 슬라이드
+  if (report.nextWeekAttendanceSummary && report.nextWeekAttendanceSummary.length > 0) {
+    addAttendanceSlide(pptx, report, report.nextWeekAttendanceSummary, '차주 근태현황', `차주 근태현황 · ${report.weekLabel}`, '6366F1');
   }
 
   const filename = `${report.projectName}_주간보고_${report.weekStart}.pptx`;

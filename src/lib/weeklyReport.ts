@@ -81,8 +81,10 @@ export interface WeeklyReportData {
   completedThisWeek: WeeklyReportSection;
   /** 이슈/리스크 요약 */
   issues: string[];
-  /** 근태현황 (선택적) */
+  /** 금주 근태현황 (선택적) */
   attendanceSummary?: WeeklyAttendanceSummary[];
+  /** 차주 근태현황 (선택적) */
+  nextWeekAttendanceSummary?: WeeklyAttendanceSummary[];
 }
 
 export interface WeeklyAttendanceRecord {
@@ -224,39 +226,45 @@ export function generateWeeklyReport({
     issues.push(`담당자 미지정 작업 ${unassigned.length}건`);
   }
 
-  // 근태 요약 생성
+  // 근태 요약 생성 (금주 + 차주)
   let attendanceSummary: WeeklyAttendanceSummary[] | undefined;
+  let nextWeekAttendanceSummary: WeeklyAttendanceSummary[] | undefined;
   if (attendances && attendances.length > 0) {
-    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-    const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
-    const weekAttendances = attendances.filter(
-      (a) => a.date >= weekStartStr && a.date <= weekEndStr
-    );
+    const buildAttendanceSummary = (rangeStart: Date, rangeEnd: Date): WeeklyAttendanceSummary[] => {
+      const startStr = format(rangeStart, 'yyyy-MM-dd');
+      const endStr = format(rangeEnd, 'yyyy-MM-dd');
+      const filtered = attendances.filter(
+        (a) => a.date >= startStr && a.date <= endStr
+      );
 
-    const byMember = new Map<string, Attendance[]>();
-    for (const a of weekAttendances) {
-      const list = byMember.get(a.memberId) || [];
-      list.push(a);
-      byMember.set(a.memberId, list);
-    }
-
-    attendanceSummary = members.map((m) => {
-      const records = (byMember.get(m.id) || [])
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((a) => ({
-          date: a.date,
-          type: a.type,
-          typeLabel: ATTENDANCE_TYPE_LABELS[a.type],
-          note: a.note,
-        }));
-
-      const stats: Record<string, number> = {};
-      for (const r of records) {
-        stats[r.typeLabel] = (stats[r.typeLabel] || 0) + 1;
+      const byMember = new Map<string, Attendance[]>();
+      for (const a of filtered) {
+        const list = byMember.get(a.memberId) || [];
+        list.push(a);
+        byMember.set(a.memberId, list);
       }
 
-      return { memberName: m.name, records, stats };
-    }).filter((s) => s.records.length > 0);
+      return members.map((m) => {
+        const records = (byMember.get(m.id) || [])
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map((a) => ({
+            date: a.date,
+            type: a.type,
+            typeLabel: ATTENDANCE_TYPE_LABELS[a.type],
+            note: a.note,
+          }));
+
+        const stats: Record<string, number> = {};
+        for (const r of records) {
+          stats[r.typeLabel] = (stats[r.typeLabel] || 0) + 1;
+        }
+
+        return { memberName: m.name, records, stats };
+      }).filter((s) => s.records.length > 0);
+    };
+
+    attendanceSummary = buildAttendanceSummary(weekStart, weekEnd);
+    nextWeekAttendanceSummary = buildAttendanceSummary(nextWeekStart, nextWeekEnd);
   }
 
   const weekNum = getWeekNumber(baseDate);
@@ -295,6 +303,7 @@ export function generateWeeklyReport({
     },
     issues,
     attendanceSummary,
+    nextWeekAttendanceSummary,
   };
 }
 

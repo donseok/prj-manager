@@ -167,12 +167,20 @@ export function exportWeeklyReportExcel(report: WeeklyReportData) {
     });
   }
 
-  // ── 근태현황 ────────────────────────────────────────────────
+  // ── 금주 근태현황 ──────────────────────────────────────────
   if (report.attendanceSummary && report.attendanceSummary.length > 0) {
     const spacerA = ws.addRow([]);
     spacerA.height = 6;
 
-    writeAttendanceSection(ws, report.attendanceSummary, totalCols);
+    writeAttendanceSection(ws, report.attendanceSummary, totalCols, '금주 근태현황');
+  }
+
+  // ── 차주 근태현황 ──────────────────────────────────────────
+  if (report.nextWeekAttendanceSummary && report.nextWeekAttendanceSummary.length > 0) {
+    const spacerNA = ws.addRow([]);
+    spacerNA.height = 6;
+
+    writeAttendanceSection(ws, report.nextWeekAttendanceSummary, totalCols, '차주 근태현황');
   }
 
   // ── 섹션별 작업 목록 ───────────────────────────────────────
@@ -248,8 +256,8 @@ function writeTaskTableHeader(ws: ExcelJS.Worksheet) {
   });
 }
 
-function writeAttendanceSection(ws: ExcelJS.Worksheet, attendanceSummary: WeeklyAttendanceSummary[], totalCols: number) {
-  writeSectionHeader(ws, '근태현황', totalCols);
+function writeAttendanceSection(ws: ExcelJS.Worksheet, attendanceSummary: WeeklyAttendanceSummary[], totalCols: number, title = '근태현황') {
+  writeSectionHeader(ws, title, totalCols);
 
   // 헤더: 담당자, 월, 화, 수, 목, 금, 소계
   const attHeaders = ['', '담당자', '월', '화', '수', '목', '금', '소계', ''];
