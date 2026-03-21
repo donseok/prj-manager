@@ -65,8 +65,35 @@ export default function Settings() {
   const statusMode = currentProject?.settings?.statusMode ?? 'auto';
   const isManualStatus = statusMode === 'manual';
 
+  // 실시간 유효성 검사
+  const nameError = (() => {
+    const trimmed = resolvedFormData.name.trim();
+    if (!trimmed) return '프로젝트명을 입력해주세요.';
+    if (trimmed.length < 2) return '프로젝트명은 2자 이상이어야 합니다.';
+    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return '프로젝트명에는 한글, 영문 또는 숫자가 포함되어야 합니다.';
+    return null;
+  })();
+
+  const dateError = (() => {
+    if (resolvedFormData.startDate && resolvedFormData.endDate &&
+        new Date(resolvedFormData.startDate) >= new Date(resolvedFormData.endDate)) {
+      return '종료일은 시작일보다 이후여야 합니다.';
+    }
+    return null;
+  })();
+
   const handleSave = async () => {
     if (!projectId || !currentProject) return;
+
+    if (nameError) {
+      showFeedback({ tone: 'error', title: '프로젝트명 오류', message: nameError });
+      return;
+    }
+    if (dateError) {
+      showFeedback({ tone: 'error', title: '날짜 오류', message: dateError });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const savedProject = await upsertProject({
@@ -74,6 +101,7 @@ export default function Settings() {
         id: projectId,
         ownerId: currentProject.ownerId,
         ...resolvedFormData,
+        name: resolvedFormData.name.trim(),
         updatedAt: new Date().toISOString(),
       });
 
@@ -303,7 +331,7 @@ export default function Settings() {
               프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject}>
+              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
                 <Save className="w-4 h-4" />
                 저장
               </Button>
@@ -373,8 +401,16 @@ export default function Settings() {
                 value={resolvedFormData.name}
                 onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                 disabled={!canEditProject}
-                className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
+                maxLength={100}
+                className={cn(
+                  'field-input',
+                  !canEditProject && 'cursor-not-allowed opacity-60',
+                  nameError && formData.name !== undefined && 'border-[rgba(203,75,95,0.4)]'
+                )}
               />
+              {nameError && formData.name !== undefined && (
+                <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">{nameError}</p>
+              )}
             </div>
 
             <div>
@@ -396,7 +432,11 @@ export default function Settings() {
                   value={resolvedFormData.startDate}
                   onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
                   disabled={!canEditProject}
-                  className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
+                  className={cn(
+                    'field-input',
+                    !canEditProject && 'cursor-not-allowed opacity-60',
+                    dateError && 'border-[rgba(203,75,95,0.4)]'
+                  )}
                 />
               </div>
               <div>
@@ -406,10 +446,17 @@ export default function Settings() {
                   value={resolvedFormData.endDate}
                   onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
                   disabled={!canEditProject}
-                  className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
+                  className={cn(
+                    'field-input',
+                    !canEditProject && 'cursor-not-allowed opacity-60',
+                    dateError && 'border-[rgba(203,75,95,0.4)]'
+                  )}
                 />
               </div>
             </div>
+            {dateError && (
+              <p className="text-xs text-[color:var(--accent-danger)]">{dateError}</p>
+            )}
 
             <div>
               <label className="field-label">진척기준일</label>
@@ -426,7 +473,7 @@ export default function Settings() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject}>
+              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
                 <Save className="w-4 h-4" />
                 저장
               </Button>

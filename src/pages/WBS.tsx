@@ -87,6 +87,7 @@ export default function WBS() {
   const [isQuickProgressOpen, setIsQuickProgressOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: Task } | null>(null);
   const [copiedTask, setCopiedTask] = useState<Task | null>(null);
+  const [editingNameBackup, setEditingNameBackup] = useState<string | null>(null);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
@@ -709,16 +710,31 @@ export default function WBS() {
           </span>
         );
 
-      case 'name':
+      case 'name': {
+        const commitName = () => {
+          if (!task.name.trim()) {
+            // 빈 작업명이면 이전 값으로 복원
+            const fallback = editingNameBackup || '새 작업';
+            handleCellChange(task.id, 'name', fallback);
+          }
+          setEditingNameBackup(null);
+          handleCellCommit();
+        };
         return isEditing ? (
           <input
             type="text"
             value={task.name}
             onChange={(e) => handleCellChange(task.id, 'name', e.target.value)}
-            onBlur={() => handleCellCommit()}
+            onBlur={() => commitName()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCellCommit();
-              if (e.key === 'Escape') handleCellCommit();
+              if (e.key === 'Enter') commitName();
+              if (e.key === 'Escape') {
+                if (editingNameBackup !== null) {
+                  handleCellChange(task.id, 'name', editingNameBackup);
+                }
+                setEditingNameBackup(null);
+                handleCellCommit();
+              }
             }}
             className="cell-input"
             autoFocus
@@ -726,12 +742,16 @@ export default function WBS() {
         ) : (
           <span
             className="cursor-text truncate font-medium text-[color:var(--text-primary)]"
-            onClick={() => setEditingCell({ taskId: task.id, columnId })}
+            onClick={() => {
+              setEditingNameBackup(task.name);
+              setEditingCell({ taskId: task.id, columnId });
+            }}
             style={{ paddingLeft: `${(task.depth || 0) * 20}px` }}
           >
             {task.name || <span className="text-[color:var(--text-secondary)]">작업명 입력</span>}
           </span>
         );
+      }
 
       case 'output':
         return isEditing ? (
@@ -777,18 +797,29 @@ export default function WBS() {
           />
         );
 
-      case 'weight':
+      case 'weight': {
+        const commitWeight = () => {
+          if (task.weight === 0) {
+            showFeedback({
+              tone: 'warning',
+              title: '가중치 0',
+              message: '가중치가 0이면 공정률에 반영되지 않습니다.',
+            });
+          }
+          handleCellCommit();
+        };
         return isEditing ? (
           <input
             type="number"
             value={task.weight}
-            onChange={(e) => handleCellChange(task.id, 'weight', parseFloat(e.target.value) || 0)}
-            onBlur={() => handleCellCommit()}
+            onChange={(e) => handleCellChange(task.id, 'weight', Math.max(0, parseFloat(e.target.value) || 0))}
+            onBlur={() => commitWeight()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
+              if (e.key === 'Enter' || e.key === 'Escape') commitWeight();
             }}
             className="cell-input text-right"
             step="0.01"
+            min="0"
             autoFocus
           />
         ) : (
@@ -799,6 +830,7 @@ export default function WBS() {
             {task.weight.toFixed(3)}
           </span>
         );
+      }
 
       case 'planStart':
       case 'planEnd':
