@@ -326,7 +326,7 @@ export default function Gantt() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="검색"
-              className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-9 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+              className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
           </div>
           {FILTER_OPTIONS.map((option) => (
