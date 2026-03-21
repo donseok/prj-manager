@@ -79,6 +79,40 @@ export default function ProjectList() {
     sourceProjectId: '',
   });
 
+  const validateProjectName = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (!trimmed) return null; // 빈 값은 disabled로 처리
+    if (trimmed.length < 2) return '프로젝트명은 2자 이상이어야 합니다.';
+    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return '프로젝트명에는 한글, 영문 또는 숫자가 포함되어야 합니다.';
+    if (/<[^>]*>/.test(trimmed)) return 'HTML 태그는 사용할 수 없습니다.';
+    return null;
+  };
+
+  const validateDates = (startDate: string, endDate: string): string | null => {
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      return '종료일은 시작일보다 이후여야 합니다.';
+    }
+    return null;
+  };
+
+  const nameError = validateProjectName(newProject.name);
+  const dateError = validateDates(newProject.startDate, newProject.endDate);
+
+  const isCreateDisabled = isCreating
+    || !newProject.name.trim()
+    || !!nameError
+    || !!dateError
+    || (newProject.creationMode === 'clone' && !newProject.sourceProjectId);
+
+  const getCreateButtonText = (): string => {
+    if (isCreating) return ''; // handled separately with spinner
+    if (!newProject.name.trim()) return '프로젝트명을 입력해주세요';
+    if (nameError) return '프로젝트명을 확인해주세요';
+    if (dateError) return '날짜를 확인해주세요';
+    if (newProject.creationMode === 'clone' && !newProject.sourceProjectId) return '복제 원본을 선택해주세요';
+    return '생성';
+  };
+
   const filteredProjects = projects.filter(
     (project) =>
       project.status !== 'deleted' &&
@@ -97,6 +131,11 @@ export default function ProjectList() {
     if (isCreating) return;
 
     setIsCreating(true);
+    const timeoutId = setTimeout(() => {
+      setIsCreating(false);
+      showFeedback({ tone: 'error', title: '요청 시간 초과', message: '프로젝트 생성에 시간이 너무 오래 걸립니다. 다시 시도해주세요.' });
+    }, 15000);
+
     try {
       const owner = user;
       const now = new Date().toISOString();
@@ -172,6 +211,7 @@ export default function ProjectList() {
         message: msg,
       });
     } finally {
+      clearTimeout(timeoutId);
       setIsCreating(false);
     }
   };
@@ -541,11 +581,22 @@ export default function ProjectList() {
               data-testid="projects-create-name"
               className="field-input"
               placeholder="예: 통합 운영 대시보드 고도화"
+              maxLength={100}
               autoFocus
             />
-            {newProject.name.length > 0 && !newProject.name.trim() && (
-              <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">프로젝트명을 입력해주세요.</p>
-            )}
+            <div className="mt-1.5 flex items-center justify-between">
+              <div>
+                {newProject.name.length > 0 && !newProject.name.trim() && (
+                  <p className="text-xs text-[color:var(--accent-danger)]">프로젝트명을 입력해주세요.</p>
+                )}
+                {nameError && (
+                  <p className="text-xs text-[color:var(--accent-danger)]">{nameError}</p>
+                )}
+              </div>
+              {newProject.name.length >= 80 && (
+                <p className="text-xs text-[color:var(--text-muted)]">{newProject.name.length}/100자</p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -597,25 +648,30 @@ export default function ProjectList() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="field-label">시작일</label>
-              <input
-                type="date"
-                value={newProject.startDate}
-                onChange={(event) => setNewProject({ ...newProject, startDate: event.target.value })}
-                className="field-input"
-              />
+          <div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="field-label">시작일</label>
+                <input
+                  type="date"
+                  value={newProject.startDate}
+                  onChange={(event) => setNewProject({ ...newProject, startDate: event.target.value })}
+                  className="field-input"
+                />
+              </div>
+              <div>
+                <label className="field-label">종료일</label>
+                <input
+                  type="date"
+                  value={newProject.endDate}
+                  onChange={(event) => setNewProject({ ...newProject, endDate: event.target.value })}
+                  className="field-input"
+                />
+              </div>
             </div>
-            <div>
-              <label className="field-label">종료일</label>
-              <input
-                type="date"
-                value={newProject.endDate}
-                onChange={(event) => setNewProject({ ...newProject, endDate: event.target.value })}
-                className="field-input"
-              />
-            </div>
+            {dateError && (
+              <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">{dateError}</p>
+            )}
           </div>
 
           {newProject.creationMode === 'clone' && (
@@ -630,17 +686,10 @@ export default function ProjectList() {
             </Button>
             <Button
               onClick={() => void handleCreateProject()}
-              disabled={isCreating || !newProject.name.trim() || (newProject.creationMode === 'clone' && !newProject.sourceProjectId)}
+              disabled={isCreateDisabled}
               data-testid="projects-create-submit"
-              title={
-                !newProject.name.trim()
-                  ? '프로젝트명을 입력해주세요'
-                  : newProject.creationMode === 'clone' && !newProject.sourceProjectId
-                    ? '복제할 원본 프로젝트를 선택해주세요'
-                    : undefined
-              }
             >
-              {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> 생성 중...</> : '생성'}
+              {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> 생성 중...</> : getCreateButtonText()}
             </Button>
           </div>
         </div>
