@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   Clock,
   TrendingUp,
-  Save,
   Calendar,
   FileBarChart,
   BarChart3,
@@ -33,8 +32,6 @@ import {
 import { exportWeeklyReportExcel } from '../lib/exportWeeklyReport';
 import { exportWeeklyReportPptx } from '../lib/exportWeeklyReportPptx';
 import {
-  saveSnapshot,
-  getSnapshots,
   compareSnapshots,
   getSnapshotByWeek,
 } from '../lib/weeklySnapshot';
@@ -60,7 +57,6 @@ export default function WeeklyReportModal({
 }: WeeklyReportModalProps) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'detail'>('overview');
-  const [snapshotSaved, setSnapshotSaved] = useState(false);
 
   const baseDate = useMemo(() => {
     return addWeeks(new Date(), weekOffset);
@@ -82,20 +78,12 @@ export default function WeeklyReportModal({
     return compareSnapshots(report, previousSnapshot?.data ?? null);
   }, [report, previousSnapshot]);
 
-  const snapshots = useMemo(() => getSnapshots(projectId), [projectId]);
-
   const handleExport = () => {
     exportWeeklyReportExcel(report);
   };
 
   const handleExportPptx = async () => {
     await exportWeeklyReportPptx(report);
-  };
-
-  const handleSaveSnapshot = () => {
-    saveSnapshot(projectId, report);
-    setSnapshotSaved(true);
-    setTimeout(() => setSnapshotSaved(false), 2500);
   };
 
   // 담당자별 작업 분포 계산
@@ -165,39 +153,24 @@ export default function WeeklyReportModal({
                   이번 주
                 </button>
               )}
-            </div>
-          </div>
 
-          {/* 하단 버튼 */}
-          <div className="weekly-report-header-actions">
-            <button
-              onClick={handleSaveSnapshot}
-              className={cn(
-                'weekly-report-action-btn',
-                snapshotSaved && 'weekly-report-action-btn-success'
-              )}
-            >
-              {snapshotSaved ? (
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              {snapshotSaved ? '저장됨' : '스냅샷 저장'}
-            </button>
-            <button
-              onClick={handleExportPptx}
-              className="weekly-report-action-btn weekly-report-action-btn-primary"
-            >
-              <Presentation className="h-3.5 w-3.5" />
-              PPT 내보내기
-            </button>
-            <button
-              onClick={handleExport}
-              className="weekly-report-action-btn weekly-report-action-btn-primary"
-            >
-              <Download className="h-3.5 w-3.5" />
-              엑셀 내보내기
-            </button>
+              <div className="ml-3 flex items-center gap-1.5">
+                <button
+                  onClick={handleExportPptx}
+                  className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25 transition-colors"
+                >
+                  <Presentation className="h-3.5 w-3.5" />
+                  PPT
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Excel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -233,7 +206,6 @@ export default function WeeklyReportModal({
               comparison={comparison}
               progressGap={progressGap}
               assigneeStats={assigneeStats}
-              snapshots={snapshots}
             />
           ) : (
             <DetailTab report={report} />
@@ -251,7 +223,6 @@ interface OverviewTabProps {
   comparison: ReturnType<typeof compareSnapshots>;
   progressGap: number;
   assigneeStats: { name: string; count: number; completed: number }[];
-  snapshots: ReturnType<typeof getSnapshots>;
 }
 
 function OverviewTab({
@@ -259,7 +230,6 @@ function OverviewTab({
   comparison,
   progressGap,
   assigneeStats,
-  snapshots,
 }: OverviewTabProps) {
   return (
     <div className="space-y-5">
@@ -434,24 +404,6 @@ function OverviewTab({
         />
       </div>
 
-      {/* 스냅샷 히스토리 */}
-      {snapshots.length > 0 && (
-        <div className="weekly-report-section-panel">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)] mb-3">
-            저장된 스냅샷
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {snapshots.map((snap) => (
-              <span
-                key={snap.id}
-                className="weekly-report-snapshot-badge"
-              >
-                {snap.weekLabel}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
