@@ -162,6 +162,9 @@ function ProjectDetailWrapper() {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects, setCurrentProject, setMembers } = useProjectStore();
   const { setTasks, expandAll } = useTaskStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  const projectExists = projectId ? projects.some((item) => item.id === projectId) : false;
 
   useEffect(() => {
     if (!projectId) {
@@ -181,26 +184,62 @@ function ProjectDetailWrapper() {
     let isCancelled = false;
 
     const loadProjectDetail = async () => {
-      if (!projectId) return;
+      if (!projectId) {
+        setIsLoading(false);
+        return;
+      }
 
-      const [members, tasks] = await Promise.all([
-        loadProjectMembers(projectId),
-        loadProjectTasks(projectId),
-      ]);
+      try {
+        const [members, tasks] = await Promise.all([
+          loadProjectMembers(projectId),
+          loadProjectTasks(projectId),
+        ]);
 
-      if (isCancelled) return;
+        if (isCancelled) return;
 
-      setMembers(members, projectId);
-      setTasks(tasks, projectId);
-      setTimeout(() => expandAll(), 100);
+        setMembers(members, projectId);
+        setTasks(tasks, projectId);
+        setTimeout(() => expandAll(), 100);
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
     };
 
+    setIsLoading(true);
     void loadProjectDetail();
 
     return () => {
       isCancelled = true;
     };
   }, [projectId, setMembers, setTasks, expandAll]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-primary)]/30 border-t-[var(--accent-primary)]" />
+      </div>
+    );
+  }
+
+  if (!projectExists) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+        <div className="text-7xl font-bold text-[color:var(--text-muted)]">404</div>
+        <h1 className="text-2xl font-semibold text-[color:var(--text-primary)]">
+          프로젝트를 찾을 수 없습니다
+        </h1>
+        <p className="max-w-md text-sm text-[color:var(--text-secondary)]">
+          요청하신 프로젝트가 존재하지 않거나 삭제되었습니다.
+        </p>
+        <Link
+          to="/projects"
+          className="mt-2 rounded-full bg-[image:var(--gradient-primary)] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:brightness-105"
+        >
+          프로젝트 목록으로
+        </Link>
+      </div>
+    );
+  }
 
   return <Outlet />;
 }

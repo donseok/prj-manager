@@ -57,6 +57,19 @@ export function useAutoSave<T>(
     }
   }, [clearPendingSave]);
 
+  // 미저장 변경사항이 있을 때 페이지 이탈 경고
+  const hasPendingSave = useRef(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasPendingSave.current) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   useEffect(() => {
     if (!projectId || loadedProjectId !== projectId) {
       clearPendingSave();
@@ -77,8 +90,10 @@ export function useAutoSave<T>(
       return;
     }
 
+    hasPendingSave.current = true;
     setSaveStatus('pending');
     timeoutRef.current = setTimeout(() => {
+      hasPendingSave.current = false;
       void runSave(latestDataRef.current);
     }, delay);
 
@@ -86,6 +101,21 @@ export function useAutoSave<T>(
       clearPendingSave();
     };
   }, [clearPendingSave, data, delay, loadedProjectId, projectId, runSave]);
+
+  // 컴포넌트 언마운트 시 (세션 만료 등) 보류 중인 변경사항 즉시 저장
+  useEffect(() => {
+    return () => {
+      if (hasPendingSave.current && currentProjectIdRef.current) {
+        hasPendingSave.current = false;
+        try {
+          saveFnRef.current(latestDataRef.current);
+        } catch {
+          // 언마운트 시 에러 무시
+        }
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 언마운트 전용
+  }, []);
 
   return {
     saveStatus,

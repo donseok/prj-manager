@@ -32,6 +32,7 @@ import { useProjectPermission } from '../hooks/useProjectPermission';
 import { openPopup } from '../lib/popupWindow';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
+import { getLeafTasks } from '../lib/taskAnalytics';
 
 type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
 type DensityMode = 'compact' | 'comfortable';
@@ -186,13 +187,13 @@ export default function Gantt() {
   );
 
   const selectedDelay = selectedTask ? getDelayDays(selectedTask) : 0;
-  const delayedCount = tasks.filter((task) => getDelayDays(task) > 0).length;
-  const activeCount = tasks.filter((task) => task.status !== 'completed').length;
+  const leafTasks = useMemo(() => getLeafTasks(tasks), [tasks]);
+  const delayedCount = leafTasks.filter((task) => getDelayDays(task) > 0).length;
+  const activeCount = leafTasks.filter((task) => task.status !== 'completed').length;
 
   // 마감 임박 작업 (leaf tasks only, sorted by planEnd ascending)
   const upcomingDeadlines = useMemo(() => {
     const today = new Date();
-    const leafTasks = tasks.filter((t) => !tasks.some((c) => c.parentId === t.id));
     return leafTasks
       .filter((t) => t.status !== 'completed' && t.planEnd)
       .sort((a, b) => {
@@ -206,11 +207,10 @@ export default function Gantt() {
         const daysLeft = differenceInCalendarDays(endDate, today);
         return { ...t, daysLeft };
       });
-  }, [tasks]);
+  }, [leafTasks]);
 
   // 담당자별 워크로드
   const assigneeWorkload = useMemo(() => {
-    const leafTasks = tasks.filter((t) => !tasks.some((c) => c.parentId === t.id));
     const activeTasks = leafTasks.filter((t) => t.status !== 'completed');
     const countMap = new Map<string, { name: string; total: number; delayed: number }>();
 
@@ -229,7 +229,7 @@ export default function Gantt() {
     }
 
     return [...countMap.values()].sort((a, b) => b.total - a.total).slice(0, 6);
-  }, [tasks, members]);
+  }, [leafTasks, members]);
 
   const maxWorkload = useMemo(
     () => Math.max(...assigneeWorkload.map((a) => a.total), 1),
@@ -534,7 +534,7 @@ export default function Gantt() {
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">오픈 작업</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeCount}</p>
-                <p className="mt-1 text-sm text-white/88">완료되지 않은 전체 작업</p>
+                <p className="mt-1 text-sm text-white/88">완료되지 않은 실작업</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연 작업</p>

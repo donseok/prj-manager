@@ -311,27 +311,41 @@ export default function ProjectList() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
-          <div className="metric-card p-6">
-            <p className="eyebrow-stat">Preparing</p>
-            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {preparingProjects}
-            </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">준비중 프로젝트</p>
-          </div>
-          <div className="metric-card p-6">
-            <p className="eyebrow-stat">Active</p>
-            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {activeProjects}
-            </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">진행중 프로젝트</p>
-          </div>
-          <div className="metric-card p-6">
-            <p className="eyebrow-stat">Completed</p>
-            <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {completedProjects}
-            </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">완료된 프로젝트</p>
-          </div>
+          {projects.length === 0 ? (
+            <>
+              {(['Preparing', 'Active', 'Completed'] as const).map((label) => (
+                <div key={label} className="metric-card animate-pulse p-6">
+                  <p className="eyebrow-stat">{label}</p>
+                  <div className="mt-3 h-10 w-12 rounded-lg bg-[color:var(--bg-tertiary)]" />
+                  <div className="mt-2 h-4 w-24 rounded bg-[color:var(--bg-tertiary)]" />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="metric-card p-6">
+                <p className="eyebrow-stat">Preparing</p>
+                <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+                  {preparingProjects}
+                </p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">준비중 프로젝트</p>
+              </div>
+              <div className="metric-card p-6">
+                <p className="eyebrow-stat">Active</p>
+                <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+                  {activeProjects}
+                </p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">진행중 프로젝트</p>
+              </div>
+              <div className="metric-card p-6">
+                <p className="eyebrow-stat">Completed</p>
+                <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
+                  {completedProjects}
+                </p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">완료된 프로젝트</p>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
