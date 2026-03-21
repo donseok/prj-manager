@@ -675,9 +675,9 @@ export default function Gantt() {
                   <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{selectedTask.actualProgress}%</span>
                 </div>
-                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+                <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(249,115,22,0.08)]">
                   <div
-                    className="h-full rounded-full bg-[linear-gradient(135deg,#1fa37a,#34c997)]"
+                    className="h-full rounded-full bg-[linear-gradient(135deg,#f97316,#fb923c)]"
                     style={{ width: `${selectedTask.actualProgress}%` }}
                   />
                 </div>
@@ -1117,11 +1117,11 @@ export default function Gantt() {
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--text-secondary)]">
         <div className="surface-badge">
-          <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#155e75,#1f8f86)]" />
+          <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#3b82f6,#60a5fa)]" />
           <span>계획</span>
         </div>
         <div className="surface-badge">
-          <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#1fa37a,#34c997)]" />
+          <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#f97316,#fb923c)]" />
           <span>실적</span>
         </div>
         <div className="surface-badge">

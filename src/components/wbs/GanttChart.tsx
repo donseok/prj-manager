@@ -458,8 +458,8 @@ export default function GanttChart({
                   {planBar && (
                     <div
                       className={cn(
-                        'absolute rounded-full border border-white/15 bg-[linear-gradient(135deg,#155e75,#1f8f86)] shadow-[0_12px_24px_-16px_rgba(21,94,117,0.8)] transition-all',
-                        isSelected && 'ring-2 ring-[rgba(15,118,110,0.22)] ring-offset-1 ring-offset-transparent'
+                        'absolute rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6,#60a5fa)] shadow-[0_12px_24px_-16px_rgba(59,130,246,0.7)] transition-all',
+                        isSelected && 'ring-2 ring-[rgba(59,130,246,0.22)] ring-offset-1 ring-offset-transparent'
                       )}
                       style={{
                         left: planBar.left,
@@ -474,7 +474,7 @@ export default function GanttChart({
                   {actualBar && (
                     <>
                       <div
-                        className="absolute rounded-full bg-[rgba(31,163,122,0.16)]"
+                        className="absolute rounded-full bg-[rgba(249,115,22,0.16)]"
                         style={{
                           left: actualBar.left,
                           top: actualBarTop,
@@ -484,8 +484,8 @@ export default function GanttChart({
                       />
                       <div
                         className={cn(
-                          'absolute rounded-full border border-white/10 bg-[linear-gradient(135deg,#1fa37a,#34c997)] shadow-[0_12px_24px_-16px_rgba(31,163,122,0.82)] transition-all',
-                          isSelected && 'ring-2 ring-[rgba(31,163,122,0.24)] ring-offset-1 ring-offset-transparent'
+                          'absolute rounded-full border border-white/10 bg-[linear-gradient(135deg,#f97316,#fb923c)] shadow-[0_12px_24px_-16px_rgba(249,115,22,0.7)] transition-all',
+                          isSelected && 'ring-2 ring-[rgba(249,115,22,0.24)] ring-offset-1 ring-offset-transparent'
                         )}
                         style={{
                           left: actualBar.left,
