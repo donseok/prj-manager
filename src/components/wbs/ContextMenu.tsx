@@ -107,7 +107,7 @@ export default function ContextMenu({
       label: '하위 작업 추가',
       icon: <Plus className="w-3.5 h-3.5" />,
       onClick: onAddChild,
-      disabled: task.level >= 4,
+      disabled: task.level >= 3,
       dividerAfter: true,
     },
     { label: '복사', icon: <Copy className="w-3.5 h-3.5" />, onClick: onCopy },

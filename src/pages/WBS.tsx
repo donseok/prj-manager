@@ -138,14 +138,14 @@ export default function WBS() {
     const y = e.clientY - rect.top;
     const height = rect.height;
 
-    // 상단 25% = before, 하단 25% = after, 중간 50% = child (하위 레벨이 4 미만일 때)
+    // 상단 25% = before, 하단 25% = after, 중간 50% = child (하위 레벨이 3 미만일 때)
     let pos: 'before' | 'after' | 'child';
     if (y < height * 0.25) {
       pos = 'before';
     } else if (y > height * 0.75) {
       pos = 'after';
     } else {
-      pos = targetTask.level < 4 ? 'child' : 'after';
+      pos = targetTask.level < 3 ? 'child' : 'after';
     }
 
     setDropTargetId(targetTask.id);
@@ -505,7 +505,7 @@ export default function WBS() {
       .filter((t) => t.parentId === task.parentId)
       .sort((a, b) => a.orderIndex - b.orderIndex);
     const idx = siblings.findIndex((s) => s.id === task.id);
-    if (idx <= 0 || task.level >= 4) return;
+    if (idx <= 0 || task.level >= 3) return;
     const newParent = siblings[idx - 1];
     moveTask(task.id, newParent.id, tasks.filter((t) => t.parentId === newParent.id).length);
   };
@@ -1507,7 +1507,7 @@ export default function WBS() {
               .filter((t) => t.parentId === contextMenu.task.parentId)
               .sort((a, b) => a.orderIndex - b.orderIndex);
             const idx = siblings.findIndex((s) => s.id === contextMenu.task.id);
-            return idx > 0 && contextMenu.task.level < 4;
+            return idx > 0 && contextMenu.task.level < 3;
           })()}
           canOutdent={!!contextMenu.task.parentId}
           canMoveUp={(() => {

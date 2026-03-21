@@ -278,7 +278,6 @@ export default function UserManual() {
               ['Level 1', 'Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
               ['Level 2', 'Activity', '단계 내 활동'],
               ['Level 3', 'Task', '구체적 작업'],
-              ['Level 4', 'Function', '세부 기능/산출물'],
             ]} />
             <div className="mt-4">
               <Tip>상위 작업(Phase, Activity)의 일정, 공정율, 상태는 하위 작업을 기반으로 자동 계산됩니다. 직접 수정해도 다음 저장 시 하위 작업 기준으로 다시 계산됩니다.</Tip>
@@ -698,7 +697,6 @@ export default function UserManual() {
             ['Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
             ['Activity', '단계 내 활동'],
             ['Task', '구체적 작업'],
-            ['Function', '세부 기능/산출물'],
             ['가중치', '작업의 상대적 중요도/비중 (숫자)'],
             ['공정율', '작업 진행률 (0~100%)'],
             ['계획 공정율', '계획 기준 공정 진행률'],

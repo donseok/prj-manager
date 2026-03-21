@@ -561,7 +561,7 @@ function buildStatusFilterAnswer(status: TaskStatus, rc: ResolvedContext): strin
 function buildWbsGuideAnswer(): string {
   return [
     'WBS는 작업 구조를 쪼개서 계획과 실적을 관리하는 화면입니다.',
-    '- Phase > Activity > Task > Function 순으로 세분화하여 입력하세요.',
+    '- Phase > Activity > Task 순으로 세분화하여 입력하세요.',
     '- 엑셀 다운로드로 계층 코드와 일정을 한 번에 정리할 수 있습니다.',
   ].join('\n');
 }

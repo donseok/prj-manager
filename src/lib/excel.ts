@@ -89,7 +89,7 @@ const STATUS_LABEL_TO_CODE = Object.fromEntries(
   Object.entries(TASK_STATUS_LABELS).map(([code, label]) => [label, code as TaskStatus])
 );
 const LEVEL_TEXT_TO_NUMBER: Record<string, number> = {
-  phase: 1, activity: 2, task: 3, function: 4,
+  phase: 1, activity: 2, task: 3,
 };
 
 // ── Shared helpers ─────────────────────────────────────────────
@@ -121,7 +121,6 @@ function levelRowBg(level: number): string {
   switch (level) {
     case 1: return C.phase;
     case 2: return C.activity;
-    case 4: return C.func;
     default: return C.task;
   }
 }

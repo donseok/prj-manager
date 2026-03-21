@@ -68,7 +68,7 @@ export interface Task {
   id: string;
   projectId: string;
   parentId?: string | null;
-  level: number; // 1=Phase, 2=Activity, 3=Task, 4=Function
+  level: number; // 1=Phase, 2=Activity, 3=Task
   orderIndex: number;
 
   // 기본 정보
@@ -130,7 +130,6 @@ export const LEVEL_LABELS: Record<number, string> = {
   1: 'Phase',
   2: 'Activity',
   3: 'Task',
-  4: 'Function',
 };
 
 // 간트 차트 관련 타입
