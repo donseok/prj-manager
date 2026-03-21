@@ -750,7 +750,7 @@ export default function WBS() {
             }}
             style={{ paddingLeft: `${(task.depth || 0) * 20}px` }}
           >
-            {task.name || <span className="text-[color:var(--text-secondary)]">작업명 입력</span>}
+            {task.name || <span className="text-[color:var(--accent-danger)] opacity-70">⚠ 작업명 입력</span>}
           </span>
         );
       }
@@ -1182,7 +1182,7 @@ export default function WBS() {
 
                   if (column.key === 'name') {
                     return (
-                      <td key={column.key} className={cellClassName} style={stickyStyle}>
+                      <td key={column.key} className={cn(cellClassName, !task.name && 'bg-[rgba(220,38,38,0.04)]')} style={stickyStyle}>
                         <div className="flex items-center">{renderCell(task, column.key)}</div>
                       </td>
                     );

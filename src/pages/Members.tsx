@@ -57,14 +57,13 @@ export default function Members() {
     setBulkMode('single');
   };
 
-  const handleSingleAdd = () => {
-    const trimmed = singleName.trim();
-    if (!trimmed) return;
+  const [pendingDuplicateName, setPendingDuplicateName] = useState<string | null>(null);
 
+  const executeSingleAdd = (name: string) => {
     addMember({
       id: generateId(),
       projectId: projectId!,
-      name: trimmed,
+      name,
       role: singleRole,
       createdAt: new Date().toISOString(),
     });
@@ -72,10 +71,24 @@ export default function Members() {
     showFeedback({
       tone: 'success',
       title: '멤버 추가 완료',
-      message: `"${trimmed}" 멤버를 추가했습니다.`,
+      message: `"${name}" 멤버를 추가했습니다.`,
     });
     setSingleName('');
+    setPendingDuplicateName(null);
     requestAnimationFrame(() => singleNameRef.current?.focus());
+  };
+
+  const handleSingleAdd = () => {
+    const trimmed = singleName.trim();
+    if (!trimmed) return;
+
+    const duplicate = members.find((m) => m.name === trimmed);
+    if (duplicate) {
+      setPendingDuplicateName(trimmed);
+      return;
+    }
+
+    executeSingleAdd(trimmed);
   };
 
   const getValidPasteMembers = (): { name: string; role: ProjectMember['role'] }[] => {
@@ -520,6 +533,16 @@ export default function Members() {
           )}
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={pendingDuplicateName !== null}
+        onClose={() => setPendingDuplicateName(null)}
+        onConfirm={() => pendingDuplicateName && executeSingleAdd(pendingDuplicateName)}
+        title="동일 이름 멤버 존재"
+        description={`"${pendingDuplicateName}" 이름의 멤버가 이미 존재합니다. 그래도 추가하시겠습니까?`}
+        confirmLabel="추가"
+        confirmVariant="primary"
+      />
 
       <ConfirmModal
         isOpen={Boolean(pendingDeleteMember)}

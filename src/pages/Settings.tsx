@@ -44,6 +44,7 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isStatusModeSaving, setIsStatusModeSaving] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { canEditProject, canDeleteProject, isReadOnly } = useProjectPermission();
 
@@ -145,6 +146,21 @@ export default function Settings() {
 
   const handleChangeStatus = async (newStatus: ProjectStatus) => {
     if (!currentProject) return;
+    // 단계 건너뛰기 시 확인 모달 표시
+    const currentStatus = currentProject.status;
+    const order: ProjectStatus[] = ['preparing', 'active', 'completed'];
+    const currentIdx = order.indexOf(currentStatus ?? 'preparing');
+    const newIdx = order.indexOf(newStatus);
+    if (Math.abs(newIdx - currentIdx) > 1) {
+      setPendingStatus(newStatus);
+      return;
+    }
+    await executeStatusChange(newStatus);
+  };
+
+  const executeStatusChange = async (newStatus: ProjectStatus) => {
+    if (!currentProject) return;
+    setPendingStatus(null);
     try {
       await changeStatus(currentProject, newStatus);
       showFeedback({
@@ -656,6 +672,16 @@ export default function Settings() {
         confirmLabel="프로젝트 삭제"
         confirmVariant="danger"
         isLoading={isDeleting}
+      />
+
+      <ConfirmModal
+        isOpen={pendingStatus !== null}
+        onClose={() => setPendingStatus(null)}
+        onConfirm={() => pendingStatus && void executeStatusChange(pendingStatus)}
+        title="상태 단계 건너뛰기"
+        description={`현재 "${PROJECT_STATUS_LABELS[currentProject?.status ?? 'preparing']}" 상태에서 "${PROJECT_STATUS_LABELS[pendingStatus ?? 'preparing']}"(으)로 건너뛰어 변경합니다. 계속하시겠습니까?`}
+        confirmLabel="상태 변경"
+        confirmVariant="primary"
       />
 
       <ConfirmModal
