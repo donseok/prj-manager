@@ -104,6 +104,16 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
     childrenByParent.set(parentId, siblings);
   });
 
+  // 역전 날짜 자동 정정: 기존 데이터에 planStart > planEnd인 경우 스왑
+  taskMap.forEach((task) => {
+    if (task.planStart && task.planEnd && task.planStart > task.planEnd) {
+      [task.planStart, task.planEnd] = [task.planEnd, task.planStart];
+    }
+    if (task.actualStart && task.actualEnd && task.actualStart > task.actualEnd) {
+      [task.actualStart, task.actualEnd] = [task.actualEnd, task.actualStart];
+    }
+  });
+
   childrenByParent.forEach((siblings) => {
     siblings.sort((left, right) => left.orderIndex - right.orderIndex || left._sourceIndex - right._sourceIndex);
   });

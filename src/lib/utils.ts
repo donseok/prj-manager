@@ -164,9 +164,12 @@ export function calculateOverallProgress(tasks: Task[]): number {
   return Math.round(progress * 100) / 100;
 }
 
-// 숫자 포맷팅 (퍼센트)
+// 숫자 포맷팅 (퍼센트) — 정수면 소수점 생략, 아니면 소수점 1자리
 export function formatPercent(value: number): string {
-  return `${Math.round(value)}%`;
+  const rounded = Math.round(value * 10) / 10;
+  return rounded === Math.floor(rounded)
+    ? `${Math.floor(rounded)}%`
+    : `${rounded.toFixed(1)}%`;
 }
 
 // 숫자 포맷팅 (소수점)

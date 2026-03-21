@@ -1,7 +1,7 @@
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -96,15 +96,79 @@ function SidebarNav({
   );
 }
 
+// ─── Workflow Hints ──────────────────────────────────────────
+
+const WORKFLOW_HINTS: Record<string, string[]> = {
+  dashboard: [
+    '대시보드에서 지연 작업을 빠르게 확인하고 우선순위를 조정하세요.',
+    '공정율과 일정 경과율의 차이로 프로젝트 건강도를 판단할 수 있습니다.',
+    '가중치를 설정하면 Phase별 공정율이 더 정확하게 산출됩니다.',
+  ],
+  wbs: [
+    'WBS에서 드래그로 순서를 바꾸고, 간트에서 일정 흐름을 바로 확인하세요.',
+    '작업을 선택 후 Tab 키로 하위 레벨을 빠르게 추가할 수 있습니다.',
+    '산출물 열에서 자동추천 기능을 활용해보세요.',
+  ],
+  gantt: [
+    '간트 차트를 새 창으로 열면 WBS와 나란히 볼 수 있습니다.',
+    '마일스톤은 기간 0일로 설정하면 다이아몬드로 표시됩니다.',
+    '간트 바를 클릭하면 상세 정보를 확인할 수 있습니다.',
+  ],
+  members: [
+    '멤버 역할을 설정하면 자동배정 시 viewer는 제외됩니다.',
+    '담당자별 작업량은 대시보드에서 한눈에 확인할 수 있습니다.',
+  ],
+  settings: [
+    '프로젝트 상태를 수동 모드로 전환하면 직접 상태를 지정할 수 있습니다.',
+    'Excel로 내보내기하면 WBS 전체를 백업할 수 있습니다.',
+  ],
+  default: [
+    '프로젝트를 선택하면 대시보드에서 전체 현황을 확인할 수 있습니다.',
+    'WBS에서 드래그로 순서를 바꾸고, 간트에서 일정 흐름을 바로 확인하세요.',
+    '새 프로젝트를 만들어 팀의 워크플로를 관리해보세요.',
+  ],
+};
+
+function getWorkflowHint(pathname: string): string {
+  let context = 'default';
+  if (pathname.includes('/wbs')) context = 'wbs';
+  else if (pathname.includes('/gantt')) context = 'gantt';
+  else if (pathname.includes('/members')) context = 'members';
+  else if (pathname.includes('/settings')) context = 'settings';
+  else if (/\/projects\/[^/]+$/.test(pathname) || pathname.endsWith('/')) context = 'dashboard';
+
+  const hints = WORKFLOW_HINTS[context] || WORKFLOW_HINTS.default;
+  const now = new Date();
+  const dayOfYear = Math.floor(
+    (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return hints[dayOfYear % hints.length];
+}
+
 // ─── Main Sidebar ────────────────────────────────────────────
 
 export default function Sidebar() {
   const { projectId } = useParams();
+  const location = useLocation();
   const { projects } = useProjectStore();
   const { isAdmin } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const activeProjects = projects.filter((project) => project.status === 'active').length;
   const [pendingCount, setPendingCount] = useState(0);
+
+  const MAX_VISIBLE_PROJECTS = 8;
+  const visibleProjects = useMemo(() => {
+    return [...projects]
+      .sort((a, b) => {
+        // active 프로젝트 우선
+        if (a.status === 'active' && b.status !== 'active') return -1;
+        if (a.status !== 'active' && b.status === 'active') return 1;
+        // updatedAt 내림차순
+        return (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '');
+      })
+      .slice(0, MAX_VISIBLE_PROJECTS);
+  }, [projects]);
+  const hasMoreProjects = projects.length > MAX_VISIBLE_PROJECTS;
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -141,7 +205,7 @@ export default function Sidebar() {
             <div className="w-full border-t border-white/10" />
 
             <div className="space-y-2">
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <NavLink
                   key={project.id}
                   to={`/projects/${project.id}`}
@@ -158,6 +222,15 @@ export default function Sidebar() {
                   <FolderOpen className="h-4 w-4" />
                 </NavLink>
               ))}
+              {hasMoreProjects && (
+                <NavLink
+                  to="/projects"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent bg-white/[0.08] text-xs font-medium text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
+                  title={`+${projects.length - MAX_VISIBLE_PROJECTS}개 더보기`}
+                >
+                  +{projects.length - MAX_VISIBLE_PROJECTS}
+                </NavLink>
+              )}
             </div>
 
             <div className="w-full border-t border-white/10" />
@@ -223,7 +296,7 @@ export default function Sidebar() {
               </NavLink>
             </div>
             <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-              {projects.map((project) => (
+              {visibleProjects.map((project) => (
                 <NavLink
                   key={project.id}
                   to={`/projects/${project.id}`}
@@ -260,6 +333,14 @@ export default function Sidebar() {
                   )} />
                 </NavLink>
               ))}
+              {hasMoreProjects && (
+                <NavLink
+                  to="/projects"
+                  className="flex items-center justify-center rounded-2xl border border-dashed border-white/12 px-3 py-2.5 text-xs font-medium text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+                >
+                  +{projects.length - MAX_VISIBLE_PROJECTS}개 더보기
+                </NavLink>
+              )}
               {projects.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-white/12 px-4 py-8 text-center">
                   <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/40" />
@@ -286,7 +367,7 @@ export default function Sidebar() {
 
           <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80">Workflow Hint</p>
-            <p className="mt-2 text-sm font-medium text-white">WBS에서 드래그로 순서를 바꾸고, 간트에서 일정 흐름을 바로 확인하세요.</p>
+            <p className="mt-2 text-sm font-medium text-white">{getWorkflowHint(location.pathname)}</p>
           </div>
         </div>
       </div>

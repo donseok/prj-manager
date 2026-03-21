@@ -23,6 +23,7 @@ import Button from '../components/common/Button';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { generateProjectReport } from '../lib/exportReport';
 import { getProjectVisualTone } from '../lib/projectVisuals';
+import { autoCalculateWeights } from '../lib/taskAutoFill';
 import {
   getDelayedTasks,
   getWeeklyTasks,
@@ -57,7 +58,7 @@ import {
 export default function Dashboard() {
   const { projectId } = useParams<{ projectId: string }>();
   const isDark = useThemeStore((state) => state.isDark);
-  const { tasks } = useTaskStore();
+  const { tasks, setTasks } = useTaskStore();
   const { currentProject, members } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
@@ -141,6 +142,16 @@ export default function Dashboard() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleAutoWeights = () => {
+    const updated = autoCalculateWeights(tasks);
+    setTasks(updated, undefined, { recordHistory: true });
+    showFeedback({
+      tone: 'success',
+      title: '가중치 자동배분 완료',
+      message: '작업 기간 기준으로 Phase 가중치를 자동 배분했습니다.',
+    });
   };
 
   return (
@@ -251,10 +262,18 @@ export default function Dashboard() {
               <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(stats.planProgress)}</span>
             </div>
             {allWeightsZero && stats.totalTasks > 0 && (
-              <p className="mt-3 text-xs leading-5 text-[color:var(--accent-warning)]">
-                <AlertTriangle className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
-                Phase 가중치가 모두 0입니다. WBS에서 가중치를 설정하면 더 정확한 공정율이 산출됩니다.
-              </p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <p className="text-xs leading-5 text-[color:var(--accent-warning)]">
+                  <AlertTriangle className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
+                  Phase 가중치가 모두 0입니다. 가중치를 설정하면 더 정확한 공정율이 산출됩니다.
+                </p>
+                <button
+                  onClick={handleAutoWeights}
+                  className="shrink-0 rounded-full border border-[color:var(--accent-warning)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-warning)] transition-colors hover:bg-[rgba(234,179,8,0.1)]"
+                >
+                  가중치 자동배분
+                </button>
+              </div>
             )}
           </div>
 
@@ -577,7 +596,7 @@ export default function Dashboard() {
               <div className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[color:var(--text-secondary)]">일정 경과율</span>
-                  <span className="font-semibold text-[color:var(--text-primary)]">{Math.round(timeline.elapsedPercent)}%</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(timeline.elapsedPercent)}</span>
                 </div>
                 <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(91,141,239,0.12)]">
                   <div
