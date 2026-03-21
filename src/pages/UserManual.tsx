@@ -20,6 +20,7 @@ import {
   ArrowUp,
   Bot,
   ClipboardList,
+  CalendarCheck,
 } from 'lucide-react';
 
 interface Section {
@@ -458,6 +459,72 @@ export default function UserManual() {
             ]} />
           </SectionCard>
           <Tip>멤버 정보 변경은 자동 저장됩니다. WBS의 담당자 드롭다운에는 여기에 등록된 멤버 목록이 표시됩니다.</Tip>
+        </div>
+      ),
+    },
+    {
+      id: 'attendance',
+      title: '근태현황',
+      icon: <CalendarCheck className="h-5 w-5" />,
+      content: (
+        <div className="space-y-6">
+          <SectionCard title="근태현황 개요">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+              프로젝트 멤버의 출결 상태를 캘린더 뷰와 리스트 뷰로 관리합니다.
+              평일은 기본 출근 상태이며, 연차/반차/출장 등 변경이 필요한 경우에만 근태를 등록합니다.
+            </p>
+            <InfoTable headers={['항목', '설명']} rows={[
+              ['캘린더 뷰', '월간 달력 형태로 멤버별 근태를 한눈에 확인 (일요일~토요일)'],
+              ['리스트 뷰', '테이블 형태로 날짜/담당자/유형/사유를 목록으로 확인'],
+              ['월간 요약', '페이지 하단에 멤버별 근태유형 카운트 테이블 표시'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="근태 등록">
+            <StepList steps={[
+              '근태현황 페이지에서 "근태 등록" 버튼을 클릭하거나, 캘린더의 날짜 셀을 클릭합니다.',
+              '담당자를 선택합니다.',
+              '날짜를 지정합니다. 여러 날을 한 번에 등록하려면 "범위 선택"을 체크합니다.',
+              '근태유형을 선택합니다 (기본값: 출근).',
+              '필요 시 사유/비고를 입력합니다.',
+              '"등록" 버튼을 클릭하면 즉시 저장됩니다.',
+            ]} />
+            <div className="mt-4">
+              <Tip>범위 선택 시 주말(토/일)은 자동으로 제외됩니다.</Tip>
+            </div>
+          </SectionCard>
+          <SectionCard title="근태유형">
+            <InfoTable headers={['유형', '설명', '색상']} rows={[
+              ['출근', '정상 출근', '녹색'],
+              ['연차', '연차 휴가', '파란색'],
+              ['오전반차', '오전 반일 휴가', '하늘색'],
+              ['오후반차', '오후 반일 휴가', '하늘색'],
+              ['병가', '질병으로 인한 휴가', '빨간색'],
+              ['출장', '업무 출장', '보라색'],
+              ['지각', '지각 출근', '주황색'],
+              ['조퇴', '조기 퇴근', '주황색'],
+              ['결근', '무단 결근', '진빨간색'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="근태 수정 및 삭제">
+            <InfoTable headers={['기능', '방법']} rows={[
+              ['수정', '캘린더 뷰에서 근태 항목 클릭 또는 리스트 뷰에서 편집 아이콘 클릭 → 모달에서 수정 후 저장'],
+              ['삭제', '리스트 뷰에서 휴지통 아이콘 클릭 → 확인 팝업에서 삭제'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="권한별 기능">
+            <InfoTable headers={['역할', '조회', '본인 근태 등록/수정', '전체 근태 관리']} rows={[
+              ['소유자/관리자', '가능', '가능', '가능'],
+              ['멤버', '가능', '가능', '불가'],
+              ['뷰어', '가능', '불가', '불가'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="주간보고서 연동">
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
+              WBS 페이지에서 주간보고를 생성하면, 해당 주의 근태현황이 자동으로 포함됩니다.
+              요약 현황 탭에서 멤버별 요일(월~금) 근태와 소계를 확인할 수 있습니다.
+            </p>
+          </SectionCard>
+          <Tip>대시보드에서도 "금주 근태현황" 위젯으로 오늘 등록된 근태와 주간 통계를 빠르게 확인할 수 있습니다.</Tip>
         </div>
       ),
     },

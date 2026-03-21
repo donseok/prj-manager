@@ -5,7 +5,8 @@
 
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import type { WeeklyReportData, WeeklyReportTask } from './weeklyReport';
+import type { WeeklyReportData, WeeklyReportTask, WeeklyAttendanceSummary } from './weeklyReport';
+import { ATTENDANCE_TYPE_COLORS } from '../types';
 
 const FONT_NAME = 'Pretendard';
 
@@ -166,6 +167,14 @@ export function exportWeeklyReportExcel(report: WeeklyReportData) {
     });
   }
 
+  // ── 근태현황 ────────────────────────────────────────────────
+  if (report.attendanceSummary && report.attendanceSummary.length > 0) {
+    const spacerA = ws.addRow([]);
+    spacerA.height = 6;
+
+    writeAttendanceSection(ws, report.attendanceSummary, totalCols);
+  }
+
   // ── 섹션별 작업 목록 ───────────────────────────────────────
   const sections = [
     report.thisWeekActual,
@@ -236,6 +245,74 @@ function writeTaskTableHeader(ws: ExcelJS.Worksheet) {
     cell.fill = fill(C.headerBg);
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = thinBorder(C.headerBg);
+  });
+}
+
+function writeAttendanceSection(ws: ExcelJS.Worksheet, attendanceSummary: WeeklyAttendanceSummary[], totalCols: number) {
+  writeSectionHeader(ws, '근태현황', totalCols);
+
+  // 헤더: 담당자, 월, 화, 수, 목, 금, 소계
+  const attHeaders = ['', '담당자', '월', '화', '수', '목', '금', '소계', ''];
+  const headerRow = ws.addRow(attHeaders);
+  headerRow.height = 26;
+  headerRow.eachCell({ includeEmpty: true }, (cell) => {
+    cell.font = font({ bold: true, size: 9, color: { argb: C.headerFont } });
+    cell.fill = fill(C.headerBg);
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = thinBorder(C.headerBg);
+  });
+
+  attendanceSummary.forEach((member, idx) => {
+    const dayMap = new Map<number, string>();
+    const dayColorMap = new Map<number, string>();
+    for (const r of member.records) {
+      const dow = new Date(r.date).getDay(); // 0=일 ~ 6=토
+      if (dow >= 1 && dow <= 5) {
+        dayMap.set(dow, r.typeLabel);
+        dayColorMap.set(dow, ATTENDANCE_TYPE_COLORS[r.type]?.replace('#', '') || '000000');
+      }
+    }
+
+    const statsStr = Object.entries(member.stats).map(([k, v]) => `${k}${v}`).join('/');
+
+    const rowData = [
+      idx + 1,
+      member.memberName,
+      dayMap.get(1) || '-',
+      dayMap.get(2) || '-',
+      dayMap.get(3) || '-',
+      dayMap.get(4) || '-',
+      dayMap.get(5) || '-',
+      statsStr,
+      '',
+    ];
+
+    const row = ws.addRow(rowData);
+    const bg = idx % 2 === 0 ? C.rowEven : C.rowOdd;
+    row.height = 24;
+    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+      cell.fill = fill(bg);
+      cell.font = font({ size: 9 });
+      cell.border = thinBorder(C.borderLight);
+      cell.alignment = { vertical: 'middle', horizontal: colNum >= 3 && colNum <= 7 ? 'center' : 'left' };
+
+      if (colNum === 1) {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.font = font({ size: 8, color: { argb: C.metaLabel } });
+      }
+      if (colNum >= 3 && colNum <= 7) {
+        const dow = colNum - 2;
+        const color = dayColorMap.get(dow);
+        if (color) {
+          cell.font = font({ bold: true, size: 8, color: { argb: color } });
+        } else {
+          cell.font = font({ size: 8, color: { argb: C.metaLabel } });
+        }
+      }
+      if (colNum === 8) {
+        cell.font = font({ size: 8, color: { argb: C.metaValue } });
+      }
+    });
   });
 }
 
