@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Presentation,
 } from 'lucide-react';
 import Modal from './common/Modal';
 import { cn } from '../lib/utils';
@@ -30,6 +31,7 @@ import {
   type WeeklyReportTask,
 } from '../lib/weeklyReport';
 import { exportWeeklyReportExcel } from '../lib/exportWeeklyReport';
+import { exportWeeklyReportPptx } from '../lib/exportWeeklyReportPptx';
 import {
   saveSnapshot,
   getSnapshots,
@@ -84,6 +86,10 @@ export default function WeeklyReportModal({
 
   const handleExport = () => {
     exportWeeklyReportExcel(report);
+  };
+
+  const handleExportPptx = async () => {
+    await exportWeeklyReportPptx(report);
   };
 
   const handleSaveSnapshot = () => {
@@ -177,6 +183,13 @@ export default function WeeklyReportModal({
                 <Save className="h-3.5 w-3.5" />
               )}
               {snapshotSaved ? '저장됨' : '스냅샷 저장'}
+            </button>
+            <button
+              onClick={handleExportPptx}
+              className="weekly-report-action-btn weekly-report-action-btn-primary"
+            >
+              <Presentation className="h-3.5 w-3.5" />
+              PPT 내보내기
             </button>
             <button
               onClick={handleExport}
