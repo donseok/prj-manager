@@ -441,16 +441,30 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
   }
 }
 
-// ── 근태현황 슬라이드 ────────────────────────────────────────
-function addAttendanceSlide(
-  pptx: PptxGenJS,
-  report: WeeklyReportData,
-  attendanceSummary: import('./weeklyReport').WeeklyAttendanceSummary[],
-  sectionTitle: string,
-  subtitle: string,
-  titleColor: string,
-) {
+// ── 근태현황 슬라이드 (금주 + 차주 통합) ─────────────────────
+function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const slide = pptx.addSlide();
+
+  const thisWeek = report.attendanceSummary || [];
+  const nextWeek = report.nextWeekAttendanceSummary || [];
+
+  // 주 시작일로부터 요일별 날짜 계산
+  const getDayHeaders = (weekStartStr: string): string[] => {
+    const ws = new Date(weekStartStr + 'T00:00:00');
+    const dayNames = ['월', '화', '수', '목', '금'];
+    return dayNames.map((name, i) => {
+      const d = new Date(ws);
+      d.setDate(ws.getDate() + i);
+      return `${name}\n(${d.getMonth() + 1}/${d.getDate()})`;
+    });
+  };
+
+  const thisWeekDays = getDayHeaders(report.weekStart);
+  // 차주 시작일: 금주 시작일 + 7일
+  const nws = new Date(report.weekStart + 'T00:00:00');
+  nws.setDate(nws.getDate() + 7);
+  const nextWeekStartStr = `${nws.getFullYear()}-${String(nws.getMonth() + 1).padStart(2, '0')}-${String(nws.getDate()).padStart(2, '0')}`;
+  const nextWeekDays = getDayHeaders(nextWeekStartStr);
 
   // 헤더 바
   slide.addShape(pptx.ShapeType.rect, {
@@ -463,85 +477,112 @@ function addAttendanceSlide(
     fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
   });
 
-  slide.addText(subtitle, {
+  slide.addText(`근태현황 · ${report.weekLabel}`, {
     x: 0.6, y: 0.65, w: 7, h: 0.3,
     fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
   });
 
-  // 섹션 제목
-  slide.addShape(pptx.ShapeType.roundRect, {
-    x: 0.4, y: 1.45, w: 9.0, h: 0.35,
-    fill: { color: titleColor }, rectRadius: 0.05,
-  });
-  slide.addText(sectionTitle, {
-    x: 0.4, y: 1.45, w: 9.0, h: 0.35,
-    fontSize: 11, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
-  });
-
-  // 테이블 헤더
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cellOpts = (opts: Record<string, any> = {}): Record<string, any> => ({
-    fontSize: 8, fontFace: 'Pretendard', align: 'center', valign: 'middle', ...opts,
+    fontSize: 7, fontFace: 'Pretendard', align: 'center', valign: 'middle', ...opts,
   });
 
-  const headerRow: PptxGenJS.TableRow = [
-    { text: '담당자', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '월', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '화', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '수', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '목', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '금', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-    { text: '소계', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
-  ];
+  // 테이블 빌드 함수
+  const buildAttendanceTable = (
+    summary: import('./weeklyReport').WeeklyAttendanceSummary[],
+    dayHeaders: string[],
+  ): { header: PptxGenJS.TableRow; rows: PptxGenJS.TableRow[] } => {
+    const header: PptxGenJS.TableRow = [
+      { text: '담당자', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark }, fontSize: 7.5 }) },
+      ...dayHeaders.map((d) => ({ text: d, options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark }, fontSize: 7 }) })),
+      { text: '소계', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark }, fontSize: 7.5 }) },
+    ];
 
-  const dataRows: PptxGenJS.TableRow[] = attendanceSummary.map((member, i) => {
-    const rowBg = i % 2 === 0 ? C.white : C.gray50;
-    const dayMap = new Map<number, { label: string; color: string }>();
-    for (const r of member.records) {
-      const dow = new Date(r.date).getDay();
-      if (dow >= 1 && dow <= 5) {
-        dayMap.set(dow, {
-          label: r.typeLabel,
-          color: ATTENDANCE_TYPE_COLORS[r.type]?.replace('#', '') || C.gray600,
-        });
+    const rows: PptxGenJS.TableRow[] = summary.map((member, i) => {
+      const rowBg = i % 2 === 0 ? C.white : C.gray50;
+      const dayMap = new Map<number, { label: string; color: string }>();
+      for (const r of member.records) {
+        const dow = new Date(r.date).getDay();
+        if (dow >= 1 && dow <= 5) {
+          dayMap.set(dow, {
+            label: r.typeLabel,
+            color: ATTENDANCE_TYPE_COLORS[r.type]?.replace('#', '') || C.gray600,
+          });
+        }
       }
+
+      const statsStr = Object.entries(member.stats).map(([k, v]) => `${k}${v}`).join('/');
+
+      const dayCell = (dow: number): PptxGenJS.TableCell => {
+        const info = dayMap.get(dow);
+        return {
+          text: info?.label || '-',
+          options: cellOpts({
+            color: info?.color || C.gray400,
+            bold: !!info,
+            fill: { color: rowBg },
+            fontSize: 7,
+          }),
+        };
+      };
+
+      return [
+        { text: member.memberName, options: cellOpts({ color: C.dark, fill: { color: rowBg }, align: 'left' as const, fontSize: 7.5 }) },
+        dayCell(1), dayCell(2), dayCell(3), dayCell(4), dayCell(5),
+        { text: statsStr, options: cellOpts({ color: C.gray600, fill: { color: rowBg }, fontSize: 6.5 }) },
+      ];
+    });
+
+    if (summary.length === 0) {
+      rows.push([{
+        text: '근태 기록 없음',
+        options: cellOpts({ color: C.gray400, fill: { color: C.gray50 }, colspan: 7 }),
+      }]);
     }
 
-    const statsStr = Object.entries(member.stats).map(([k, v]) => `${k}${v}`).join('/');
-
-    const dayCell = (dow: number): PptxGenJS.TableCell => {
-      const info = dayMap.get(dow);
-      return {
-        text: info?.label || '-',
-        options: cellOpts({
-          color: info?.color || C.gray400,
-          bold: !!info,
-          fill: { color: rowBg },
-          fontSize: 7.5,
-        }),
-      };
-    };
-
-    return [
-      { text: member.memberName, options: cellOpts({ color: C.dark, fill: { color: rowBg }, align: 'left' as const, fontSize: 8 }) },
-      dayCell(1),
-      dayCell(2),
-      dayCell(3),
-      dayCell(4),
-      dayCell(5),
-      { text: statsStr, options: cellOpts({ color: C.gray600, fill: { color: rowBg }, fontSize: 7 }) },
-    ];
-  });
+    return { header, rows };
+  };
 
   const tableW = 9.0;
-  slide.addTable([headerRow, ...dataRows], {
-    x: 0.4,
-    y: 1.9,
-    w: tableW,
-    colW: [tableW * 0.18, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.17],
+  const colWidths = [tableW * 0.17, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.18];
+
+  // ── 금주 근태현황 ──
+  let curY = 1.45;
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.4, y: curY, w: tableW, h: 0.32,
+    fill: { color: C.primary }, rectRadius: 0.05,
+  });
+  slide.addText('금주 근태현황', {
+    x: 0.4, y: curY, w: tableW, h: 0.32,
+    fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
+  });
+  curY += 0.38;
+
+  const thisTable = buildAttendanceTable(thisWeek, thisWeekDays);
+  const thisRowCount = 1 + Math.max(thisTable.rows.length, 1); // header + data
+  slide.addTable([thisTable.header, ...thisTable.rows], {
+    x: 0.4, y: curY, w: tableW, colW: colWidths,
     border: { type: 'solid', pt: 0.5, color: C.gray200 },
-    rowH: 0.32,
-    autoPage: false,
+    rowH: 0.28, autoPage: false,
+  });
+  curY += thisRowCount * 0.28 + 0.25;
+
+  // ── 차주 근태현황 ──
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.4, y: curY, w: tableW, h: 0.32,
+    fill: { color: '6366F1' }, rectRadius: 0.05,
+  });
+  slide.addText('차주 근태현황', {
+    x: 0.4, y: curY, w: tableW, h: 0.32,
+    fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
+  });
+  curY += 0.38;
+
+  const nextTable = buildAttendanceTable(nextWeek, nextWeekDays);
+  slide.addTable([nextTable.header, ...nextTable.rows], {
+    x: 0.4, y: curY, w: tableW, colW: colWidths,
+    border: { type: 'solid', pt: 0.5, color: C.gray200 },
+    rowH: 0.28, autoPage: false,
   });
 }
 
@@ -560,14 +601,11 @@ export async function exportWeeklyReportPptx(report: WeeklyReportData) {
   // 슬라이드 2~: 상세 (좌: 금주실적, 우: 차주계획)
   addDetailSlides(pptx, report);
 
-  // 금주 근태현황 슬라이드
-  if (report.attendanceSummary && report.attendanceSummary.length > 0) {
-    addAttendanceSlide(pptx, report, report.attendanceSummary, '금주 근태현황', `근태현황 · ${report.weekLabel}`, C.primary);
-  }
-
-  // 차주 근태현황 슬라이드
-  if (report.nextWeekAttendanceSummary && report.nextWeekAttendanceSummary.length > 0) {
-    addAttendanceSlide(pptx, report, report.nextWeekAttendanceSummary, '차주 근태현황', `차주 근태현황 · ${report.weekLabel}`, '6366F1');
+  // 근태현황 슬라이드 (금주 + 차주 통합)
+  const hasThisWeek = report.attendanceSummary && report.attendanceSummary.length > 0;
+  const hasNextWeek = report.nextWeekAttendanceSummary && report.nextWeekAttendanceSummary.length > 0;
+  if (hasThisWeek || hasNextWeek) {
+    addAttendanceCombinedSlide(pptx, report);
   }
 
   const filename = `${report.projectName}_주간보고_${report.weekStart}.pptx`;
