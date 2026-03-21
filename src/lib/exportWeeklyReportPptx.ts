@@ -8,6 +8,7 @@
 
 import PptxGenJS from 'pptxgenjs';
 import type { WeeklyReportData, WeeklyReportTask } from './weeklyReport';
+import { ATTENDANCE_TYPE_COLORS } from '../types';
 
 // ── 색상 ────────────────────────────────────────────────────
 const C = {
@@ -440,6 +441,104 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
   }
 }
 
+// ── 근태현황 슬라이드 ────────────────────────────────────────
+function addAttendanceSlide(pptx: PptxGenJS, report: WeeklyReportData) {
+  const slide = pptx.addSlide();
+  const attendanceSummary = report.attendanceSummary!;
+
+  // 헤더 바
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: 0, w: '100%', h: 1.3,
+    fill: { color: C.darkBg },
+  });
+
+  slide.addText(report.projectName, {
+    x: 0.6, y: 0.25, w: 7, h: 0.35,
+    fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
+  });
+
+  slide.addText(`근태현황 · ${report.weekLabel}`, {
+    x: 0.6, y: 0.65, w: 7, h: 0.3,
+    fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
+  });
+
+  // 섹션 제목
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.4, y: 1.45, w: 9.0, h: 0.35,
+    fill: { color: C.primary }, rectRadius: 0.05,
+  });
+  slide.addText('금주 근태현황', {
+    x: 0.4, y: 1.45, w: 9.0, h: 0.35,
+    fontSize: 11, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
+  });
+
+  // 테이블 헤더
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cellOpts = (opts: Record<string, any> = {}): Record<string, any> => ({
+    fontSize: 8, fontFace: 'Pretendard', align: 'center', valign: 'middle', ...opts,
+  });
+
+  const headerRow: PptxGenJS.TableRow = [
+    { text: '담당자', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '월', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '화', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '수', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '목', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '금', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+    { text: '소계', options: cellOpts({ bold: true, color: C.white, fill: { color: C.dark } }) },
+  ];
+
+  const dataRows: PptxGenJS.TableRow[] = attendanceSummary.map((member, i) => {
+    const rowBg = i % 2 === 0 ? C.white : C.gray50;
+    const dayMap = new Map<number, { label: string; color: string }>();
+    for (const r of member.records) {
+      const dow = new Date(r.date).getDay();
+      if (dow >= 1 && dow <= 5) {
+        dayMap.set(dow, {
+          label: r.typeLabel,
+          color: ATTENDANCE_TYPE_COLORS[r.type]?.replace('#', '') || C.gray600,
+        });
+      }
+    }
+
+    const statsStr = Object.entries(member.stats).map(([k, v]) => `${k}${v}`).join('/');
+
+    const dayCell = (dow: number): PptxGenJS.TableCell => {
+      const info = dayMap.get(dow);
+      return {
+        text: info?.label || '-',
+        options: cellOpts({
+          color: info?.color || C.gray400,
+          bold: !!info,
+          fill: { color: rowBg },
+          fontSize: 7.5,
+        }),
+      };
+    };
+
+    return [
+      { text: member.memberName, options: cellOpts({ color: C.dark, fill: { color: rowBg }, align: 'left' as const, fontSize: 8 }) },
+      dayCell(1),
+      dayCell(2),
+      dayCell(3),
+      dayCell(4),
+      dayCell(5),
+      { text: statsStr, options: cellOpts({ color: C.gray600, fill: { color: rowBg }, fontSize: 7 }) },
+    ];
+  });
+
+  const tableW = 9.0;
+  slide.addTable([headerRow, ...dataRows], {
+    x: 0.4,
+    y: 1.9,
+    w: tableW,
+    colW: [tableW * 0.18, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.17],
+    border: { type: 'solid', pt: 0.5, color: C.gray200 },
+    rowH: 0.32,
+    autoPage: false,
+  });
+}
+
 // ── 메인 내보내기 함수 ──────────────────────────────────────
 export async function exportWeeklyReportPptx(report: WeeklyReportData) {
   const pptx = new PptxGenJS();
@@ -454,6 +553,11 @@ export async function exportWeeklyReportPptx(report: WeeklyReportData) {
 
   // 슬라이드 2~: 상세 (좌: 금주실적, 우: 차주계획)
   addDetailSlides(pptx, report);
+
+  // 근태현황 슬라이드
+  if (report.attendanceSummary && report.attendanceSummary.length > 0) {
+    addAttendanceSlide(pptx, report);
+  }
 
   const filename = `${report.projectName}_주간보고_${report.weekStart}.pptx`;
   await pptx.writeFile({ fileName: filename });
