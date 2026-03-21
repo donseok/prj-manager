@@ -58,6 +58,8 @@ export default function GanttChart({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const isDark = useThemeStore((s) => s.isDark);
   const isExternalScroll = useRef(false);
+  const prevSelectedIdRef = useRef<string | null>(null);
+  const skipAutoFocusRef = useRef(false);
 
   const recommendedStartDate = useMemo(() => {
     if (propStartDate) return startOfWeek(propStartDate, { weekStartsOn: 1 });
@@ -174,6 +176,16 @@ export default function GanttChart({
   useEffect(() => {
     if (!selectedTask || !containerRef.current) return;
 
+    // "오늘" 버튼 등에서 자동 포커스를 건너뛰도록 요청한 경우
+    if (skipAutoFocusRef.current) {
+      skipAutoFocusRef.current = false;
+      return;
+    }
+
+    // 선택 작업이 실제로 변경된 경우에만 스크롤
+    if (prevSelectedIdRef.current === selectedTask.id) return;
+    prevSelectedIdRef.current = selectedTask.id;
+
     const rowIndex = tasks.findIndex((task) => task.id === selectedTask.id);
     if (rowIndex < 0) return;
 
@@ -231,7 +243,22 @@ export default function GanttChart({
   const handleGoToToday = () => {
     // 오늘 날짜가 화면 왼쪽 1/4 지점에 오도록 설정
     const offsetDays = Math.floor(weeksToShow * 7 * 0.25);
-    setManualViewStartDate(startOfWeek(addDays(new Date(), -offsetDays), { weekStartsOn: 1 }));
+    const newStartDate = startOfWeek(addDays(new Date(), -offsetDays), { weekStartsOn: 1 });
+
+    // 자동 포커스(선택 작업 위치로 스크롤)를 건너뛰기
+    skipAutoFocusRef.current = true;
+    setManualViewStartDate(newStartDate);
+
+    // 다음 렌더 후 오늘 날짜 위치로 직접 스크롤
+    requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const todayPixel = differenceInDays(new Date(), newStartDate) * dayWidth;
+      const clientWidth = containerRef.current.clientWidth;
+      containerRef.current.scrollTo({
+        left: Math.max(todayPixel - clientWidth / 2, 0),
+        behavior: 'smooth',
+      });
+    });
   };
 
   const handleFitToTasks = () => {
