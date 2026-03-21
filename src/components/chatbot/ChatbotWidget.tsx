@@ -128,7 +128,7 @@ export default function ChatbotWidget() {
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
       {isOpen && (
-        <section className="pointer-events-auto flex w-[min(92vw,25rem)] flex-col overflow-hidden rounded-[30px] border border-white/15 bg-[image:var(--gradient-surface)] shadow-[0_38px_120px_-48px_rgba(8,17,32,0.65)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
+        <section className="pointer-events-auto flex w-[min(92vw,30rem)] flex-col overflow-hidden rounded-[30px] border border-white/15 bg-[image:var(--gradient-surface)] shadow-[0_38px_120px_-48px_rgba(8,17,32,0.65)] backdrop-blur-2xl animate-scale-in dark:bg-[image:var(--gradient-dark)]">
           <div className="relative overflow-hidden rounded-t-[30px] border-b border-white/10 bg-[linear-gradient(160deg,#0E1B45_0%,#152560_48%,#1E3A7B_100%)] px-4 py-3 text-white">
             <div className="pointer-events-none absolute right-[-3.5rem] top-[-2rem] h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_70%)] blur-2xl" />
             <div className="relative flex items-center justify-between gap-3">
@@ -178,7 +178,7 @@ export default function ChatbotWidget() {
             </div>
           </div>
 
-          <div className="app-panel flex max-h-[min(70vh,28rem)] flex-1 flex-col gap-3 p-3">
+          <div className="app-panel flex max-h-[min(75vh,36rem)] flex-1 flex-col gap-3 p-3">
             <div className="flex flex-wrap gap-2">
               {visibleSuggestions.map((suggestion) => (
                 <button
