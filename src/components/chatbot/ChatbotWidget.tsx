@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { MessageCircle, SendHorizonal, X, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useTaskStore } from '../../store/taskStore';
-import { CHATBOT_SUGGESTIONS, createChatbotGreeting, createChatbotReply } from '../../lib/chatbot';
+import {
+  CHATBOT_SUGGESTIONS,
+  createChatbotGreeting,
+  createChatbotReply,
+  type ChatbotMessage,
+  type ChatbotContext,
+} from '../../lib/chatbot';
 import { cn, generateId } from '../../lib/utils';
 import DKBotAvatar from './DKBotAvatar';
 
-interface ChatMessage {
+interface UIMessage {
   id: string;
   role: 'assistant' | 'user';
   text: string;
@@ -18,11 +24,12 @@ export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<UIMessage[]>([]);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const timerRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const context = useMemo(
+  const context = useMemo<ChatbotContext>(
     () => ({
       project: currentProject,
       members,
@@ -32,12 +39,18 @@ export default function ChatbotWidget() {
     [currentProject, members, tasks, projects]
   );
 
+  // 대화 히스토리 → ChatbotMessage[] 형태로 변환
+  const chatHistory = useMemo<ChatbotMessage[]>(
+    () => messages.map((m) => ({ role: m.role, text: m.text })),
+    [messages]
+  );
+
   useEffect(() => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const greeting: ChatMessage = {
+    const greeting: UIMessage = {
       id: generateId(),
       role: 'assistant',
       text: createChatbotGreeting({
@@ -47,11 +60,11 @@ export default function ChatbotWidget() {
         allProjects: projects,
       }),
     };
-    // 타이머를 사용해 렌더 사이클 후 상태를 업데이트
     timerRef.current = window.setTimeout(() => {
       setMessages([greeting]);
       setDraft('');
       setIsThinking(false);
+      setDynamicSuggestions([]);
     }, 0);
   }, [currentProject, projects]);
 
@@ -67,7 +80,7 @@ export default function ChatbotWidget() {
     };
   }, []);
 
-  const submitQuestion = (input: string) => {
+  const submitQuestion = useCallback((input: string) => {
     const question = input.trim();
     if (!question || isThinking) return;
 
@@ -75,33 +88,42 @@ export default function ChatbotWidget() {
       window.clearTimeout(timerRef.current);
     }
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        role: 'user',
-        text: question,
-      },
-    ]);
+    const userMsg: UIMessage = {
+      id: generateId(),
+      role: 'user',
+      text: question,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
     setDraft('');
     setIsThinking(true);
     setIsOpen(true);
 
+    // 현재 히스토리 + 새 유저 메시지를 ChatbotMessage[]로 구성
+    const historyForReply: ChatbotMessage[] = [
+      ...chatHistory,
+      { role: 'user', text: question },
+    ];
+
     timerRef.current = window.setTimeout(() => {
-      void createChatbotReply(question, context).then((reply) => {
+      void createChatbotReply(question, context, historyForReply).then((reply) => {
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             role: 'assistant',
-            text: reply,
+            text: reply.text,
           },
         ]);
+        setDynamicSuggestions(reply.suggestions);
         setIsThinking(false);
         timerRef.current = null;
       });
-    }, 420);
-  };
+    }, 300);
+  }, [isThinking, context, chatHistory]);
+
+  // 초기 제안 vs 동적 제안 결정
+  const visibleSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : CHATBOT_SUGGESTIONS;
 
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
@@ -131,10 +153,11 @@ export default function ChatbotWidget() {
                     setMessages([{
                       id: generateId(),
                       role: 'assistant',
-                      text: createChatbotGreeting({ project: currentProject, members: [], tasks: [], allProjects: projects }),
+                      text: createChatbotGreeting({ project: currentProject, members, tasks, allProjects: projects }),
                     }]);
                     setDraft('');
                     setIsThinking(false);
+                    setDynamicSuggestions([]);
                   }}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/12 text-white/80 transition hover:bg-white/18 hover:text-white"
                   aria-label="대화 초기화"
@@ -157,7 +180,7 @@ export default function ChatbotWidget() {
 
           <div className="app-panel flex max-h-[min(70vh,28rem)] flex-1 flex-col gap-3 p-3">
             <div className="flex flex-wrap gap-2">
-              {CHATBOT_SUGGESTIONS.map((suggestion) => (
+              {visibleSuggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
