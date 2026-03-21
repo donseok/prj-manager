@@ -14,6 +14,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, ScanSearch } from 'lucide-reac
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
 import { useThemeStore } from '../../store/themeStore';
+import { isKoreanHoliday } from '../../lib/holidays';
 import Button from '../common/Button';
 
 interface GanttChartProps {
@@ -332,6 +333,8 @@ export default function GanttChart({
               {dateRange.map((date) => {
                 const isToday = isSameDay(date, today);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isHoliday = isKoreanHoliday(date);
+                const isNonWorkDay = isWeekend || isHoliday;
 
                 let bgColor: string | undefined;
                 let numColor: string;
@@ -342,7 +345,7 @@ export default function GanttChart({
                     bgColor = 'rgba(15,118,110,0.35)';
                     numColor = '#5eead4';
                     dayColor = '#5eead4';
-                  } else if (isWeekend) {
+                  } else if (isNonWorkDay) {
                     bgColor = '#8b2030';
                     numColor = '#ffffff';
                     dayColor = '#ffffff';
@@ -356,8 +359,8 @@ export default function GanttChart({
                     bgColor = 'rgba(15,118,110,0.15)';
                     numColor = 'var(--accent-primary)';
                     dayColor = 'var(--accent-primary)';
-                  } else if (isWeekend) {
-                    bgColor = 'rgba(127,111,97,0.08)';
+                  } else if (isNonWorkDay) {
+                    bgColor = 'rgba(200,16,46,0.08)';
                     numColor = 'var(--text-secondary)';
                     dayColor = 'var(--text-muted)';
                   } else {
@@ -392,12 +395,14 @@ export default function GanttChart({
             <div className="absolute inset-0 pointer-events-none">
               {dateRange.map((date, index) => {
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isHoliday = isKoreanHoliday(date);
+                const isNonWorkDay = isWeekend || isHoliday;
                 return (
                   <div
                     key={`${date.toISOString()}-grid`}
                     className={cn(
                       'absolute top-0 bottom-0 border-r border-[var(--border-color)]',
-                      highlightWeekends && isWeekend && 'bg-[rgba(127,111,97,0.05)] dark:bg-[rgba(255,255,255,0.03)]'
+                      highlightWeekends && isNonWorkDay && 'bg-[rgba(200,16,46,0.06)] dark:bg-[rgba(200,16,46,0.08)]'
                     )}
                     style={{ left: index * dayWidth, width: dayWidth }}
                   />
