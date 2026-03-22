@@ -894,15 +894,29 @@ export default function WBS() {
         );
       }
 
-      case 'planProgress':
+      case 'planProgress': {
+        const planValue = task.planProgress as number;
+        return (
+          <div className="flex items-center gap-1">
+            <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+              <div
+                className="h-full rounded-full bg-[image:linear-gradient(135deg,#155e75,#1f8f86)]"
+                style={{ width: `${planValue}%` }}
+              />
+            </div>
+            <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{planValue}%</span>
+          </div>
+        );
+      }
+
       case 'actualProgress': {
-        const progressValue = task[columnId as keyof Task] as number;
+        const actualValue = task.actualProgress as number;
         return isEditing ? (
           <div className="flex items-center gap-1">
             <input
               type="text"
               inputMode="numeric"
-              defaultValue={progressValue}
+              defaultValue={actualValue}
               onChange={(e) => {
                 const raw = e.target.value.replace(/[^0-9]/g, '');
                 const num = Math.min(100, Math.max(0, parseInt(raw) || 0));
@@ -928,16 +942,11 @@ export default function WBS() {
           >
             <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
               <div
-                className={cn(
-                  'h-full rounded-full',
-                  columnId === 'planProgress'
-                    ? 'bg-[image:linear-gradient(135deg,#155e75,#1f8f86)]'
-                    : 'bg-[image:linear-gradient(135deg,#1fa37a,#34c997)]'
-                )}
-                style={{ width: `${progressValue}%` }}
+                className="h-full rounded-full bg-[image:linear-gradient(135deg,#1fa37a,#34c997)]"
+                style={{ width: `${actualValue}%` }}
               />
             </div>
-            <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{progressValue}%</span>
+            <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{actualValue}%</span>
           </div>
         );
       }

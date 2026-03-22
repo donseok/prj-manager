@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 import type { Project, ProjectStatus, Task } from '../types';
 import { syncProjectTasks, upsertProject } from './dataRepository';
 import { getLeafTasks } from './taskAnalytics';
@@ -45,6 +45,26 @@ function calculateAggregateProgress(tasks: Task[], field: 'planProgress' | 'actu
   return Math.round(value * 100) / 100;
 }
 
+
+/**
+ * 리프 Task의 계획 공정율을 오늘 날짜 기준으로 자동 계산.
+ * planned_progress = clamp(0, 100, (today - planStart) / (planEnd - planStart) * 100)
+ */
+function calculateLeafPlanProgress(task: Task, today: Date): number {
+  if (task.status === 'completed') return 100;
+  const start = parseDate(task.planStart);
+  const end = parseDate(task.planEnd);
+  if (!start || !end) return 0;
+
+  const totalDays = differenceInCalendarDays(end, start);
+  if (totalDays <= 0) {
+    return today >= start ? 100 : 0;
+  }
+
+  const elapsedDays = differenceInCalendarDays(today, start);
+  const progress = (elapsedDays / totalDays) * 100;
+  return Math.round(Math.min(100, Math.max(0, progress)));
+}
 
 function deriveParentStatus(children: Task[]): Task['status'] {
   if (children.length === 0) return 'pending';
@@ -117,6 +137,15 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
 
   childrenByParent.forEach((siblings) => {
     siblings.sort((left, right) => left.orderIndex - right.orderIndex || left._sourceIndex - right._sourceIndex);
+  });
+
+  // 리프 Task의 계획 공정율 자동 계산 (오늘 기준)
+  const today = new Date();
+  const parentIds = new Set(childrenByParent.keys());
+  taskMap.forEach((task) => {
+    if (!parentIds.has(task.id)) {
+      task.planProgress = calculateLeafPlanProgress(task, today);
+    }
   });
 
   const buildBranch = (parentId: string | null, level: number): InternalTask[] => {
