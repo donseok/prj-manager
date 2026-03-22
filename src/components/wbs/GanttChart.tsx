@@ -473,7 +473,9 @@ export default function GanttChart({
 
             {tasks.map((task, rowIndex) => {
               const planBar = calculateBar(task.planStart, task.planEnd);
-              const actualBar = calculateBar(task.actualStart, task.actualEnd);
+              // actualEnd가 없으면 오늘 날짜를 시각적 종료일로 사용 (진행 중인 작업)
+              const actualEndForDisplay = task.actualEnd || (task.actualStart ? format(today, 'yyyy-MM-dd') : null);
+              const actualBar = calculateBar(task.actualStart, actualEndForDisplay);
               const isSelected = task.id === selectedTaskId;
 
               return (
