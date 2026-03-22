@@ -394,7 +394,16 @@ export async function deleteUserAccount(
 
 // ─── Helpers ─────────────────────────────────────────────────
 
+// 단기 캐시: 로그인 직후 onAuthStateChange에서 중복 profiles 쿼리 방지
+let _userCache: { id: string; user: User; ts: number } | null = null;
+const USER_CACHE_TTL = 10_000; // 10초
+
 async function toAppUser(user: SupabaseAuthUser): Promise<User> {
+  // 캐시 히트: 같은 유저, TTL 이내
+  if (_userCache && _userCache.id === user.id && Date.now() - _userCache.ts < USER_CACHE_TTL) {
+    return _userCache.user;
+  }
+
   let systemRole: SystemRole = 'user';
   let accountStatus: AccountStatus = 'active';
 
@@ -406,25 +415,12 @@ async function toAppUser(user: SupabaseAuthUser): Promise<User> {
 
   if (error) {
     console.error('[toAppUser] profiles 조회 실패:', error.code, error.message);
-    // 폴백: system_role만 조회
-    const { data: fallback, error: fallbackErr } = await supabase
-      .from('profiles')
-      .select('system_role')
-      .eq('id', user.id)
-      .single();
-    console.log('[toAppUser] 폴백 결과:', fallback, fallbackErr?.message);
-    if (fallback?.system_role) {
-      systemRole = fallback.system_role as SystemRole;
-    }
   } else if (data) {
     systemRole = (data.system_role as SystemRole) || 'user';
     accountStatus = (data.account_status as AccountStatus) || 'active';
-    console.log('[toAppUser] profiles 조회 성공:', { systemRole, accountStatus });
-  } else {
-    console.warn('[toAppUser] profiles 데이터 없음 (user.id:', user.id, ')');
   }
 
-  return {
+  const appUser: User = {
     id: user.id,
     email: user.email || `${user.id}@anon.local`,
     name:
@@ -435,6 +431,9 @@ async function toAppUser(user: SupabaseAuthUser): Promise<User> {
     accountStatus,
     createdAt: user.created_at,
   };
+
+  _userCache = { id: user.id, user: appUser, ts: Date.now() };
+  return appUser;
 }
 
 function getAuthErrorMessage(message: string): string {

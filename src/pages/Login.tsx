@@ -5,11 +5,8 @@ import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
-import { loadInitialProjects } from '../lib/dataRepository';
-import { useProjectStore } from '../store/projectStore';
 export default function Login() {
   const { isAuthenticated, setUser, isPending, isSuspended } = useAuthStore();
-  const { setProjects } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -48,8 +45,7 @@ export default function Login() {
             navigate('/pending', { replace: true });
             return;
           }
-          const projects = await loadInitialProjects();
-          setProjects(projects);
+          // 프로젝트 로드는 App.tsx의 onAuthStateChange에서 처리
         }
       } else {
         if (!name.trim()) {
