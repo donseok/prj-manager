@@ -12,6 +12,14 @@ import {
   CheckCircle2,
   Clock3,
   Loader2,
+  FolderKanban,
+  Layers,
+  GitBranch,
+  Target,
+  BarChart3,
+  Users,
+  Calendar,
+  Bookmark,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -292,9 +300,90 @@ export default function ProjectList() {
       )}
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="app-panel-dark relative overflow-hidden p-6 md:p-8">
+        <div className="app-panel-dark relative min-h-[320px] overflow-hidden p-6 md:p-8 lg:min-h-[360px]">
           <div className="pointer-events-none absolute right-[-4rem] top-[-6rem] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)] blur-3xl" />
-          <div className="relative">
+          <div className="pointer-events-none absolute bottom-[-6rem] left-[10%] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.14),transparent_72%)] blur-3xl" />
+          <div className="pointer-events-none absolute right-[22%] top-[25%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.14),transparent_70%)] blur-3xl" />
+
+          {/* ---- Floating decorative elements (right side) — 프로젝트 라이브러리 테마 ---- */}
+          <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+            {/* Stat bubbles */}
+            <div
+              className="pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md hero-float-1 h-[76px] w-[76px]"
+              style={{ top: '8%', right: '10%' }}
+            >
+              <span className="text-2xl font-bold text-white/90">{projects.length}</span>
+              <span className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/50">total</span>
+            </div>
+            <div
+              className="pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md hero-float-3 h-[68px] w-[68px]"
+              style={{ top: '38%', right: '5%' }}
+            >
+              <span className="text-2xl font-bold text-white/90">{projects.filter(p => p.status === 'active').length}</span>
+              <span className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/50">active</span>
+            </div>
+            <div
+              className="pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md hero-float-2 h-[64px] w-[64px]"
+              style={{ top: '20%', right: '25%' }}
+            >
+              <span className="text-2xl font-bold text-white/90">✓</span>
+            </div>
+
+            {/* Mini project card */}
+            <div
+              className="hero-float-2 pointer-events-none absolute rounded-2xl border border-white/[0.12] bg-white/[0.08] backdrop-blur-md"
+              style={{ top: '66%', right: '6%', width: '136px', padding: '10px 12px' }}
+            >
+              <div className="mb-2 flex items-center gap-1.5">
+                <FolderKanban className="h-3 w-3 text-teal-400/60" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">프로젝트</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-1 w-full rounded-full bg-white/15" />
+                <div className="h-1 w-[80%] rounded-full bg-teal-400/20" />
+                <div className="h-1 w-[60%] rounded-full bg-white/8" />
+              </div>
+            </div>
+
+            {/* Icon elements */}
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-4 h-11 w-11" style={{ top: '5%', right: '22%' }}>
+              <FolderOpen className="h-5 w-5 text-amber-400/50" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-2 h-10 w-10" style={{ top: '54%', right: '12%' }}>
+              <Layers className="h-4.5 w-4.5 text-teal-400/50" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-1 h-10 w-10" style={{ top: '60%', right: '24%' }}>
+              <GitBranch className="h-4.5 w-4.5 text-white/30" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-3 h-9 w-9" style={{ top: '30%', right: '3%' }}>
+              <Target className="h-4 w-4 text-orange-400/40" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-4 h-10 w-10" style={{ top: '48%', right: '30%' }}>
+              <BarChart3 className="h-4.5 w-4.5 text-teal-300/45" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-1 h-9 w-9" style={{ top: '78%', right: '18%' }}>
+              <Users className="h-4 w-4 text-white/30" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-2 h-11 w-11" style={{ top: '12%', right: '38%' }}>
+              <Calendar className="h-5 w-5 text-amber-400/40" />
+            </div>
+            <div className="pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-3 h-9 w-9" style={{ top: '74%', right: '34%' }}>
+              <Bookmark className="h-4 w-4 text-teal-300/40" />
+            </div>
+
+            {/* Decorative lines */}
+            <div className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2" style={{ top: '26%', right: '15%', transform: 'rotate(-20deg)' }} />
+            <div className="absolute h-px w-20 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-3" style={{ top: '50%', right: '18%', transform: 'rotate(15deg)' }} />
+            <div className="absolute h-px w-14 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent hero-float-1" style={{ top: '70%', right: '28%', transform: 'rotate(-10deg)' }} />
+
+            {/* Decorative dots */}
+            <div className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1" style={{ top: '44%', right: '14%' }} />
+            <div className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-4" style={{ top: '35%', right: '20%' }} />
+            <div className="absolute h-1 w-1 rounded-full bg-amber-400/30 hero-float-2" style={{ top: '58%', right: '8%' }} />
+            <div className="absolute h-1.5 w-1.5 rounded-full bg-orange-400/25 hero-float-3" style={{ top: '16%', right: '6%' }} />
+          </div>
+
+          <div className="relative z-10 max-w-2xl">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
               Project Library
