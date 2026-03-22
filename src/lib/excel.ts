@@ -393,7 +393,7 @@ export function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBa
 
   ds.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1 + orderedRows.length, column: dsHeaders.length } };
 
-  void saveWorkbook(wb, `${safeName}_WBS.xlsx`);
+  saveWorkbook(wb, `${safeName}_WBS.xlsx`).catch((err) => console.error('WBS export failed:', err));
 }
 
 // ══════════════════════════════════════════════════════════════

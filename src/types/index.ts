@@ -59,7 +59,7 @@ export interface ProjectMember {
   projectId: string;
   userId?: string;
   name: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: 'owner' | 'admin' | 'editor' | 'member' | 'restricted_member' | 'viewer';
   createdAt: string;
 }
 

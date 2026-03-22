@@ -289,6 +289,34 @@ export async function syncProjectTasks(projectId: string, tasks: Task[]) {
   }
 }
 
+// ─── User-scoped Project Loading ────────────────────────────
+
+/** Load project IDs that a user is a member of */
+export async function loadProjectIdsForUser(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Failed to load project IDs for user:', error);
+    return new Set();
+  }
+
+  return new Set((data || []).map((row) => String((row as { project_id: string }).project_id)));
+}
+
+/** Load projects filtered by membership. System admins see all projects. */
+export async function loadProjectsForUser(userId: string, isSystemAdmin: boolean): Promise<Project[]> {
+  if (isSystemAdmin) {
+    return loadProjects();
+  }
+
+  const memberProjectIds = await loadProjectIdsForUser(userId);
+  const allProjects = await loadProjects();
+  return allProjects.filter((p) => memberProjectIds.has(p.id));
+}
+
 // ─── Row Mappers (snake_case → camelCase) ────────────────────
 
 function mapProjectRow(row: ProjectRow): Project {

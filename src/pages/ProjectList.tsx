@@ -23,6 +23,7 @@ import Modal from '../components/common/Modal';
 import { generateId } from '../lib/utils';
 import { deleteProjectById, loadProjectMembers, loadProjectTasks, syncProjectMembers, syncProjectTasks, upsertProject } from '../lib/dataRepository';
 import { cloneProjectMembers, cloneProjectTasks } from '../lib/projectClone';
+import { logAuditEvent } from '../lib/auditLog';
 import {
   getProjectCardBackground,
   getProjectSummary,
@@ -31,6 +32,7 @@ import {
 } from '../lib/projectVisuals';
 import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useSystemSettingsStore } from '../store/systemSettingsStore';
 import type { Project, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
@@ -41,6 +43,8 @@ export default function ProjectList() {
   const { user, isAdmin } = useAuthStore();
   const { isDark } = useThemeStore();
   const { changeStatus } = useProjectStatus();
+  const { settings: systemSettings } = useSystemSettingsStore();
+  const canCreateProject = systemSettings.projectCreationPolicy === 'all' || isAdmin;
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // /projects/new 경로 접근 시 생성 모달 자동 오픈
@@ -226,6 +230,15 @@ export default function ProjectList() {
 
     setIsDeleting(true);
     try {
+      if (user) {
+        await logAuditEvent({
+          projectId: pendingDeleteProject.id,
+          userId: user.id,
+          userName: user.name,
+          action: 'project.delete',
+          details: `프로젝트 "${pendingDeleteProject.name}" 삭제`,
+        });
+      }
       await deleteProjectById(pendingDeleteProject.id);
       deleteProject(pendingDeleteProject.id);
       showFeedback({
@@ -296,10 +309,12 @@ export default function ProjectList() {
               같은 시각 언어로 맞춰 워크플로우가 끊기지 않도록 정리했습니다.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="w-4 h-4" />
-                새 프로젝트
-              </Button>
+              {canCreateProject && (
+                <Button onClick={() => setShowCreateModal(true)}>
+                  <Plus className="w-4 h-4" />
+                  새 프로젝트
+                </Button>
+              )}
               <Link to="/">
                 <Button variant="outline" className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]">
                   홈으로
@@ -357,10 +372,12 @@ export default function ProjectList() {
               프로젝트 탐색
             </h2>
           </div>
-          <Button variant="outline" onClick={() => setShowCreateModal(true)} data-testid="projects-open-create-button">
-            <Plus className="w-4 h-4" />
-            새 프로젝트
-          </Button>
+          {canCreateProject && (
+            <Button variant="outline" onClick={() => setShowCreateModal(true)} data-testid="projects-open-create-button">
+              <Plus className="w-4 h-4" />
+              새 프로젝트
+            </Button>
+          )}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -569,7 +586,7 @@ export default function ProjectList() {
                 ? '다른 키워드로 검색하거나 새 프로젝트를 생성해보세요.'
                 : '첫 프로젝트를 만들면 여기에서 카드 기반으로 관리할 수 있습니다.'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && canCreateProject && (
               <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className="w-4 h-4" />
                 새 프로젝트 만들기

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus } from 'lucide-react';
+import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -8,10 +8,12 @@ import FeedbackNotice from '../components/common/FeedbackNotice';
 import Modal from '../components/common/Modal';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, generateId } from '../lib/utils';
-import { syncProjectMembers } from '../lib/dataRepository';
+import { syncProjectMembers, upsertProject } from '../lib/dataRepository';
+import { logAuditEvent } from '../lib/auditLog';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
+import { useAuthStore } from '../store/authStore';
 import type { ProjectMember } from '../types';
 
 export default function Members() {
@@ -31,8 +33,11 @@ export default function Members() {
   const [pasteText, setPasteText] = useState('');
   const singleNameRef = useRef<HTMLInputElement>(null);
 
+  const [pendingTransferTarget, setPendingTransferTarget] = useState<ProjectMember | null>(null);
+
+  const { user } = useAuthStore();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
-  const { canManageMembers, isReadOnly } = useProjectPermission();
+  const { canManageMembers, canTransferOwnership, isReadOnly } = useProjectPermission();
 
   const saveMembers = useCallback(
     (data: ProjectMember[]) => syncProjectMembers(projectId!, data),
@@ -68,6 +73,15 @@ export default function Members() {
       createdAt: new Date().toISOString(),
     });
 
+    if (user && projectId) {
+      void logAuditEvent({
+        projectId,
+        userId: user.id,
+        userName: user.name,
+        action: 'member.add',
+        details: `멤버 "${name}" (${roleLabels[singleRole]}) 추가`,
+      });
+    }
     showFeedback({
       tone: 'success',
       title: '멤버 추가 완료',
@@ -113,6 +127,15 @@ export default function Members() {
       });
     }
 
+    if (user && projectId) {
+      void logAuditEvent({
+        projectId,
+        userId: user.id,
+        userName: user.name,
+        action: 'member.add',
+        details: `${validMembers.length}명 일괄 추가`,
+      });
+    }
     showFeedback({
       tone: 'success',
       title: '멤버 추가 완료',
@@ -129,6 +152,15 @@ export default function Members() {
   const confirmDeleteMember = () => {
     if (!pendingDeleteMember) return;
     removeMember(pendingDeleteMember.id);
+    if (user && projectId) {
+      void logAuditEvent({
+        projectId,
+        userId: user.id,
+        userName: user.name,
+        action: 'member.remove',
+        details: `멤버 "${pendingDeleteMember.name}" 삭제`,
+      });
+    }
     showFeedback({
       tone: 'success',
       title: '멤버 삭제 완료',
@@ -155,20 +187,82 @@ export default function Members() {
   };
 
   const handleRoleChange = (id: string, role: ProjectMember['role']) => {
+    const member = members.find((m) => m.id === id);
     updateMember(id, { role });
+    if (user && projectId && member) {
+      void logAuditEvent({
+        projectId,
+        userId: user.id,
+        userName: user.name,
+        action: 'member.role_change',
+        details: `"${member.name}" 역할 변경: ${roleLabels[member.role]} → ${roleLabels[role]}`,
+      });
+    }
+  };
+
+  const handleTransferOwnership = async (target: ProjectMember) => {
+    if (!projectId || !currentProject) return;
+    const currentOwner = members.find((m) => m.role === 'owner');
+    if (!currentOwner) return;
+
+    // Change current owner to admin
+    updateMember(currentOwner.id, { role: 'admin' });
+    // Change target to owner
+    updateMember(target.id, { role: 'owner' });
+    // Update project ownerId
+    try {
+      const updatedProject = await upsertProject({
+        ...currentProject,
+        ownerId: target.userId || currentProject.ownerId,
+        updatedAt: new Date().toISOString(),
+      });
+      useProjectStore.getState().updateProject(projectId, updatedProject);
+      // Persist member changes
+      const updatedMembers = useProjectStore.getState().members;
+      await syncProjectMembers(projectId, updatedMembers);
+      if (user) {
+        void logAuditEvent({
+          projectId,
+          userId: user.id,
+          userName: user.name,
+          action: 'owner.transfer',
+          details: `소유권 이전: ${currentOwner.name} → ${target.name}`,
+        });
+      }
+      showFeedback({
+        tone: 'success',
+        title: '소유권 이전 완료',
+        message: `"${target.name}"에게 프로젝트 소유권을 이전했습니다.`,
+      });
+    } catch (error) {
+      console.error('Failed to transfer ownership:', error);
+      // Revert
+      updateMember(currentOwner.id, { role: 'owner' });
+      updateMember(target.id, { role: target.role });
+      showFeedback({
+        tone: 'error',
+        title: '소유권 이전 실패',
+        message: '소유권 이전 중 오류가 발생했습니다.',
+      });
+    }
+    setPendingTransferTarget(null);
   };
 
   const roleLabels: Record<ProjectMember['role'], string> = {
     owner: '소유자',
     admin: '관리자',
+    editor: '편집자',
     member: '멤버',
+    restricted_member: '제한 멤버',
     viewer: '뷰어',
   };
 
   const roleStyles: Record<ProjectMember['role'], string> = {
     owner: 'bg-[rgba(18,61,100,0.12)] text-[color:var(--accent-ink)]',
     admin: 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]',
+    editor: 'bg-[rgba(59,130,246,0.12)] text-[#3b82f6]',
     member: 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
+    restricted_member: 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]',
     viewer: 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
   };
 
@@ -366,19 +460,34 @@ export default function Members() {
                   <select
                     value={member.role}
                     onChange={(event) => handleRoleChange(member.id, event.target.value as ProjectMember['role'])}
-                    disabled={!canManageMembers}
-                    className={cn('field-select w-auto min-w-[8rem] py-2', !canManageMembers && 'cursor-not-allowed opacity-60')}
+                    disabled={!canManageMembers || member.role === 'owner'}
+                    className={cn('field-select w-auto min-w-[8rem] py-2', (!canManageMembers || member.role === 'owner') && 'cursor-not-allowed opacity-60')}
                   >
-                    {Object.entries(roleLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
+                    {Object.entries(roleLabels)
+                      .filter(([value]) => value !== 'owner')
+                      .map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    {member.role === 'owner' && (
+                      <option value="owner">{roleLabels.owner}</option>
+                    )}
                   </select>
                 </div>
 
                 {editingId !== member.id && canManageMembers && (
                   <div className="mt-4 flex items-center justify-end gap-2">
+                    {canTransferOwnership && member.role !== 'owner' && (
+                      <button
+                        onClick={() => setPendingTransferTarget(member)}
+                        aria-label={`${member.name}에게 소유권 이전`}
+                        className="flex h-10 items-center gap-1.5 rounded-full border border-[rgba(18,61,100,0.16)] bg-[rgba(18,61,100,0.05)] px-3 text-xs font-semibold text-[color:var(--accent-ink)] transition-colors hover:bg-[rgba(18,61,100,0.12)]"
+                      >
+                        <Crown className="w-3.5 h-3.5" />
+                        소유권 이전
+                      </button>
+                    )}
                     <button
                       onClick={() => handleStartEdit(member)}
                       aria-label={`${member.name} 편집`}
@@ -386,13 +495,15 @@ export default function Members() {
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleDeleteMember(member)}
-                      aria-label={`${member.name} 삭제`}
-                      className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.05)] text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.12)]"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {member.role !== 'owner' && (
+                      <button
+                        onClick={() => handleDeleteMember(member)}
+                        aria-label={`${member.name} 삭제`}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.05)] text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.12)]"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -464,6 +575,8 @@ export default function Members() {
                 >
                   <option value="member">멤버</option>
                   <option value="admin">관리자</option>
+                  <option value="editor">편집자</option>
+                  <option value="restricted_member">제한 멤버</option>
                   <option value="viewer">뷰어</option>
                 </select>
               </div>
@@ -555,6 +668,20 @@ export default function Members() {
             : ''
         }
         confirmLabel="멤버 삭제"
+        confirmVariant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(pendingTransferTarget)}
+        onClose={() => setPendingTransferTarget(null)}
+        onConfirm={() => { if (pendingTransferTarget) void handleTransferOwnership(pendingTransferTarget); }}
+        title="소유권 이전"
+        description={
+          pendingTransferTarget
+            ? `"${pendingTransferTarget.name}"에게 프로젝트 소유권을 이전합니다. 이전 후 기존 소유자는 관리자 역할로 변경됩니다. 이 작업은 되돌릴 수 없습니다.`
+            : ''
+        }
+        confirmLabel="소유권 이전"
         confirmVariant="danger"
       />
     </div>

@@ -18,7 +18,8 @@ import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
 import { ensureSupabaseSession, subscribeToSupabaseAuthChanges, isSupabaseConfigured, ensureMigrations } from './lib/supabase';
-import { loadInitialProjects, loadProjectMembers, loadProjectTasks } from './lib/dataRepository';
+import { loadInitialProjects, loadProjectMembers, loadProjectTasks, loadProjectsForUser } from './lib/dataRepository';
+import { useSystemSettingsStore } from './store/systemSettingsStore';
 
 // 인증 라우트 가드
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -64,6 +65,8 @@ function App() {
     const initializeApp = async () => {
       // DB 스키마 마이그레이션 확인
       await ensureMigrations();
+      // 시스템 설정 로드
+      await useSystemSettingsStore.getState().loadSettings();
 
       if (!isSupabaseConfigured) {
         // localStorage 모드: 로컬 사용자로 자동 로그인
@@ -76,7 +79,9 @@ function App() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const projects = await loadInitialProjects();
+        // Ensure sample data is loaded, then filter by membership
+        await loadInitialProjects();
+        const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
         if (!isCancelled) setProjects(projects);
         return;
       }
@@ -86,7 +91,7 @@ function App() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const projects = await loadInitialProjects();
+        const projects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'admin');
         if (isCancelled) return;
         setProjects(projects);
       } else {
@@ -96,7 +101,7 @@ function App() {
       unsubscribe = subscribeToSupabaseAuthChanges((nextUser) => {
         if (nextUser) {
           setUser(nextUser);
-          void loadInitialProjects().then((projects) => {
+          void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'admin').then((projects) => {
             if (!isCancelled) setProjects(projects);
           });
         } else {
@@ -271,7 +276,8 @@ function PopupProjectWrapper() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const loadedProjects = await loadInitialProjects();
+        await loadInitialProjects();
+        const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);
@@ -284,7 +290,7 @@ function PopupProjectWrapper() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const loadedProjects = await loadInitialProjects();
+        const loadedProjects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'admin');
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);

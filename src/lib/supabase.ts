@@ -50,6 +50,12 @@ export async function ensureMigrations(): Promise<void> {
 
     // attendance 테이블 존재 여부 확인 및 자동 생성
     await ensureAttendanceTable();
+
+    // audit_log 테이블 확인 및 자동 생성
+    await ensureAuditLogTable();
+
+    // system_settings 테이블 확인 및 자동 생성
+    await ensureSystemSettingsTable();
   } catch (err) {
     console.error('[migration] 마이그레이션 확인 중 오류:', err);
   }
@@ -108,6 +114,72 @@ async function ensureAttendanceTable(): Promise<void> {
 
   console.error(
     '[migration] attendance 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+    createSQL
+  );
+}
+
+/** audit_log 테이블이 없으면 생성 */
+async function ensureAuditLogTable(): Promise<void> {
+  const { error } = await supabase.from('audit_log').select('id').limit(1);
+  if (!error) {
+    console.log('[migration] audit_log 테이블 확인 완료');
+    return;
+  }
+
+  console.log('[migration] audit_log 테이블 없음 — 생성 시도');
+
+  const createSQL = `
+    create table if not exists public.audit_log (
+      id text primary key,
+      project_id text not null,
+      user_id text not null,
+      user_name text not null,
+      action text not null,
+      details text not null default '',
+      created_at timestamptz not null default timezone('utc', now())
+    );
+    create index if not exists idx_audit_log_project_id on public.audit_log (project_id);
+    create index if not exists idx_audit_log_created_at on public.audit_log (created_at);
+  `;
+
+  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+  if (!rpcError) {
+    console.log('[migration] audit_log 테이블 생성 완료');
+    return;
+  }
+
+  console.error(
+    '[migration] audit_log 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+    createSQL
+  );
+}
+
+/** system_settings 테이블이 없으면 생성 */
+async function ensureSystemSettingsTable(): Promise<void> {
+  const { error } = await supabase.from('system_settings').select('key').limit(1);
+  if (!error) {
+    console.log('[migration] system_settings 테이블 확인 완료');
+    return;
+  }
+
+  console.log('[migration] system_settings 테이블 없음 — 생성 시도');
+
+  const createSQL = `
+    create table if not exists public.system_settings (
+      key text primary key,
+      value jsonb not null default '{}'::jsonb,
+      updated_at timestamptz not null default timezone('utc', now())
+    );
+  `;
+
+  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+  if (!rpcError) {
+    console.log('[migration] system_settings 테이블 생성 완료');
+    return;
+  }
+
+  console.error(
+    '[migration] system_settings 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
     createSQL
   );
 }

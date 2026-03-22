@@ -47,6 +47,10 @@ import { syncTaskField, isSyncableField } from '../lib/taskFieldSync';
 import { autoFillTasks } from '../lib/taskAutoFill';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useProjectPermission, useCurrentMemberId } from '../hooks/useProjectPermission';
+import { canEditSpecificTask } from '../lib/permissions';
+import { logAuditEvent } from '../lib/auditLog';
+import { useAuthStore } from '../store/authStore';
 import { openPopup } from '../lib/popupWindow';
 import type { Task, TaskStatus, ProjectMember } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
@@ -96,6 +100,9 @@ export default function WBS() {
   const dragOverCounterRef = useRef(0);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const permissions = useProjectPermission();
+  const currentMemberId = useCurrentMemberId();
+  const authUser = useAuthStore((s) => s.user);
   const isInPopup = window.location.pathname.startsWith('/popup/');
   const templates = listTaskTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
@@ -218,6 +225,7 @@ export default function WBS() {
   // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
   const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
     const task = tasks.find((t) => t.id === taskId);
+    if (task && !canEditSpecificTask(permissions, task, currentMemberId)) return;
     const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
 
     // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
@@ -684,7 +692,8 @@ export default function WBS() {
 
   // 셀 렌더링
   const renderCell = (task: Task, columnId: string) => {
-    const isEditing = editingCell?.taskId === task.id && editingCell?.columnId === columnId;
+    const taskEditable = canEditSpecificTask(permissions, task, currentMemberId);
+    const isEditing = taskEditable && editingCell?.taskId === task.id && editingCell?.columnId === columnId;
 
     switch (columnId) {
       case 'expand': {
@@ -743,8 +752,9 @@ export default function WBS() {
           />
         ) : (
           <span
-            className="cursor-text truncate font-medium text-[color:var(--text-primary)]"
+            className={cn('truncate font-medium text-[color:var(--text-primary)]', taskEditable && 'cursor-text')}
             onClick={() => {
+              if (!taskEditable) return;
               setEditingNameBackup(task.name);
               setEditingCell({ taskId: task.id, columnId });
             }}
@@ -770,8 +780,8 @@ export default function WBS() {
           />
         ) : (
           <span
-            className="cursor-text truncate text-[color:var(--text-secondary)]"
-            onClick={() => setEditingCell({ taskId: task.id, columnId })}
+            className={cn('truncate text-[color:var(--text-secondary)]', taskEditable && 'cursor-text')}
+            onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
             {task.output || <span className="text-[color:var(--text-muted)]">-</span>}
           </span>
@@ -826,8 +836,8 @@ export default function WBS() {
           />
         ) : (
           <span
-            className="cursor-text text-right block"
-            onClick={() => setEditingCell({ taskId: task.id, columnId })}
+            className={cn('text-right block', taskEditable && 'cursor-text')}
+            onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
             {task.weight.toFixed(3)}
           </span>
@@ -863,6 +873,7 @@ export default function WBS() {
               type="date"
               value={dateValue || ''}
               onChange={(e) => handleCellChange(task.id, columnId as keyof Task, e.target.value || null, true)}
+              disabled={!taskEditable}
               className={cn(
                 'cell-input text-sm',
                 hasWarning && 'text-[color:var(--accent-danger)] ring-1 ring-[rgba(203,75,95,0.3)]',
@@ -912,8 +923,8 @@ export default function WBS() {
           </div>
         ) : (
           <div
-            className="cursor-text flex items-center gap-1"
-            onClick={() => setEditingCell({ taskId: task.id, columnId })}
+            className={cn('flex items-center gap-1', taskEditable && 'cursor-text')}
+            onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
             <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
               <div
@@ -936,6 +947,7 @@ export default function WBS() {
           <select
             value={task.status}
             onChange={(e) => handleCellChange(task.id, 'status', e.target.value as TaskStatus, true)}
+            disabled={!taskEditable}
             data-testid={`wbs-status-${task.id}`}
             className={cn(
               'cell-select rounded-full px-2 py-1 text-xs font-semibold',
@@ -954,11 +966,12 @@ export default function WBS() {
         );
 
       case 'actions': {
+        if (!taskEditable && !permissions.canCreateTask) return null;
         const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : null;
         const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : null;
         return (
           <div className="flex items-center gap-0.5">
-            {childLabel && (
+            {permissions.canCreateTask && childLabel && (
               <button
                 onClick={() => handleAddTask(task.id, task.level + 1)}
                 className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
@@ -968,7 +981,7 @@ export default function WBS() {
                 {childLabel}
               </button>
             )}
-            {siblingLabel && (
+            {permissions.canCreateTask && siblingLabel && (
               <button
                 onClick={() => handleAddTask(task.parentId || undefined, task.level)}
                 className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
@@ -977,13 +990,15 @@ export default function WBS() {
                 <Plus className="w-3.5 h-3.5" />
               </button>
             )}
-            <button
-              onClick={() => handleDeleteTask(task.id)}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
-              title="삭제"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            {permissions.canDeleteTask && (
+              <button
+                onClick={() => handleDeleteTask(task.id)}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
+                title="삭제"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         );
       }
@@ -1482,6 +1497,15 @@ export default function WBS() {
         onConfirm={() => {
           if (!pendingDeleteTask) return;
           deleteTask(pendingDeleteTask.id);
+          if (authUser && projectId) {
+            void logAuditEvent({
+              projectId,
+              userId: authUser.id,
+              userName: authUser.name,
+              action: 'task.delete',
+              details: `태스크 "${pendingDeleteTask.name || '이름 없음'}" 삭제`,
+            });
+          }
           showFeedback({
             tone: 'warning',
             title: '작업 삭제 완료',

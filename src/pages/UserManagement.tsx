@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock } from 'lucide-react';
+import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings } from 'lucide-react';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAllProfiles, updateUserSystemRole, updateAccountStatus } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { useSystemSettingsStore } from '../store/systemSettingsStore';
 import type { AccountStatus, SystemRole } from '../types';
 
 interface ProfileItem {
@@ -35,11 +36,13 @@ const STATUS_BADGE: Record<AccountStatus, { label: string; className: string }> 
 export default function UserManagement() {
   const { user } = useAuthStore();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const { settings: systemSettings, setSettings: setSystemSettings } = useSystemSettingsStore();
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [tab, setTab] = useState<TabFilter>('all');
+  const [savingPolicy, setSavingPolicy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +109,23 @@ export default function UserManagement() {
       });
     }
     setUpdating(null);
+  };
+
+  const handlePolicyChange = async (policy: 'all' | 'admin_only') => {
+    if (savingPolicy || systemSettings.projectCreationPolicy === policy) return;
+    setSavingPolicy(true);
+    try {
+      await setSystemSettings({ ...systemSettings, projectCreationPolicy: policy });
+      showFeedback({
+        tone: 'success',
+        title: '정책 변경 완료',
+        message: policy === 'all' ? '모든 사용자가 프로젝트를 생성할 수 있습니다.' : '관리자만 프로젝트를 생성할 수 있습니다.',
+      });
+    } catch {
+      showFeedback({ tone: 'error', title: '정책 변경 실패', message: '프로젝트 생성 정책을 변경하지 못했습니다.' });
+    } finally {
+      setSavingPolicy(false);
+    }
   };
 
   const tabs: { key: TabFilter; label: string; count?: number }[] = [
@@ -378,6 +398,47 @@ export default function UserManagement() {
           </table>
         </div>
       )}
+
+      {/* Project creation policy */}
+      <div className="mt-8 rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+            <Settings className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">프로젝트 생성 권한</h2>
+            <p className="text-sm text-[color:var(--text-secondary)]">누가 새 프로젝트를 만들 수 있는지 제어합니다.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            { key: 'all' as const, title: '모든 사용자', desc: '로그인한 모든 활성 사용자가 프로젝트를 생성할 수 있습니다.' },
+            { key: 'admin_only' as const, title: '관리자만', desc: '시스템 관리자만 프로젝트를 생성할 수 있습니다.' },
+          ]).map((option) => {
+            const isSelected = systemSettings.projectCreationPolicy === option.key;
+            return (
+              <button
+                key={option.key}
+                onClick={() => void handlePolicyChange(option.key)}
+                disabled={isSelected || savingPolicy}
+                className={`rounded-xl border p-4 text-left transition-all ${
+                  isSelected
+                    ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                    : 'border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)]'
+                } disabled:cursor-default`}
+              >
+                <p className="font-medium text-[color:var(--text-primary)]">
+                  {option.title}
+                  {isSelected && (
+                    <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 정책</span>
+                  )}
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{option.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </section>
   );
 }
