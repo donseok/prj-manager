@@ -1,8 +1,8 @@
 # TRD (Technical Requirements Document)
 # DK Flow - 프로젝트 관리 시스템 기술 요구사항 정의서
 
-**버전**: 2.0
-**최종 수정일**: 2026-03-19
+**버전**: 3.0
+**최종 수정일**: 2026-03-22
 
 ---
 
@@ -24,6 +24,7 @@
 | 라우팅 | React Router | 7.13 | SPA 네스티드 라우팅 |
 | 엑셀 | ExcelJS | 4.4 | 서식/스타일 포함 엑셀 생성 |
 | 문서 | docx | 9.6 | Word 보고서 생성 |
+| PPT | PptxGenJS | 1.1 | 주간보고 PowerPoint 생성 |
 | 파일 저장 | file-saver | 2.0 | 브라우저 파일 다운로드 |
 | UUID | uuid | 13.0 | 고유 ID 생성 |
 | 폰트 | Pretendard Variable | - | 한글 최적화 가변 폰트 |
@@ -70,7 +71,7 @@
 │  │  └──────────┘ └──────────┘ └──────────┘        │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐        │   │
 │  │  │ Store    │ │   Lib    │ │  Types   │        │   │
-│  │  │(5 stores)│ │(9 modules│ │          │        │   │
+│  │  │(6 stores)│ │(22 modul│ │          │        │   │
 │  │  │          │ │ utils,   │ │          │        │   │
 │  │  │          │ │ excel,   │ │          │        │   │
 │  │  │          │ │ chatbot) │ │          │        │   │
@@ -149,9 +150,11 @@
 -- Supabase Auth가 관리, 추가 프로필 정보만 저장
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
+  email VARCHAR(255),
   name VARCHAR(100),
   avatar_url TEXT,
   system_role VARCHAR(20) DEFAULT 'user',  -- admin, user
+  account_status VARCHAR(20) DEFAULT 'pending',  -- pending, active, suspended
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -220,6 +223,11 @@ CREATE TABLE tasks (
   -- 상태
   status VARCHAR(20) DEFAULT 'pending',        -- pending, in_progress, completed, on_hold
 
+  -- 자동화
+  duration_days INTEGER,                       -- 작업 기간 (일)
+  predecessor_ids TEXT[],                      -- 선행 작업 ID 배열
+  task_source VARCHAR(20),                     -- 작업 생성 출처 (manual, template, draft)
+
   -- 메타
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -229,6 +237,25 @@ CREATE TABLE tasks (
 CREATE INDEX idx_tasks_project ON tasks(project_id);
 CREATE INDEX idx_tasks_parent ON tasks(parent_id);
 CREATE INDEX idx_tasks_assignee ON tasks(assignee_id);
+```
+
+#### attendances
+```sql
+CREATE TABLE attendances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES project_members(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  type VARCHAR(20) NOT NULL,  -- present, annual_leave, half_day_am, half_day_pm, sick_leave, business_trip, late, early_leave, absence
+  note TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 인덱스
+CREATE INDEX idx_attendances_project ON attendances(project_id);
+CREATE INDEX idx_attendances_member ON attendances(member_id);
+CREATE INDEX idx_attendances_date ON attendances(date);
 ```
 
 ### 3.3 RLS (Row Level Security) 정책
@@ -278,7 +305,13 @@ src/
 │   │   ├── Header.tsx         # 상단 헤더 (로고, 테마 토글, 사용자 메뉴)
 │   │   └── Sidebar.tsx        # 좌측 네비게이션 (프로젝트 스위처, 챗봇)
 │   ├── wbs/
-│   │   └── GanttChart.tsx     # 간트 차트 컴포넌트
+│   │   ├── GanttChart.tsx     # 간트 차트 컴포넌트
+│   │   ├── ContextMenu.tsx    # WBS 우클릭 컨텍스트 메뉴
+│   │   ├── MemberSelect.tsx   # 담당자 선택 드롭다운
+│   │   └── QuickProgressModal.tsx # 빠른 공정율 편집 모달
+│   ├── attendance/
+│   │   └── AttendanceModal.tsx # 근태 입력/수정 모달
+│   ├── WeeklyReportModal.tsx  # 주간보고 생성/내보내기 모달
 │   └── chatbot/               # AI 챗봇 위젯
 │       ├── ChatbotWidget.tsx  # 챗봇 UI
 │       └── DKBotAvatar.tsx    # 챗봇 아바타
@@ -293,12 +326,16 @@ src/
 │   ├── Members.tsx            # 멤버 관리
 │   ├── Settings.tsx           # 프로젝트 설정, 가져오기/내보내기
 │   ├── UserManagement.tsx     # 시스템 사용자 관리 (관리자 전용)
-│   └── UserManual.tsx         # 사용자 매뉴얼/도움말
+│   ├── UserManual.tsx         # 사용자 매뉴얼/도움말
+│   ├── Attendance.tsx         # 근태 관리 (캘린더 뷰)
+│   ├── AccountSettings.tsx    # 계정 설정 (이름/비밀번호 변경, 탈퇴)
+│   └── PendingApproval.tsx    # 계정 승인 대기 페이지
 │
-├── store/                     # Zustand 상태 관리 (5개 스토어)
+├── store/                     # Zustand 상태 관리 (6개 스토어)
 │   ├── projectStore.ts        # 프로젝트 목록, 현재 프로젝트, 멤버
 │   ├── taskStore.ts           # 태스크 트리, Undo/Redo (50건)
 │   ├── authStore.ts           # 인증 상태 (localStorage 영속화)
+│   ├── attendanceStore.ts     # 근태 기록 관리
 │   ├── themeStore.ts          # 테마 (Light/Dark/System)
 │   └── uiStore.ts             # UI 상태
 │
@@ -311,12 +348,27 @@ src/
 │   ├── excel.ts               # ExcelJS 기반 WBS/간트 엑셀 내보내기
 │   ├── exportReport.ts        # PDF/Word 보고서 생성
 │   ├── projectVisuals.ts      # 프로젝트 테마/비주얼 메타데이터
-│   └── chatbot.ts             # 챗봇 AI 엔진 (의도 스코어링, 퍼지 매칭)
+│   ├── chatbot.ts             # 챗봇 AI 엔진 (의도 스코어링, 퍼지 매칭)
+│   ├── weeklyReport.ts        # 주간보고 데이터 생성 (금주실적/차주계획/이슈)
+│   ├── weeklySnapshot.ts      # 주간 스냅샷 저장 및 전주 대비 비교
+│   ├── exportWeeklyReport.ts  # 주간보고 엑셀(.xlsx) 내보내기
+│   ├── exportWeeklyReportPptx.ts # 주간보고 파워포인트(.pptx) 내보내기
+│   ├── taskAutoFill.ts        # WBS 자동화 통합 (일정/가중치 자동 계산)
+│   ├── taskDraft.ts           # 텍스트 기반 WBS 초안 자동 생성
+│   ├── taskScheduler.ts       # duration/선행작업 기반 일정 자동 산출
+│   ├── taskFieldSync.ts       # 계획→실적 등 필드 간 일괄 복사
+│   ├── taskTemplates.ts       # 프로젝트 유형별 WBS 템플릿
+│   ├── broadcastSync.ts       # BroadcastChannel 기반 다중 탭 동기화
+│   ├── projectClone.ts        # 프로젝트 복제 로직
+│   ├── popupWindow.ts         # WBS/간트 팝업 윈도우 관리
+│   ├── holidays.ts            # 공휴일 데이터 및 영업일 계산
+│   └── permissions.ts         # 프로젝트 권한 체크 유틸리티
 │
 ├── hooks/                     # 커스텀 React 훅
 │   ├── useAutoSave.ts         # 디바운스 자동 저장 (700ms)
 │   ├── usePageFeedback.ts     # 피드백 알림 관리
-│   └── useProjectStatus.ts    # 프로젝트 상태 변경 로직
+│   ├── useProjectStatus.ts    # 프로젝트 상태 변경 로직
+│   └── useProjectPermission.ts # 프로젝트 권한 확인 훅
 │
 ├── types/
 │   └── index.ts               # TypeScript 인터페이스 (User, Project, Task, ProjectMember 등)
@@ -339,9 +391,14 @@ src/
 │   ├── /wbs                   → WBS.tsx
 │   ├── /gantt                 → Gantt.tsx
 │   ├── /members               → Members.tsx
-│   └── /settings              → Settings.tsx
+│   ├── /settings              → Settings.tsx
+│   └── /attendance            → Attendance.tsx
+├── /account                   → AccountSettings.tsx (계정 설정)
+├── /pending                   → PendingApproval.tsx (승인 대기)
 ├── /manual                    → UserManual.tsx
 ├── /admin/users               → UserManagement.tsx (관리자 전용)
+├── /popup/projects/:projectId/wbs   → WBS.tsx (팝업 윈도우)
+├── /popup/projects/:projectId/gantt → Gantt.tsx (팝업 윈도우)
 └── /404                       → NotFound (404 페이지)
 ```
 
@@ -383,14 +440,16 @@ interface ProjectState {
   projects: Project[];
   currentProject: Project | null;
   members: ProjectMember[];
+  membersLoadedProjectId: string | null;  // 멤버 로드된 프로젝트 ID
   setProjects: (projects: Project[]) => void;
   addProject: (project: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
-  setMembers: (members: ProjectMember[]) => void;
+  setMembers: (members: ProjectMember[], projectId: string) => void;
   addMember: (member: ProjectMember) => void;
   updateMember: (id: string, updates: Partial<ProjectMember>) => void;
   removeMember: (id: string) => void;
+  // BroadcastChannel 기반 다중 탭 동기화
 }
 
 // taskStore.ts
@@ -401,6 +460,9 @@ interface TaskState {
   expandedIds: Set<string>;   // 펼침 상태
   history: Task[][];          // Undo/Redo 히스토리 (50건)
   historyIndex: number;
+  loadedProjectId: string | null;  // 로드된 프로젝트 ID (cross-project 저장 방지)
+  selectedTaskId: string | null;   // 현재 선택된 작업 ID
+  editingCell: { taskId: string; field: string } | null;  // 현재 편집 중인 셀
   setTasks: (tasks: Task[]) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -411,6 +473,7 @@ interface TaskState {
   collapseAll: () => void;
   undo: () => void;
   redo: () => void;
+  // BroadcastChannel 기반 다중 탭 동기화
 }
 
 // authStore.ts (localStorage 영속화)
@@ -419,6 +482,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isAdmin: boolean;           // systemRole === 'admin'
   isLoading: boolean;
+  accountStatus: string;      // 'pending' | 'active' | 'suspended'
+  isPending: boolean;         // accountStatus === 'pending'
+  isSuspended: boolean;       // accountStatus === 'suspended'
   setUser: (user: User) => void;
   logout: () => void;
 }
@@ -429,6 +495,19 @@ interface ThemeState {
   isDark: boolean;            // 시스템 설정 반영 계산값
   setTheme: (theme: string) => void;
   toggleTheme: () => void;
+}
+
+// attendanceStore.ts
+interface AttendanceState {
+  attendances: Attendance[];
+  loadedProjectId: string | null;
+  isLoading: boolean;
+  setAttendances: (attendances: Attendance[], projectId: string) => void;
+  addAttendance: (attendance: Attendance) => void;
+  updateAttendance: (id: string, updates: Partial<Attendance>) => void;
+  removeAttendance: (id: string) => void;
+  getByMember: (memberId: string) => Attendance[];
+  getByDateRange: (start: string, end: string) => Attendance[];
 }
 ```
 
@@ -454,6 +533,25 @@ interface ThemeState {
     → flattenTaskTree() — 트리 → 표시용 평탄 목록
     → calculateParentProgress() — 하위 → 상위 자동 집계
     → projectTaskSync — 날짜/상태/진행률 롤업
+```
+
+### 6.3 다중 탭 동기화 (BroadcastChannel)
+```
+탭 A: 데이터 변경
+  → Zustand Store 업데이트
+    → broadcastSync.ts — BroadcastChannel 메시지 발행
+      → 탭 B, C, ...: BroadcastChannel 메시지 수신
+        → Zustand Store 동기화 (프로젝트, 태스크, 멤버)
+```
+
+### 6.4 주간보고 생성 흐름
+```
+사용자: 주간보고 생성 요청
+  → weeklyReport.ts — 금주 실적/차주 계획/이슈 자동 도출
+    → weeklySnapshot.ts — 현재 스냅샷 저장 + 전주 대비 KPI 델타 계산
+      → 주간보고 표시 (WeeklyReportModal)
+        ├─ exportWeeklyReport.ts → 엑셀(.xlsx) 내보내기
+        └─ exportWeeklyReportPptx.ts → 파워포인트(.pptx) 내보내기
 ```
 
 ---
