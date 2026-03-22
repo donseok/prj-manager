@@ -79,15 +79,15 @@ export default function Header() {
     <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
-          <Link to="/" className="group flex items-center gap-3">
-            <div className="rounded-2xl shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.02]">
+          <Link to="/" className="group flex items-center gap-3.5">
+            <div className="relative rounded-2xl shadow-[0_20px_40px_-20px_rgba(15,118,110,0.7)] ring-1 ring-white/10 transition-all duration-500 ease-out group-hover:-translate-y-0.5 group-hover:shadow-[0_24px_48px_-20px_rgba(15,118,110,0.85)] group-hover:ring-white/20 dark:shadow-[0_20px_40px_-20px_rgba(50,182,171,0.35)] dark:ring-white/5 dark:group-hover:shadow-[0_24px_48px_-20px_rgba(50,182,171,0.5)]">
               <DKFlowLogo size={44} />
             </div>
             <div className="min-w-0">
-              <span className="block truncate text-lg font-bold tracking-[-0.02em] text-[color:var(--text-primary)]">
+              <span className="block truncate bg-gradient-to-r from-[var(--text-primary)] via-[var(--text-primary)] to-[color:var(--accent-primary)] bg-clip-text text-lg font-extrabold tracking-[-0.03em] text-transparent transition-all duration-500 group-hover:to-[color:var(--accent-primary)] dark:to-[#32b6ab]">
                 DK Flow
               </span>
-              <p className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-secondary)]">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)] transition-colors duration-300 group-hover:text-[color:var(--text-secondary)]">
                 업무의 흐름을 설계하다
               </p>
             </div>
