@@ -249,7 +249,7 @@ function writeHeaderRow(ws: ExcelJS.Worksheet, headers: string[]) {
 // WBS Export
 // ══════════════════════════════════════════════════════════════
 
-export function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBaseOptions) {
+export async function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBaseOptions) {
   const displayName = projectName?.trim() || '프로젝트';
   const safeName = getSafeProjectName(projectName);
   const orderedRows = getOrderedTaskRows(tasks);
@@ -393,14 +393,14 @@ export function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBa
 
   ds.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1 + orderedRows.length, column: dsHeaders.length } };
 
-  saveWorkbook(wb, `${safeName}_WBS.xlsx`).catch((err) => console.error('WBS export failed:', err));
+  await saveWorkbook(wb, `${safeName}_WBS.xlsx`);
 }
 
 // ══════════════════════════════════════════════════════════════
 // Gantt Export
 // ══════════════════════════════════════════════════════════════
 
-export function exportGanttWorkbook({
+export async function exportGanttWorkbook({
   projectName, tasks, members = [],
   filterLabel = '전체', searchQuery = '', startDate, weeksToShow = 12,
 }: ExportGanttOptions) {
@@ -562,7 +562,7 @@ export function exportGanttWorkbook({
 
   ds.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1 + orderedRows.length, column: dsHeaders.length } };
 
-  void saveWorkbook(wb, `${safeName}_간트.xlsx`);
+  await saveWorkbook(wb, `${safeName}_간트.xlsx`);
 }
 
 // ══════════════════════════════════════════════════════════════

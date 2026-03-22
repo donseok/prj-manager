@@ -190,7 +190,7 @@ export default function Settings() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
@@ -200,11 +200,20 @@ export default function Settings() {
       return;
     }
 
-    exportWbsWorkbook({
-      projectName: currentProject?.name,
-      tasks,
-      members,
-    });
+    try {
+      await exportWbsWorkbook({
+        projectName: currentProject?.name,
+        tasks,
+        members,
+      });
+    } catch (error) {
+      console.error('WBS export failed:', error);
+      showFeedback({
+        tone: 'error',
+        title: 'WBS 내보내기 실패',
+        message: error instanceof Error ? error.message : '엑셀 파일 생성 중 오류가 발생했습니다.',
+      });
+    }
   };
 
   const applyImportedTasks = useCallback(

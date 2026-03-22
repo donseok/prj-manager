@@ -275,7 +275,7 @@ export default function Gantt() {
   }, []);
 
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredFlatTasks.length === 0) {
       showFeedback({
         tone: 'info',
@@ -285,14 +285,18 @@ export default function Gantt() {
       return;
     }
 
-    exportGanttWorkbook({
-      projectName: currentProject?.name,
-      tasks: filteredFlatTasks,
-      members,
-      filterLabel: FILTER_OPTIONS.find((option) => option.value === filterMode)?.label || '전체',
-      searchQuery,
-      weeksToShow,
-    });
+    try {
+      await exportGanttWorkbook({
+        projectName: currentProject?.name,
+        tasks: filteredFlatTasks,
+        members,
+        filterLabel: FILTER_OPTIONS.find((option) => option.value === filterMode)?.label || '전체',
+        searchQuery,
+        weeksToShow,
+      });
+    } catch (error) {
+      console.error('Gantt export failed:', error);
+    }
   };
 
   const handleTaskFieldChange = (taskId: string, field: keyof Task, value: Task[keyof Task]) => {
