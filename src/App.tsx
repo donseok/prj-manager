@@ -167,7 +167,7 @@ function App() {
 // 프로젝트 상세 래퍼 (프로젝트 로드)
 function ProjectDetailWrapper() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { projects, setCurrentProject, setMembers } = useProjectStore();
+  const { projects, projectsInitialized, setCurrentProject, setMembers } = useProjectStore();
   const { setTasks, expandAll } = useTaskStore();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -220,7 +220,7 @@ function ProjectDetailWrapper() {
     };
   }, [projectId, setMembers, setTasks, expandAll]);
 
-  if (isLoading) {
+  if (isLoading || !projectsInitialized) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-primary)]/30 border-t-[var(--accent-primary)]" />

@@ -12,6 +12,7 @@ interface ProjectState {
   members: ProjectMember[];
   membersLoadedProjectId: string | null;
   isLoading: boolean;
+  projectsInitialized: boolean;
 
   // Actions
   setProjects: (projects: Project[]) => void;
@@ -35,8 +36,9 @@ export const useProjectStore = create<ProjectState>((set) => ({
   members: [],
   membersLoadedProjectId: null,
   isLoading: false,
+  projectsInitialized: false,
 
-  setProjects: (projects) => set({ projects: sortProjectsByUpdatedAt(projects) }),
+  setProjects: (projects) => set({ projects: sortProjectsByUpdatedAt(projects), projectsInitialized: true }),
 
   addProject: (project) =>
     set((state) => ({
