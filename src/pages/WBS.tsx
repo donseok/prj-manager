@@ -1067,13 +1067,13 @@ export default function WBS() {
       {
         key: 'planStart',
         label: '계획시작',
-        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'planEnd',
         label: '계획종료',
-        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
         className: 'text-center whitespace-nowrap',
       },
       {
@@ -1085,13 +1085,13 @@ export default function WBS() {
       {
         key: 'actualStart',
         label: '실적시작',
-        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actualEnd',
         label: '실적종료',
-        width: getResponsiveWidth(workspaceWidth * 0.09, 128, fullscreen ? 184 : 150),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
         className: 'text-center whitespace-nowrap',
       },
       {
