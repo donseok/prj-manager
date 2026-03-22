@@ -11,6 +11,7 @@ import {
   Clock3,
   Play,
   CheckCircle2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -21,11 +22,13 @@ import FeedbackNotice from '../components/common/FeedbackNotice';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn } from '../lib/utils';
 import { deleteProjectById, upsertProject } from '../lib/dataRepository';
-import { exportWbsWorkbook, parseTasksFromWorkbook } from '../lib/excel';
+import { exportWbsWorkbook, generateWbsTemplate, parseTasksFromWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
+import AuditLogPanel from '../components/common/AuditLogPanel';
+import { logAuditEvent } from '../lib/auditLog';
 import type { ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
@@ -35,7 +38,7 @@ export default function Settings() {
   const { currentProject, members, updateProject, deleteProject } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
-  const { isAdmin } = useAuthStore();
+  const { user, isAdmin } = useAuthStore();
   const { changeStatus } = useProjectStatus();
   const { tasks, setTasks } = useTaskStore();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -107,6 +110,15 @@ export default function Settings() {
       });
 
       updateProject(projectId, savedProject);
+      if (user) {
+        void logAuditEvent({
+          projectId,
+          userId: user.id,
+          userName: user.name,
+          action: 'project.settings_change',
+          details: '프로젝트 기본 정보 변경',
+        });
+      }
       showFeedback({
         tone: 'success',
         title: '설정 저장 완료',
@@ -634,6 +646,11 @@ export default function Settings() {
                   className="hidden"
                 />
               </label>
+
+              <Button variant="outline" onClick={generateWbsTemplate}>
+                <FileSpreadsheet className="w-4 h-4" />
+                업로드 양식 다운로드
+              </Button>
             </div>
           </div>
 
@@ -662,6 +679,18 @@ export default function Settings() {
           )}
         </div>
       </section>
+
+      {projectId && (canEditProject || isAdmin) && (
+        <section className="app-panel p-6">
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+            감사 로그
+          </h2>
+          <p className="mt-2 mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+            프로젝트에서 발생한 주요 변경 이력을 확인합니다.
+          </p>
+          <AuditLogPanel projectId={projectId} />
+        </section>
+      )}
 
       <ConfirmModal
         isOpen={showDeleteModal}

@@ -705,3 +705,221 @@ function overlaps(start: string | null | undefined, end: string | null | undefin
   if (e) return e >= rs && e <= re;
   return false;
 }
+
+// ══════════════════════════════════════════════════════════════
+// WBS Upload Template
+// ══════════════════════════════════════════════════════════════
+
+export function generateWbsTemplate() {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'DK Flow';
+  wb.created = new Date();
+
+  // ── Sheet 1: WBS 데이터 (import parser 호환) ──
+  const ws = wb.addWorksheet(WBS_DATA_SHEET_NAME, {
+    views: [{ state: 'frozen', ySplit: 2, xSplit: 0 }],
+  });
+
+  const headers = [
+    'WBS코드', '상위WBS코드', '구분', '작업명', '산출물',
+    '담당자', '가중치', '기간일수', '계획시작', '계획종료', '상태',
+  ];
+  const colWidths = [12, 14, 12, 40, 20, 12, 10, 10, 14, 14, 10];
+  const colDescriptions = [
+    '계층 번호\n(예: 1, 1.1, 1.1.1)',
+    '상위 작업의\nWBS코드',
+    'Phase / Activity\n/ Task',
+    '작업 이름\n(필수)',
+    '산출물명\n(선택)',
+    '담당자 이름\n(선택)',
+    '리프 작업의\n비중 (합계≈100)',
+    '예상 소요일\n(리프 작업만)',
+    'YYYY-MM-DD\n형식',
+    'YYYY-MM-DD\n형식',
+    '대기 / 진행중\n/ 완료 / 보류',
+  ];
+
+  colWidths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  // Row 1: Column descriptions (sub-header)
+  const descRow = ws.addRow(colDescriptions);
+  descRow.height = 36;
+  descRow.eachCell((cell) => {
+    cell.font = font({ size: 8, italic: true, color: { argb: '64748B' } });
+    cell.fill = fill('F1F5F9');
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = thinBorder(C.borderLight);
+  });
+
+  // Row 2: Headers
+  const headerRow = ws.addRow(headers);
+  headerRow.height = 30;
+  headerRow.eachCell((cell) => {
+    cell.font = font({ bold: true, size: 10, color: { argb: C.headerFont } });
+    cell.fill = fill(C.headerBg);
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = thinBorder(C.headerBg);
+  });
+
+  // ── Example data ──
+  const examples: (string | number)[][] = [
+    ['1',     '',  'Phase',    '분석',               '',              '',      '',  '',  '',            '',            ''],
+    ['1.1',   '1', 'Activity', '현황 분석',           '',              '',      '',  '',  '',            '',            ''],
+    ['1.1.1', '1.1', 'Task',   '현행 시스템 분석',     'AS-IS 분석서',  '홍길동', 15,   5,  '2026-04-01', '2026-04-07', '대기'],
+    ['1.1.2', '1.1', 'Task',   '요구사항 수집',       '요구사항 정의서', '김영희', 15,   5,  '2026-04-08', '2026-04-14', '대기'],
+    ['1.2',   '1', 'Activity', '개선방안 도출',       '',              '',      '',  '',  '',            '',            ''],
+    ['1.2.1', '1.2', 'Task',   '개선방안 수립',       'TO-BE 설계서',  '박철수', 20,   7,  '2026-04-15', '2026-04-23', '대기'],
+    ['2',     '',  'Phase',    '설계',               '',              '',      '',  '',  '',            '',            ''],
+    ['2.1',   '2', 'Activity', '상세 설계',           '',              '',      '',  '',  '',            '',            ''],
+    ['2.1.1', '2.1', 'Task',   '화면 설계',           '화면설계서',     '홍길동', 25,  10,  '2026-04-24', '2026-05-07', '대기'],
+    ['2.1.2', '2.1', 'Task',   'DB 설계',            'ERD 문서',      '김영희', 25,   7,  '2026-04-24', '2026-05-02', '대기'],
+  ];
+
+  examples.forEach((data) => {
+    const row = ws.addRow(data);
+    const level = data[2] as string;
+    row.height = 24;
+
+    // Level-based row coloring
+    let bg = C.white;
+    let nameFont: Partial<ExcelJS.Font> = { size: 10, color: { argb: '334155' } };
+    if (level === 'Phase') {
+      bg = C.phase;
+      nameFont = { bold: true, size: 11, color: { argb: C.phaseFont } };
+    } else if (level === 'Activity') {
+      bg = C.activity;
+      nameFont = { bold: true, size: 10, color: { argb: C.activityFont } };
+    }
+
+    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+      cell.fill = fill(bg);
+      cell.font = font({ size: 10, color: { argb: '475569' } });
+      cell.border = thinBorder(C.borderLight);
+      cell.alignment = { vertical: 'middle' };
+
+      // WBS코드, 상위WBS코드, 구분 → center
+      if (colNum <= 3) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      // 작업명 → level-based font
+      if (colNum === 4) cell.font = font(nameFont);
+      // 가중치, 기간일수 → center
+      if (colNum === 7 || colNum === 8) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      // 날짜 → center
+      if (colNum === 9 || colNum === 10) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      // 상태 → center
+      if (colNum === 11) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+  });
+
+  // ── Data Validation ──
+  const dataStartRow = 3; // after desc + header
+  const dataEndRow = 100;
+
+  // 구분 (column 3): dropdown
+  for (let r = dataStartRow; r <= dataEndRow; r++) {
+    ws.getCell(r, 3).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"Phase,Activity,Task"'],
+      showErrorMessage: true,
+      errorTitle: '입력 오류',
+      error: 'Phase, Activity, Task 중 선택하세요.',
+    };
+  }
+
+  // 상태 (column 11): dropdown
+  for (let r = dataStartRow; r <= dataEndRow; r++) {
+    ws.getCell(r, 11).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"대기,진행중,완료,보류"'],
+      showErrorMessage: true,
+      errorTitle: '입력 오류',
+      error: '대기, 진행중, 완료, 보류 중 선택하세요.',
+    };
+  }
+
+  // ── Sheet 2: 작성 가이드 ──
+  const guide = wb.addWorksheet('작성 가이드');
+  guide.getColumn(1).width = 4;
+  guide.getColumn(2).width = 18;
+  guide.getColumn(3).width = 70;
+
+  const guideData: [string, string][] = [
+    ['WBS 업로드 양식 — 작성 가이드', ''],
+    ['', ''],
+    ['1. 기본 규칙', ''],
+    ['WBS코드', '계층 번호 체계입니다. 점(.)으로 레벨을 구분합니다.\n  Phase: 1, 2, 3 ...\n  Activity: 1.1, 1.2, 2.1 ...\n  Task: 1.1.1, 1.1.2, 2.1.1 ...'],
+    ['상위WBS코드', 'WBS코드에서 마지막 번호를 뺀 상위 코드입니다.\n  1.1의 상위 → 1\n  1.1.2의 상위 → 1.1\n  Phase(최상위)는 빈칸으로 둡니다.'],
+    ['구분', 'Phase(단계), Activity(활동), Task(작업) 중 하나를 선택합니다.\n드롭다운으로 선택할 수 있습니다.'],
+    ['작업명', '작업의 이름입니다. 필수 입력 항목입니다.'],
+    ['', ''],
+    ['2. 계층 구조', ''],
+    ['Phase (1레벨)', '프로젝트의 대단계입니다. (예: 분석, 설계, 개발, 테스트)\n날짜/공정율/상태는 하위 작업에서 자동 계산되므로 비워두세요.'],
+    ['Activity (2레벨)', 'Phase 하위의 주요 활동입니다.\n날짜/공정율/상태는 하위 작업에서 자동 계산되므로 비워두세요.'],
+    ['Task (3레벨)', '실제 수행하는 작업(리프 태스크)입니다.\n담당자, 가중치, 기간일수, 계획시작/종료, 상태를 입력하세요.'],
+    ['', ''],
+    ['3. 필드 설명', ''],
+    ['산출물', '해당 작업의 결과물 이름입니다. (선택)'],
+    ['담당자', '작업 담당자의 이름입니다. (선택)\n프로젝트 멤버와 자동 매칭되지는 않습니다.\n가져오기 후 WBS 화면에서 담당자를 지정해주세요.'],
+    ['가중치', '리프(Task) 작업의 비중입니다. 모든 리프 작업의 가중치 합계가\n100에 가깝도록 배분하세요. 공정율 계산에 사용됩니다.\nPhase/Activity는 자동 계산되므로 비워두세요.'],
+    ['기간일수', '예상 소요일입니다. (선택) 리프 작업에만 입력합니다.'],
+    ['계획시작 / 종료', '날짜 형식: YYYY-MM-DD (예: 2026-04-01)\nYYYY.MM.DD, YYYY/MM/DD 형식도 인식합니다.\nPhase/Activity는 비워두면 하위에서 자동 계산됩니다.'],
+    ['상태', '대기, 진행중, 완료, 보류 중 선택합니다. (드롭다운)\n비워두면 "대기"로 설정됩니다.\nPhase/Activity는 자동 계산되므로 비워두세요.'],
+    ['', ''],
+    ['4. 주의사항', ''],
+    ['자동 계산', 'Phase/Activity의 계획시작, 계획종료, 공정율, 상태는\n하위 Task들로부터 자동으로 집계됩니다.\n직접 입력해도 가져오기 후 하위 값으로 덮어씌워집니다.'],
+    ['순서', '같은 레벨 내에서 행 순서대로 정렬됩니다.\nWBS코드 번호 순서와 행 순서를 일치시키세요.'],
+    ['예제 데이터', '"WBS 데이터" 시트에 예제가 포함되어 있습니다.\n예제를 지우고 실제 데이터를 입력하세요.'],
+    ['시트 이름', '"WBS 데이터" 시트 이름을 변경하지 마세요.\n시스템이 이 시트 이름으로 데이터를 찾습니다.'],
+  ];
+
+  // Title row
+  guide.mergeCells('B1:C1');
+  const titleCell = guide.getCell('B1');
+  titleCell.value = guideData[0][0];
+  titleCell.font = font({ bold: true, size: 16, color: { argb: C.headerFont } });
+  titleCell.fill = fill(C.titleBg);
+  titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+  guide.getCell('A1').fill = fill(C.titleBg);
+  guide.getRow(1).height = 44;
+
+  // Content rows
+  guideData.slice(1).forEach(([label, desc], idx) => {
+    const rowNum = idx + 2;
+    const row = guide.getRow(rowNum);
+
+    if (!label && !desc) {
+      row.height = 12;
+      return;
+    }
+
+    // Section headers (e.g., "1. 기본 규칙")
+    if (!desc && label) {
+      guide.mergeCells(`B${rowNum}:C${rowNum}`);
+      const cell = guide.getCell(`B${rowNum}`);
+      cell.value = label;
+      cell.font = font({ bold: true, size: 12, color: { argb: C.primaryDark } });
+      cell.fill = fill(C.primaryLight);
+      cell.alignment = { vertical: 'middle' };
+      guide.getCell(`A${rowNum}`).fill = fill(C.primaryLight);
+      row.height = 30;
+      return;
+    }
+
+    // Regular rows
+    const labelCell = guide.getCell(`B${rowNum}`);
+    labelCell.value = label;
+    labelCell.font = font({ bold: true, size: 10, color: { argb: '1E293B' } });
+    labelCell.alignment = { vertical: 'top' };
+
+    const descCell = guide.getCell(`C${rowNum}`);
+    descCell.value = desc;
+    descCell.font = font({ size: 10, color: { argb: '475569' } });
+    descCell.alignment = { vertical: 'top', wrapText: true };
+
+    const lineCount = desc.split('\n').length;
+    row.height = Math.max(22, lineCount * 16 + 6);
+  });
+
+  void saveWorkbook(wb, 'WBS_업로드_양식.xlsx');
+}
