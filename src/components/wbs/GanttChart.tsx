@@ -157,16 +157,19 @@ export default function GanttChart({
   ): { left: number; width: number } | null => {
     if (!start || !end) return null;
 
-    const startX = dateToX(start);
-    const endX = dateToX(end);
+    const startDate = parseISO(start);
+    const endDate = parseISO(end);
+    const startDiff = differenceInDays(startDate, displayStartDate);
+    const endDiff = differenceInDays(endDate, displayStartDate);
 
-    if (startX === null && endX === null) return null;
+    // 둘 다 화면 밖(같은 쪽)이면 표시 안 함
+    if (startDiff >= dateRange.length || endDiff < 0) return null;
 
-    const left = startX ?? 0;
-    const right = endX !== null ? endX + dayWidth : dateRange.length * dayWidth;
+    const left = Math.max(startDiff * dayWidth, 0);
+    const right = Math.min((endDiff + 1) * dayWidth, dateRange.length * dayWidth);
     const width = Math.max(right - left, dayWidth / 2);
 
-    return { left: Math.max(left, 0), width };
+    return { left, width };
   };
 
   const todayX = dateToX(today);
@@ -527,7 +530,7 @@ export default function GanttChart({
                           width: Math.max(actualBar.width * (task.actualProgress / 100), task.actualProgress > 0 ? 8 : 0),
                           height: barHeight,
                         }}
-                        title={`실적: ${task.actualStart} ~ ${task.actualEnd} (${task.actualProgress}%)`}
+                        title={`실적: ${task.actualStart} ~ ${task.actualEnd || '진행중'} (${task.actualProgress}%)`}
                       />
                     </>
                   )}

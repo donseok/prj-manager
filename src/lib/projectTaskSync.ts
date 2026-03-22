@@ -237,8 +237,8 @@ function buildDerivedProject(project: Project, tasks: Task[]) {
   };
 }
 
-export async function syncProjectWorkspace(project: Project, tasks: Task[]) {
-  const normalizedTasks = normalizeTaskHierarchy(tasks);
+export async function syncProjectWorkspace(project: Project, tasks: Task[], options?: { skipNormalize?: boolean }) {
+  const normalizedTasks = options?.skipNormalize ? tasks : normalizeTaskHierarchy(tasks);
   await syncProjectTasks(project.id, normalizedTasks);
   const savedProject = await upsertProject(buildDerivedProject(project, normalizedTasks));
   return {

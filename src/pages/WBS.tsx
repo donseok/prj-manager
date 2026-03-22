@@ -202,7 +202,7 @@ export default function WBS() {
     async (data: Task[]) => {
       if (!projectId || !currentProject) return;
       try {
-        const { project } = await syncProjectWorkspace(currentProject, data);
+        const { project } = await syncProjectWorkspace(currentProject, data, { skipNormalize: true });
         updateProject(project.id, project);
       } catch (error) {
         console.error('WBS 자동 저장 실패:', error);

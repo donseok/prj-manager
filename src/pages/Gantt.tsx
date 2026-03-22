@@ -244,7 +244,7 @@ export default function Gantt() {
   const saveTasks = useCallback(
     async (data: Task[]) => {
       if (!currentProject) return;
-      const { project } = await syncProjectWorkspace(currentProject, data);
+      const { project } = await syncProjectWorkspace(currentProject, data, { skipNormalize: true });
       updateProject(project.id, project);
     },
     [currentProject, updateProject]

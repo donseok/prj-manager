@@ -215,21 +215,28 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     } else {
       newExpanded.add(id);
     }
-    set({ expandedIds: newExpanded });
-    get().setTasks(tasks);
+    // tasks 배열 참조를 유지하여 불필요한 자동저장을 방지하고, 트리만 재구성
+    const tasksWithExpanded = tasks.map((t) => ({ ...t, isExpanded: newExpanded.has(t.id) }));
+    const tree = buildTaskTree(tasksWithExpanded);
+    const flat = flattenTaskTree(tree);
+    set({ expandedIds: newExpanded, taskTree: tree, flatTasks: flat });
   },
 
   expandAll: () => {
     const { tasks } = get();
     const allIds = new Set(tasks.map((t) => t.id));
-    set({ expandedIds: allIds });
-    get().setTasks(tasks);
+    const tasksWithExpanded = tasks.map((t) => ({ ...t, isExpanded: true }));
+    const tree = buildTaskTree(tasksWithExpanded);
+    const flat = flattenTaskTree(tree);
+    set({ expandedIds: allIds, taskTree: tree, flatTasks: flat });
   },
 
   collapseAll: () => {
     const { tasks } = get();
-    set({ expandedIds: new Set() });
-    get().setTasks(tasks);
+    const tasksWithExpanded = tasks.map((t) => ({ ...t, isExpanded: false }));
+    const tree = buildTaskTree(tasksWithExpanded);
+    const flat = flattenTaskTree(tree);
+    set({ expandedIds: new Set(), taskTree: tree, flatTasks: flat });
   },
 
   setEditingCell: (cell) => set({ editingCell: cell }),

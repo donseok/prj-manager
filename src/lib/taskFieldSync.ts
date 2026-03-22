@@ -169,6 +169,15 @@ function applySyncFromActualStart(task: Task, actualStart: string | null, update
     if (task.actualProgress === 0) {
       updates.actualProgress = 5;
     }
+  } else if (!actualStart && task.status === 'in_progress') {
+    // 실적시작이 지워지면 대기로 전환, 실적 초기화
+    updates.status = 'pending';
+    if (task.actualProgress > 0) {
+      updates.actualProgress = 0;
+    }
+    if (task.actualEnd) {
+      updates.actualEnd = null;
+    }
   }
 }
 
@@ -185,6 +194,12 @@ function applySyncFromActualEnd(task: Task, actualEnd: string | null, updates: P
     }
     if (!task.actualStart) {
       updates.actualStart = task.planStart || actualEnd;
+    }
+  } else if (!actualEnd && task.status === 'completed') {
+    // 실적종료가 지워지면 진행중으로 되돌림
+    updates.status = 'in_progress';
+    if (task.actualProgress >= 100) {
+      updates.actualProgress = 50;
     }
   }
 }
