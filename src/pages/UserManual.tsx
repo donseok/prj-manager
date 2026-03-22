@@ -22,6 +22,14 @@ import {
   ClipboardList,
   CalendarCheck,
   UserCog,
+  FileText,
+  Bookmark,
+  GraduationCap,
+  ListChecks,
+  Info,
+  Lightbulb,
+  Sparkles,
+  Compass,
 } from 'lucide-react';
 
 interface Section {
@@ -90,6 +98,53 @@ function StepList({ steps }: { steps: string[] }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Floating decorative element component (manual hero)               */
+/* ------------------------------------------------------------------ */
+function FloatingElement({
+  children,
+  className = '',
+  style = {},
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm ${className}`}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Floating stat bubble component (manual hero)                       */
+/* ------------------------------------------------------------------ */
+function FloatingStatBubble({
+  value,
+  label,
+  className = '',
+  style = {},
+}: {
+  value: string;
+  label?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md ${className}`}
+      style={style}
+    >
+      <span className="text-2xl font-bold text-white/90">{value}</span>
+      {label && <span className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/50">{label}</span>}
+    </div>
   );
 }
 
@@ -904,10 +959,138 @@ export default function UserManual() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <section className="app-panel-dark relative overflow-hidden p-6 md:p-8">
+      <section className="app-panel-dark relative min-h-[320px] overflow-hidden p-6 md:p-8 lg:min-h-[360px]">
         <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
-        <div className="relative">
+        <div className="pointer-events-none absolute right-[25%] top-[20%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.12),transparent_70%)] blur-3xl" />
+
+        {/* ---- Floating decorative elements (right side) — 매뉴얼 가이드 북 테마 ---- */}
+        <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+          {/* Stat bubbles — manual guide metrics */}
+          <FloatingStatBubble
+            value="12"
+            label="섹션"
+            className="hero-float-1 h-[76px] w-[76px]"
+            style={{ top: '8%', right: '11%' }}
+          />
+          <FloatingStatBubble
+            value="v3"
+            label="latest"
+            className="hero-float-3 h-[68px] w-[68px]"
+            style={{ top: '40%', right: '5%' }}
+          />
+          <FloatingStatBubble
+            value="✓"
+            className="hero-float-2 h-[60px] w-[60px]"
+            style={{ top: '20%', right: '26%' }}
+          />
+
+          {/* Mini TOC card — special wider floating element */}
+          <div
+            className="hero-float-2 pointer-events-none absolute rounded-2xl border border-white/[0.12] bg-white/[0.08] backdrop-blur-md"
+            style={{ top: '65%', right: '6%', width: '140px', padding: '10px 12px' }}
+          >
+            <div className="mb-2 flex items-center gap-1.5">
+              <ListChecks className="h-3 w-3 text-amber-400/60" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">목차</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-1 w-full rounded-full bg-white/15" />
+              <div className="h-1 w-[85%] rounded-full bg-white/10" />
+              <div className="h-1 w-[70%] rounded-full bg-white/8" />
+            </div>
+          </div>
+
+          {/* Icon elements — documentation & learning icons */}
+          <FloatingElement
+            className="hero-float-4 h-11 w-11"
+            style={{ top: '5%', right: '22%' }}
+          >
+            <BookOpen className="h-5 w-5 text-amber-400/50" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-2 h-10 w-10"
+            style={{ top: '54%', right: '12%' }}
+          >
+            <Lightbulb className="h-4.5 w-4.5 text-amber-300/50" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-1 h-10 w-10"
+            style={{ top: '60%', right: '24%' }}
+          >
+            <FileText className="h-4.5 w-4.5 text-teal-400/45" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-3 h-9 w-9"
+            style={{ top: '30%', right: '3%' }}
+          >
+            <Bookmark className="h-4 w-4 text-orange-400/40" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-4 h-10 w-10"
+            style={{ top: '48%', right: '30%' }}
+          >
+            <GraduationCap className="h-4.5 w-4.5 text-teal-300/45" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-1 h-9 w-9"
+            style={{ top: '78%', right: '18%' }}
+          >
+            <Info className="h-4 w-4 text-white/30" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-2 h-11 w-11"
+            style={{ top: '12%', right: '38%' }}
+          >
+            <Sparkles className="h-5 w-5 text-amber-400/40" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-3 h-9 w-9"
+            style={{ top: '72%', right: '34%' }}
+          >
+            <Compass className="h-4 w-4 text-teal-300/40 hero-spin-slow" />
+          </FloatingElement>
+          <FloatingElement
+            className="hero-float-4 h-10 w-10"
+            style={{ top: '82%', right: '4%' }}
+          >
+            <Search className="h-4.5 w-4.5 text-white/30" />
+          </FloatingElement>
+
+          {/* Decorative connecting gradient lines */}
+          <div
+            className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2"
+            style={{ top: '26%', right: '15%', transform: 'rotate(-20deg)' }}
+          />
+          <div
+            className="absolute h-px w-20 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent hero-float-3"
+            style={{ top: '50%', right: '18%', transform: 'rotate(15deg)' }}
+          />
+          <div
+            className="absolute h-px w-14 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-1"
+            style={{ top: '68%', right: '28%', transform: 'rotate(-10deg)' }}
+          />
+
+          {/* Decorative dots */}
+          <div
+            className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1"
+            style={{ top: '44%', right: '14%' }}
+          />
+          <div
+            className="absolute h-1 w-1 rounded-full bg-amber-400/30 hero-float-4"
+            style={{ top: '35%', right: '20%' }}
+          />
+          <div
+            className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-2"
+            style={{ top: '58%', right: '8%' }}
+          />
+          <div
+            className="absolute h-1.5 w-1.5 rounded-full bg-orange-400/25 hero-float-3"
+            style={{ top: '16%', right: '6%' }}
+          />
+        </div>
+
+        <div className="relative z-10 max-w-2xl">
           <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
             <BookOpen className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
             User Manual v3.0
