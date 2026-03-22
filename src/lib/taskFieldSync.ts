@@ -147,9 +147,15 @@ function applySyncFromProgress(task: Task, progress: number, updates: Partial<Ta
       updates.actualEnd = null;
     }
   } else {
-    // 0% → 대기 (보류 상태라면 유지)
+    // 0% → 대기 (보류 상태라면 유지), 실적 날짜 초기화
     if (task.status === 'in_progress') {
       updates.status = 'pending';
+    }
+    if (task.actualStart) {
+      updates.actualStart = null;
+    }
+    if (task.actualEnd) {
+      updates.actualEnd = null;
     }
   }
 }
