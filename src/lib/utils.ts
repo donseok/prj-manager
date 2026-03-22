@@ -146,7 +146,7 @@ export function calculateParentProgress(tasks: Task[], parentId: string): number
       ? children.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
       : children.reduce((sum, t) => sum + t.actualProgress, 0) / children.length;
 
-  return Math.round(progress * 100) / 100;
+  return Math.round(progress);
 }
 
 // 전체 공정율 계산
@@ -161,15 +161,12 @@ export function calculateOverallProgress(tasks: Task[]): number {
       ? topLevelTasks.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
       : topLevelTasks.reduce((sum, t) => sum + t.actualProgress, 0) / topLevelTasks.length;
 
-  return Math.round(progress * 100) / 100;
+  return Math.round(progress);
 }
 
-// 숫자 포맷팅 (퍼센트) — 정수면 소수점 생략, 아니면 소수점 1자리
+// 숫자 포맷팅 (퍼센트)
 export function formatPercent(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return rounded === Math.floor(rounded)
-    ? `${Math.floor(rounded)}%`
-    : `${rounded.toFixed(1)}%`;
+  return `${Math.round(value)}%`;
 }
 
 // 숫자 포맷팅 (소수점)

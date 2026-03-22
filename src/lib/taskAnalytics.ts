@@ -41,9 +41,9 @@ export function calculateProjectStats(tasks: Task[], baseDate?: Date): ProjectSt
   const totalPlanWeight = phases.reduce((sum, t) => sum + t.weight, 0);
   const planProgress =
     totalPlanWeight > 0
-      ? phases.reduce((sum, t) => sum + t.weight * t.planProgress, 0) / totalPlanWeight
+      ? Math.round(phases.reduce((sum, t) => sum + t.weight * t.planProgress, 0) / totalPlanWeight)
       : phases.length > 0
-        ? phases.reduce((sum, t) => sum + t.planProgress, 0) / phases.length
+        ? Math.round(phases.reduce((sum, t) => sum + t.planProgress, 0) / phases.length)
         : 0;
 
   return {

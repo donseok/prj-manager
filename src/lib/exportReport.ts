@@ -148,7 +148,7 @@ export async function generateProjectReport({ project, tasks, members }: ReportD
   const phases = tasks.filter(t => t.level === 1).sort((a, b) => a.orderIndex - b.orderIndex);
   const totalWeight = phases.reduce((sum, p) => sum + p.weight, 0);
   const planProgress = totalWeight > 0
-    ? phases.reduce((sum, p) => sum + p.weight * p.planProgress, 0) / totalWeight
+    ? Math.round(phases.reduce((sum, p) => sum + p.weight * p.planProgress, 0) / totalWeight)
     : 0;
 
   // 일정 계산

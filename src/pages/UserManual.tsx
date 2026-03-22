@@ -924,7 +924,7 @@ export default function UserManual() {
       {/* Body */}
       <section className="grid gap-6 xl:grid-cols-[280px_1fr]">
         {/* Sidebar TOC */}
-        <div className="app-panel sticky top-[6.75rem] self-start overflow-hidden xl:max-h-[calc(100vh-8rem)]">
+        <div className="app-panel sticky top-[6.75rem] self-start overflow-hidden">
           <div className="border-b border-[var(--border-color)] p-4">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
@@ -937,7 +937,7 @@ export default function UserManual() {
               />
             </div>
           </div>
-          <nav className="max-h-[calc(100vh-14rem)] overflow-y-auto p-3">
+          <nav className="p-3">
             <div className="space-y-1">
               {filteredSections.map((section) => (
                 <button
