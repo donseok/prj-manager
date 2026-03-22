@@ -21,6 +21,7 @@ import {
   Bot,
   ClipboardList,
   CalendarCheck,
+  UserCog,
 } from 'lucide-react';
 
 interface Section {
@@ -149,8 +150,17 @@ export default function UserManual() {
       icon: <Home className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
+          <SectionCard title="히어로 영역">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">홈 화면 최상단에 프로젝트 운영 현황을 한눈에 보여주는 풀 와이드 히어로 패널이 표시됩니다. 우측에는 실시간 지표 버블과 아이콘이 부드럽게 움직이는 장식 요소가 배치되어 있습니다.</p>
+            <InfoTable headers={['요소', '설명']} rows={[
+              ['히어로 타이틀', '"한눈에 보이는 프로젝트 운영" — 서비스 소개 및 CTA 버튼'],
+              ['새 프로젝트 시작', '새 프로젝트 생성 페이지로 이동'],
+              ['전체 프로젝트', '프로젝트 목록 페이지로 이동'],
+              ['플로팅 장식', '프로젝트 지표 버블(숫자)과 아이콘이 우측에 표시 (lg 이상 화면)'],
+            ]} />
+          </SectionCard>
           <SectionCard title="요약 카드">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">상단 히어로 영역에서 다음 정보를 확인할 수 있습니다:</p>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">히어로 하단에 3개의 요약 카드가 표시됩니다:</p>
             <InfoTable headers={['카드', '설명']} rows={[
               ['전체 프로젝트', '시스템에 등록된 모든 프로젝트 수'],
               ['진행중', '현재 진행중 상태인 프로젝트 수'],
@@ -158,10 +168,18 @@ export default function UserManual() {
             ]} />
           </SectionCard>
           <SectionCard title="지표 패널">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">히어로 아래에 3개의 지표 카드가 배치됩니다:</p>
             <InfoTable headers={['지표', '설명']} rows={[
               ['Active Ratio', '전체 프로젝트 대비 진행중 프로젝트 비율'],
               ['Completed', '완료된 프로젝트 수'],
               ['Quick Access', '최근 프로젝트 바로가기 (최대 3개)'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="빠른 접근 카드">
+            <InfoTable headers={['카드', '설명']} rows={[
+              ['새 프로젝트', '프로젝트 생성 페이지로 바로가기'],
+              ['프로젝트 라이브러리', '전체 프로젝트 목록으로 이동'],
+              ['운영 중심 대시보드', '핵심 지표와 작업 흐름 중심 레이아웃 안내'],
             ]} />
           </SectionCard>
           <SectionCard title="최근 프로젝트">
@@ -347,7 +365,18 @@ export default function UserManual() {
               ['차주 계획', '다음 주 예정 작업 목록'],
               ['지연 작업', '지연된 작업과 지연 일수'],
             ]} />
+          </SectionCard>
+          <SectionCard title="주간보고 내보내기">
+            <InfoTable headers={['형식', '설명']} rows={[
+              ['엑셀 (.xlsx)', '금주 실적, 차주 계획, 지연 작업, 근태현황을 시트별로 정리한 엑셀 파일'],
+              ['PPT (.pptx)', '주간보고 프레젠테이션 파일 — 금주 실적, 차주 계획, 지연 작업, 근태현황 슬라이드 포함'],
+            ]} />
             <div className="mt-4">
+              <Tip>PPT 내보내기에는 근태현황 슬라이드가 자동 포함되며, 금주/차주 근태를 요일+날짜 형태로 한 페이지에 통합 표시합니다.</Tip>
+            </div>
+          </SectionCard>
+          <SectionCard>
+            <div>
               <Tip>주간보고는 스냅샷을 저장하여 주차별 비교가 가능합니다. 전주 대비 완료 수, 공정율 변화량, 지연 변화가 델타 지표로 표시됩니다.</Tip>
             </div>
           </SectionCard>
@@ -448,8 +477,12 @@ export default function UserManual() {
             <InfoTable headers={['기능', '방법']} rows={[
               ['이름 수정', '연필 아이콘 클릭 → 수정 → Enter 또는 ✓ 클릭'],
               ['역할 변경', '역할 드롭다운에서 변경'],
+              ['소유권 이전', '소유자가 다른 멤버에게 프로젝트 소유권을 이전 (이전 후 기존 소유자는 관리자로 변경)'],
               ['멤버 삭제', '휴지통 아이콘 클릭 → 확인'],
             ]} />
+            <div className="mt-4">
+              <Tip type="warning">소유권 이전은 되돌릴 수 없습니다. 이전 후 기존 소유자는 관리자 역할로 자동 변경됩니다.</Tip>
+            </div>
           </SectionCard>
           <SectionCard title="멤버 현황">
             <InfoTable headers={['지표', '설명']} rows={[
@@ -560,9 +593,24 @@ export default function UserManual() {
             <InfoTable headers={['기능', '설명']} rows={[
               ['WBS 엑셀 내보내기', '현재 WBS를 엑셀 파일로 다운로드'],
               ['엑셀 가져오기', '엑셀 파일에서 WBS 데이터를 불러오기 (.xlsx, .xls)'],
+              ['업로드 양식 다운로드', 'WBS 엑셀 가져오기용 표준 양식 파일을 다운로드하여 올바른 형식으로 데이터를 준비할 수 있습니다'],
             ]} />
             <div className="mt-4">
               <Tip type="warning">엑셀 가져오기 시 기존 작업이 있으면 덮어쓰기 확인 대화상자가 표시됩니다. 중요한 데이터는 미리 엑셀로 내보내기하여 백업하세요.</Tip>
+            </div>
+          </SectionCard>
+          <SectionCard title="감사 로그">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">설정 페이지 하단에서 프로젝트의 주요 변경 이력을 확인할 수 있습니다:</p>
+            <InfoTable headers={['기록 항목', '설명']} rows={[
+              ['프로젝트 설정 변경', '프로젝트 기본 정보 수정 이력'],
+              ['멤버 역할 변경', '멤버 역할(소유자/관리자/멤버/뷰어) 변경 기록'],
+              ['멤버 추가/삭제', '프로젝트 멤버 추가 및 제거 기록'],
+              ['소유권 이전', '프로젝트 소유자 변경 기록'],
+              ['태스크 삭제', '작업 삭제 이력'],
+              ['프로젝트 삭제', '프로젝트 삭제 기록'],
+            ]} />
+            <div className="mt-4">
+              <Tip>감사 로그에는 시간, 사용자, 작업 유형, 상세 내용이 기록되어 변경 추적이 가능합니다.</Tip>
             </div>
           </SectionCard>
           <SectionCard title="위험 영역 (삭제 권한 필요)">
@@ -703,6 +751,7 @@ export default function UserManual() {
               ['간트 차트 엑셀', '간트 차트 페이지', '.xlsx'],
               ['현황 보고서', '대시보드 페이지', '.docx (Word)'],
               ['주간보고 엑셀', 'WBS 페이지 → 주간보고 팝업', '.xlsx'],
+              ['주간보고 PPT', 'WBS 페이지 → 주간보고 팝업', '.pptx'],
             ]} />
           </SectionCard>
           <SectionCard title="가져오기 기능">
@@ -747,8 +796,47 @@ export default function UserManual() {
               ['작업 편집', 'O', 'O', 'O', 'X'],
               ['멤버 관리', 'O', 'O', 'X', 'X'],
               ['설정 변경', 'O', 'O', 'X', 'X'],
+              ['소유권 이전', 'O', 'X', 'X', 'X'],
               ['프로젝트 삭제', 'O', 'X', 'X', 'X'],
             ]} />
+          </SectionCard>
+          <SectionCard title="감사 로그">
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
+              프로젝트 설정 페이지에서 주요 변경 이력(멤버 역할 변경, 소유권 이전, 설정 변경, 태스크 삭제 등)을 시간순으로 조회할 수 있습니다. 변경 시 사용자, 작업 유형, 상세 내용이 자동으로 기록됩니다.
+            </p>
+          </SectionCard>
+        </div>
+      ),
+    },
+    {
+      id: 'account',
+      title: '계정 설정',
+      icon: <UserCog className="h-5 w-5" />,
+      content: (
+        <div className="space-y-6">
+          <SectionCard title="계정 설정 접근">
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
+              헤더 우측의 프로필 영역을 클릭한 후, 드롭다운 메뉴에서 "계정 설정"을 선택하면 접근할 수 있습니다.
+            </p>
+          </SectionCard>
+          <SectionCard title="계정 정보">
+            <InfoTable headers={['항목', '설명']} rows={[
+              ['이름', '로그인된 사용자의 이름'],
+              ['이메일', '로그인된 사용자의 이메일'],
+              ['시스템 역할', 'admin (관리자) 또는 user (일반)'],
+              ['소유 프로젝트', '현재 사용자가 소유한 프로젝트 수'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="회원 탈퇴">
+            <StepList steps={[
+              '계정 설정 페이지 하단의 "회원 탈퇴" 버튼을 클릭합니다.',
+              '탈퇴 확인 모달에서 비밀번호를 입력합니다 (온라인 모드).',
+              '확인 텍스트로 "회원탈퇴"를 입력합니다.',
+              '"탈퇴하기" 버튼을 클릭하면 계정이 영구 삭제됩니다.',
+            ]} />
+            <div className="mt-4">
+              <Tip type="warning">회원 탈퇴 시 소유한 프로젝트와 관련 데이터가 모두 영구 삭제됩니다. 이 작업은 되돌릴 수 없으므로 중요한 데이터는 미리 백업하세요.</Tip>
+            </div>
           </SectionCard>
         </div>
       ),
@@ -822,7 +910,7 @@ export default function UserManual() {
         <div className="relative">
           <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
             <BookOpen className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-            User Manual v2.0
+            User Manual v3.0
           </div>
           <h1 className="mt-6 text-[clamp(2rem,4vw,3.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
             DK Flow<br />사용자 매뉴얼
