@@ -158,40 +158,19 @@ export default function QuickProgressModal({
                     </div>
 
                     <div className="mt-3 flex items-center gap-3">
-                      {/* Progress slider */}
-                      <div className="flex-1">
-                        <div className="relative">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="5"
-                            value={progress}
-                            onChange={(e) =>
-                              handleLocalChange(task.id, 'actualProgress', Number(e.target.value))
-                            }
-                            className="progress-slider w-full"
-                          />
-                          <div className="pointer-events-none mt-1 flex justify-between text-[10px] text-[color:var(--text-muted)]">
-                            <span>0%</span>
-                            <span>50%</span>
-                            <span>100%</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex w-16 items-center gap-1">
+                      <div className="flex w-20 items-center gap-1">
                         <input
-                          type="number"
-                          min="0"
-                          max="100"
+                          type="text"
+                          inputMode="numeric"
                           value={progress}
-                          onChange={(e) =>
-                            handleLocalChange(
-                              task.id,
-                              'actualProgress',
-                              Math.min(100, Math.max(0, Number(e.target.value) || 0))
-                            )
-                          }
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9]/g, '');
+                            const num = Math.min(100, Math.max(0, parseInt(raw) || 0));
+                            handleLocalChange(task.id, 'actualProgress', raw === '' ? 0 : num);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
+                          }}
                           className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-2 py-1 text-center text-sm text-[color:var(--text-primary)] outline-none focus:border-[rgba(15,118,110,0.4)]"
                         />
                         <span className="text-xs text-[color:var(--text-muted)]">%</span>

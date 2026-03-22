@@ -900,34 +900,25 @@ export default function WBS() {
         return isEditing ? (
           <div className="flex items-center gap-1">
             <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={progressValue}
-              onChange={(e) =>
-                handleCellChange(task.id, columnId as keyof Task, Number(e.target.value))
-              }
-              onBlur={() => handleCellCommit()}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') handleCellCommit();
+              type="text"
+              inputMode="numeric"
+              defaultValue={progressValue}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                const num = Math.min(100, Math.max(0, parseInt(raw) || 0));
+                e.target.value = raw === '' ? '' : String(num);
+                if (raw !== '') {
+                  handleCellChange(task.id, columnId as keyof Task, num);
+                }
               }}
-              className="progress-slider flex-1"
-              autoFocus
-            />
-            <input
-              type="number"
-              value={progressValue}
-              onChange={(e) =>
-                handleCellChange(task.id, columnId as keyof Task, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))
-              }
-              onBlur={() => handleCellCommit()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
+                if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
               }}
-              className="cell-input w-10 text-right text-xs"
-              min="0"
-              max="100"
+              onBlur={() => handleCellCommit()}
+              className="cell-input w-full text-right text-xs"
+              autoFocus
+              onFocus={(e) => e.target.select()}
             />
           </div>
         ) : (
