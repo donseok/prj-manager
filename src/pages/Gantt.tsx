@@ -108,13 +108,12 @@ export default function Gantt() {
     [tasks]
   );
 
-  // 직접 필터에 매칭된 Task ID (ancestor-only 구분용)
-  const directMatchIds = useMemo(() => new Set<string>(), []);
-
-  const filteredFlatTasks = useMemo(() => {
-    directMatchIds.clear();
+  const { filteredFlatTasks, directMatchIds } = useMemo(() => {
+    const directMatchIds = new Set<string>();
     const query = searchQuery.trim().toLowerCase();
-    if (!query && filterMode === 'all') return flatTasks;
+    if (!query && filterMode === 'all') {
+      return { filteredFlatTasks: flatTasks, directMatchIds };
+    }
 
     const matchedIds = new Set<string>();
     const assigneeNameMap = Object.fromEntries(members.map((member) => [member.id, member.name]));
@@ -147,8 +146,11 @@ export default function Gantt() {
       }
     });
 
-    return flatTasks.filter((task) => matchedIds.has(task.id));
-  }, [directMatchIds, filterMode, flatTasks, members, searchQuery, taskMap]);
+    return {
+      filteredFlatTasks: flatTasks.filter((task) => matchedIds.has(task.id)),
+      directMatchIds,
+    };
+  }, [filterMode, flatTasks, members, searchQuery, taskMap]);
 
   const resolvedSelectedTaskId = useMemo(() => {
     if (filteredFlatTasks.length === 0) return null;

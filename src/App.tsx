@@ -59,6 +59,10 @@ function App() {
   const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
+    document.title = 'DK Flow';
+  }, []);
+
+  useEffect(() => {
     let isCancelled = false;
     let unsubscribe = () => {};
 

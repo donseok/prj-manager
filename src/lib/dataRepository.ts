@@ -510,7 +510,6 @@ export async function upsertAttendance(attendance: Attendance): Promise<Attendan
   return mapAttendanceRow(data as AttendanceRow);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function deleteAttendanceById(_projectId: string, id: string): Promise<void> {
   const { error } = await supabase.from('attendance').delete().eq('id', id);
   if (error) {

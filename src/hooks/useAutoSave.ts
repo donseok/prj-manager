@@ -71,33 +71,45 @@ export function useAutoSave<T>(
   }, []);
 
   useEffect(() => {
+    let isActive = true;
+
     if (!projectId || loadedProjectId !== projectId) {
       clearPendingSave();
-      return;
+      return () => {
+        isActive = false;
+      };
     }
 
     if (currentProjectIdRef.current !== projectId) {
       currentProjectIdRef.current = projectId;
       hydratedRef.current = false;
       // 프로젝트 전환 시 저장 상태 초기화 (의도적 effect 내 setState)
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 프로젝트 전환 시 저장 상태 초기화
-      setSaveStatus('idle');
-      setLastSavedAt(null);
+      queueMicrotask(() => {
+        if (!isActive) return;
+        setSaveStatus('idle');
+        setLastSavedAt(null);
+      });
     }
 
     if (!hydratedRef.current) {
       hydratedRef.current = true;
-      return;
+      return () => {
+        isActive = false;
+      };
     }
 
     hasPendingSave.current = true;
-    setSaveStatus('pending');
+    queueMicrotask(() => {
+      if (!isActive) return;
+      setSaveStatus('pending');
+    });
     timeoutRef.current = setTimeout(() => {
       hasPendingSave.current = false;
       void runSave(latestDataRef.current);
     }, delay);
 
     return () => {
+      isActive = false;
       clearPendingSave();
     };
   }, [clearPendingSave, data, delay, loadedProjectId, projectId, runSave]);
@@ -114,7 +126,6 @@ export function useAutoSave<T>(
         }
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- 언마운트 전용
   }, []);
 
   return {

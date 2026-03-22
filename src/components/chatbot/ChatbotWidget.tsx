@@ -38,6 +38,11 @@ export default function ChatbotWidget() {
     }),
     [currentProject, members, tasks, projects]
   );
+  const latestContextRef = useRef(context);
+
+  useEffect(() => {
+    latestContextRef.current = context;
+  }, [context]);
 
   // 대화 히스토리 → ChatbotMessage[] 형태로 변환
   const chatHistory = useMemo<ChatbotMessage[]>(
@@ -53,12 +58,7 @@ export default function ChatbotWidget() {
     const greeting: UIMessage = {
       id: generateId(),
       role: 'assistant',
-      text: createChatbotGreeting({
-        project: currentProject,
-        members,
-        tasks,
-        allProjects: projects,
-      }),
+      text: createChatbotGreeting(latestContextRef.current),
     };
     timerRef.current = window.setTimeout(() => {
       setMessages([greeting]);

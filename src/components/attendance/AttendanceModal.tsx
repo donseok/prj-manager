@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, Save } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -22,6 +22,28 @@ const attendanceTypes: AttendanceType[] = [
   'sick_leave', 'business_trip', 'late', 'early_leave', 'absence',
 ];
 
+function getInitialMemberId(
+  editingAttendance: Attendance | null | undefined,
+  defaultMemberId: string | undefined,
+  members: ProjectMember[]
+) {
+  if (editingAttendance) return editingAttendance.memberId;
+  return defaultMemberId || (members[0]?.id ?? '');
+}
+
+function getInitialDate(editingAttendance: Attendance | null | undefined, defaultDate: string | undefined) {
+  if (editingAttendance) return editingAttendance.date;
+  return defaultDate || new Date().toISOString().slice(0, 10);
+}
+
+function getInitialType(editingAttendance: Attendance | null | undefined): AttendanceType {
+  return editingAttendance?.type || 'present';
+}
+
+function getInitialNote(editingAttendance: Attendance | null | undefined) {
+  return editingAttendance?.note || '';
+}
+
 export default function AttendanceModal({
   isOpen,
   onClose,
@@ -32,33 +54,14 @@ export default function AttendanceModal({
   defaultDate,
   defaultMemberId,
 }: AttendanceModalProps) {
-  const [memberId, setMemberId] = useState('');
-  const [date, setDate] = useState('');
+  const [memberId, setMemberId] = useState(() => getInitialMemberId(editingAttendance, defaultMemberId, members));
+  const [date, setDate] = useState(() => getInitialDate(editingAttendance, defaultDate));
   const [endDate, setEndDate] = useState('');
-  const [type, setType] = useState<AttendanceType>('present');
-  const [note, setNote] = useState('');
+  const [type, setType] = useState<AttendanceType>(() => getInitialType(editingAttendance));
+  const [note, setNote] = useState(() => getInitialNote(editingAttendance));
   const [useRange, setUseRange] = useState(false);
 
   const isEdit = Boolean(editingAttendance);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (editingAttendance) {
-      setMemberId(editingAttendance.memberId);
-      setDate(editingAttendance.date);
-      setEndDate('');
-      setType(editingAttendance.type);
-      setNote(editingAttendance.note || '');
-      setUseRange(false);
-    } else {
-      setMemberId(defaultMemberId || (members[0]?.id ?? ''));
-      setDate(defaultDate || new Date().toISOString().slice(0, 10));
-      setEndDate('');
-      setType('present');
-      setNote('');
-      setUseRange(false);
-    }
-  }, [isOpen, editingAttendance, defaultDate, defaultMemberId, members]);
 
   const handleSubmit = () => {
     if (!memberId || !date) return;

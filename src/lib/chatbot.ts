@@ -1410,7 +1410,7 @@ export async function createChatbotReply(
     if (result.text) {
       // 복합 인텐트: 2번째 인텐트도 호환 가능하면 합산
       let combinedText = result.text;
-      let combinedIntentType = result.intentType;
+      const combinedIntentType = result.intentType;
 
       if (intents.length >= 2 && isComposable(topIntent.type) && isComposable(intents[1].type) && intents[1].type !== topIntent.type) {
         // 2번째 인텐트가 충분히 높은 점수이고 독립적 인텐트일 때만

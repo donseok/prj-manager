@@ -323,16 +323,19 @@ export default function Attendance() {
       )}
 
       {/* 모달 */}
-      <AttendanceModal
-        isOpen={showModal}
-        onClose={() => { setShowModal(false); setEditingRecord(null); }}
-        onSave={handleSave}
-        members={members}
-        projectId={projectId!}
-        editingAttendance={editingRecord}
-        defaultDate={defaultDate}
-        defaultMemberId={defaultMemberId}
-      />
+      {showModal && (
+        <AttendanceModal
+          key={editingRecord?.id || `new:${defaultDate || ''}:${defaultMemberId || ''}`}
+          isOpen={showModal}
+          onClose={() => { setShowModal(false); setEditingRecord(null); }}
+          onSave={handleSave}
+          members={members}
+          projectId={projectId!}
+          editingAttendance={editingRecord}
+          defaultDate={defaultDate}
+          defaultMemberId={defaultMemberId}
+        />
+      )}
 
       <ConfirmModal
         isOpen={Boolean(pendingDelete)}
