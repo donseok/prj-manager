@@ -10,27 +10,33 @@ import PptxGenJS from 'pptxgenjs';
 import type { WeeklyReportData, WeeklyReportTask } from './weeklyReport';
 import { ATTENDANCE_TYPE_COLORS } from '../types';
 
-// ── 색상 ────────────────────────────────────────────────────
+// ── 색상 (동국제강그룹 CI 기반) ──────────────────────────────
 const C = {
-  primary: '0F766E',
-  primaryDark: '0D6B64',
-  accent: '1FA37A',
-  dark: '1E293B',
-  darkBg: '0F172A',
+  // 동국블루 — 투명성·신뢰·품격
+  primary: '002452',
+  primaryLight: '003670',
+  primaryTint: 'E8EDF4',
+  // 동국레드 — 자부심·열정·의지
+  accent: 'C51F2A',
+  accentLight: 'FDEAEB',
+  // 뉴트럴
+  dark: '1A1A2E',
+  darkBg: '002452',
   white: 'FFFFFF',
-  gray50: 'F8FAFC',
-  gray100: 'F1F5F9',
-  gray200: 'E2E8F0',
-  gray400: '94A3B8',
-  gray500: '64748B',
-  gray600: '475569',
-  gray700: '334155',
-  danger: 'DC2626',
-  dangerBg: 'FEE2E2',
-  warning: 'F59E0B',
+  gray50: 'F7F8FA',
+  gray100: 'ECEEF2',
+  gray200: 'D4D8E0',
+  gray400: '8B92A0',
+  gray500: '5C6370',
+  gray600: '3E4555',
+  gray700: '2A2F3C',
+  // 상태
+  danger: 'C51F2A',
+  dangerBg: 'FDEAEB',
+  warning: 'D97706',
   warningBg: 'FEF3C7',
-  success: '16A34A',
-  successBg: 'DCFCE7',
+  success: '0D7C3E',
+  successBg: 'E2F5EA',
 };
 
 // ── 유틸 ────────────────────────────────────────────────────
@@ -39,7 +45,7 @@ function statusColor(status: string): { bg: string; font: string } {
     case 'completed':
       return { bg: C.successBg, font: C.success };
     case 'in_progress':
-      return { bg: 'DBEAFE', font: '2563EB' };
+      return { bg: C.primaryTint, font: C.primary };
     case 'on_hold':
       return { bg: C.warningBg, font: C.warning };
     default:
@@ -59,13 +65,21 @@ function chunk<T>(arr: T[], size: number): T[][] {
 function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const slide = pptx.addSlide();
 
-  // 상단 배경 바
+  // 상단 배경 바 (동국블루)
   slide.addShape(pptx.ShapeType.rect, {
     x: 0,
     y: 0,
     w: '100%',
     h: 1.3,
     fill: { color: C.darkBg },
+  });
+  // 동국레드 악센트 라인
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 1.3,
+    w: '100%',
+    h: 0.04,
+    fill: { color: C.accent },
   });
 
   // 프로젝트명 + 주차
@@ -92,9 +106,9 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   // KPI 카드 4개
   const kpis = [
     { label: '전체 작업', value: `${report.summary.totalLeafTasks}건`, color: C.primary },
-    { label: '완료', value: `${report.summary.completedTasks}건`, color: C.accent },
-    { label: '실적 공정율', value: `${Math.round(report.summary.overallActualProgress)}%`, color: '5B8DEF' },
-    { label: '지연', value: `${report.summary.delayedTasks}건`, color: C.danger },
+    { label: '완료', value: `${report.summary.completedTasks}건`, color: C.success },
+    { label: '실적 공정율', value: `${Math.round(report.summary.overallActualProgress)}%`, color: C.primaryLight },
+    { label: '지연', value: `${report.summary.delayedTasks}건`, color: C.accent },
   ];
 
   const cardW = 2.05;
@@ -182,7 +196,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
     y: barY + 0.6,
     w: barW,
     h: barH,
-    fill: { color: 'EEF2FF' },
+    fill: { color: C.primaryTint },
     rectRadius: 0.1,
   });
   if (planPct > 0) {
@@ -191,7 +205,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
       y: barY + 0.6,
       w: barW * (planPct / 100),
       h: barH,
-      fill: { color: '5B8DEF' },
+      fill: { color: C.primaryLight },
       rectRadius: 0.1,
     });
   }
@@ -211,7 +225,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
     y: barY + 1.2,
     w: barW,
     h: barH,
-    fill: { color: 'F0FDFA' },
+    fill: { color: C.primaryTint },
     rectRadius: 0.1,
   });
   if (actualPct > 0) {
@@ -236,7 +250,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
       fontSize: 11,
       fontFace: 'Pretendard',
       bold: true,
-      color: C.warning,
+      color: C.accent,
     });
     report.issues.slice(0, 4).forEach((issue, i) => {
       slide.addText(`${i + 1}. ${issue}`, {
@@ -256,8 +270,8 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const ribbons = [
     { label: '금주 실적', count: report.thisWeekActual.tasks.length, color: C.primary },
     { label: '금주 완료', count: report.completedThisWeek.tasks.length, color: C.success },
-    { label: '차주 계획', count: report.nextWeekPlan.tasks.length, color: '6366F1' },
-    { label: '지연 작업', count: report.delayed.tasks.length, color: C.danger },
+    { label: '차주 계획', count: report.nextWeekPlan.tasks.length, color: C.primaryLight },
+    { label: '지연 작업', count: report.delayed.tasks.length, color: C.accent },
   ];
   ribbons.forEach((r, i) => {
     const x = startX + i * (cardW + cardGap);
@@ -402,13 +416,21 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
   for (let p = 0; p < pageCount; p++) {
     const slide = pptx.addSlide();
 
-    // 헤더 바
+    // 헤더 바 (동국블루)
     slide.addShape(pptx.ShapeType.rect, {
       x: 0,
       y: 0,
       w: '100%',
       h: 1.3,
       fill: { color: C.darkBg },
+    });
+    // 동국레드 악센트 라인
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0,
+      y: 1.3,
+      w: '100%',
+      h: 0.04,
+      fill: { color: C.accent },
     });
 
     slide.addText(report.projectName, {
@@ -437,7 +459,7 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
     addTaskTable(slide, pptx, '금주 실적', actualChunks[p] || [], 0.4, C.primary);
 
     // 우: 차주 계획
-    addTaskTable(slide, pptx, '차주 계획', planChunks[p] || [], 5.2, '6366F1');
+    addTaskTable(slide, pptx, '차주 계획', planChunks[p] || [], 5.2, C.primaryLight);
   }
 }
 
@@ -466,10 +488,15 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const nextWeekStartStr = `${nws.getFullYear()}-${String(nws.getMonth() + 1).padStart(2, '0')}-${String(nws.getDate()).padStart(2, '0')}`;
   const nextWeekDays = getDayHeaders(nextWeekStartStr);
 
-  // 헤더 바
+  // 헤더 바 (동국블루)
   slide.addShape(pptx.ShapeType.rect, {
     x: 0, y: 0, w: '100%', h: 1.3,
     fill: { color: C.darkBg },
+  });
+  // 동국레드 악센트 라인
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: 1.3, w: '100%', h: 0.04,
+    fill: { color: C.accent },
   });
 
   slide.addText(report.projectName, {
@@ -570,7 +597,7 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   // ── 차주 근태현황 ──
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.4, y: curY, w: tableW, h: 0.32,
-    fill: { color: '6366F1' }, rectRadius: 0.05,
+    fill: { color: C.primaryLight }, rectRadius: 0.05,
   });
   slide.addText('차주 근태현황', {
     x: 0.4, y: curY, w: tableW, h: 0.32,
