@@ -950,7 +950,7 @@ export default function UserManual() {
                   }`}
                 >
                   {section.icon}
-                  <span className="flex-1 truncate">{section.title}</span>
+                  <span className="flex-1 truncate" title={section.title}>{section.title}</span>
                   {activeSection === section.id && <ChevronRight className="h-4 w-4 shrink-0" />}
                 </button>
               ))}

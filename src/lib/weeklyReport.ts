@@ -198,15 +198,15 @@ export function generateWeeklyReport({
   const totalWeight = leafTasks.reduce((s, t) => s + t.weight, 0);
   const overallActualProgress =
     totalWeight > 0
-      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.actualProgress, 0) / totalWeight * 100) / 100
+      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.actualProgress, 0) / totalWeight)
       : leafTasks.length > 0
-        ? Math.round(leafTasks.reduce((s, t) => s + t.actualProgress, 0) / leafTasks.length * 100) / 100
+        ? Math.round(leafTasks.reduce((s, t) => s + t.actualProgress, 0) / leafTasks.length)
         : 0;
   const overallPlanProgress =
     totalWeight > 0
-      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.planProgress, 0) / totalWeight * 100) / 100
+      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.planProgress, 0) / totalWeight)
       : leafTasks.length > 0
-        ? Math.round(leafTasks.reduce((s, t) => s + t.planProgress, 0) / leafTasks.length * 100) / 100
+        ? Math.round(leafTasks.reduce((s, t) => s + t.planProgress, 0) / leafTasks.length)
         : 0;
 
   // 이슈 자동생성

@@ -189,7 +189,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                 )}
               >
                 <UserCircle className="h-4 w-4 shrink-0 text-[color:var(--menu-muted)]" />
-                <span className="truncate text-[color:var(--menu-text)]">{m.name}</span>
+                <span className="truncate text-[color:var(--menu-text)]" title={m.name}>{m.name}</span>
               </button>
             ))}
 
@@ -253,7 +253,10 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
           isOpen && 'bg-[color:var(--bg-tertiary)]'
         )}
       >
-        <span className={cn('truncate', selectedMember ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-muted)]')}>
+        <span
+          className={cn('truncate', selectedMember ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-muted)]')}
+          title={selectedMember?.name || undefined}
+        >
           {selectedMember?.name || '-'}
         </span>
         <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-[color:var(--text-muted)] transition-transform', isOpen && 'rotate-180')} />

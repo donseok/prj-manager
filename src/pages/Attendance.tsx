@@ -441,7 +441,7 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
                       className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight hover:bg-black/5 dark:hover:bg-white/5 truncate"
                     >
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
-                      <span className="truncate text-[color:var(--text-secondary)]">
+                      <span className="truncate text-[color:var(--text-secondary)]" title={`${getMemberName(a.memberId)} ${ATTENDANCE_TYPE_LABELS[a.type]}`}>
                         {getMemberName(a.memberId)} {ATTENDANCE_TYPE_LABELS[a.type]}
                       </span>
                     </button>

@@ -42,7 +42,7 @@ function calculateAggregateProgress(tasks: Task[], field: 'planProgress' | 'actu
       ? tasks.reduce((sum, task) => sum + task.weight * task[field], 0) / totalWeight
       : tasks.reduce((sum, task) => sum + task[field], 0) / tasks.length;
 
-  return Math.round(value * 100) / 100;
+  return Math.round(value);
 }
 
 

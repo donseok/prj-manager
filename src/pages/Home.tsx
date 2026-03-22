@@ -298,7 +298,7 @@ export default function Home() {
                   className="flex items-center justify-between rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-tertiary)]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-[color:var(--text-primary)]">{project.name}</p>
+                    <p className="truncate font-medium text-[color:var(--text-primary)]" title={project.name}>{project.name}</p>
                     <p className="mt-1 text-xs text-[color:var(--text-muted)]">{project.startDate || '시작일 미정'}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)]" />
@@ -411,10 +411,10 @@ export default function Home() {
                           {tone.label}
                         </div>
                       </div>
-                      <h3 className="mt-4 truncate text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                      <h3 className="mt-4 truncate text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]" title={project.name}>
                         {project.name}
                       </h3>
-                      <p className="mt-2 line-clamp-1 text-sm text-[color:var(--text-secondary)]">
+                      <p className="mt-2 line-clamp-1 text-sm text-[color:var(--text-secondary)]" title={getProjectSummary(project)}>
                         {getProjectSummary(project)}
                       </p>
                     </div>

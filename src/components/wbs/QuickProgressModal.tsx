@@ -139,7 +139,7 @@ export default function QuickProgressModal({
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]">
+                        <p className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]" title={task.name || '이름 없는 작업'}>
                           {task.name || '이름 없는 작업'}
                         </p>
                         <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">

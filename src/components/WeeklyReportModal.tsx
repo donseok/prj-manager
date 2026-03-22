@@ -368,7 +368,7 @@ function OverviewTab({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-[color:var(--text-primary)] truncate">
+                    <span className="text-sm font-medium text-[color:var(--text-primary)] truncate" title={stat.name}>
                       {stat.name}
                     </span>
                     <span className="text-xs text-[color:var(--text-secondary)]">

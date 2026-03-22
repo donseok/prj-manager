@@ -461,10 +461,10 @@ export default function ProjectList() {
                             <ToneIcon className="h-3.5 w-3.5" />
                             {tone.label}
                           </div>
-                          <h3 className="mt-3 truncate text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                          <h3 className="mt-3 truncate text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]" title={project.name}>
                             {project.name}
                           </h3>
-                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[color:var(--text-secondary)]" title={getProjectSummary(project)}>
                             {getProjectSummary(project)}
                           </p>
                         </div>

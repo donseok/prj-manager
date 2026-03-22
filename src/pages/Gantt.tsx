@@ -455,7 +455,7 @@ export default function Gantt() {
                       <span className="w-5 flex-shrink-0" />
                     )}
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
+                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]" title={task.name || undefined}>
                         {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
                       </p>
                     </div>
@@ -569,7 +569,7 @@ export default function Gantt() {
                         onClick={() => setSelectedTaskId(t.id)}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white/95">{t.name}</p>
+                          <p className="truncate text-sm font-medium text-white/95" title={t.name}>{t.name}</p>
                           <p className="mt-0.5 text-xs text-white/55">{formatDate(t.planEnd, 'M/d (EEE)')}</p>
                         </div>
                         <span className={cn(
@@ -601,7 +601,7 @@ export default function Gantt() {
                     {assigneeWorkload.map((a, i) => (
                       <li key={i}>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="truncate text-white/90">{a.name}</span>
+                          <span className="truncate text-white/90" title={a.name}>{a.name}</span>
                           <span className="ml-2 shrink-0 text-xs text-white/60">
                             {a.total}건{a.delayed > 0 && <span className="ml-1 text-red-400">({a.delayed} 지연)</span>}
                           </span>
@@ -1091,7 +1091,7 @@ export default function Gantt() {
                     )}
 
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]">
+                      <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]" title={task.name || undefined}>
                         {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
                       </p>
                     </div>

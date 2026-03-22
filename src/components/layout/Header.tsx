@@ -98,7 +98,7 @@ export default function Header() {
               <ChevronRight className="h-4 w-4 text-[color:var(--text-secondary)]" />
               <div className="surface-badge max-w-[24rem]">
                 <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
-                <span className="truncate">{currentProject.name}</span>
+                <span className="truncate" title={currentProject.name}>{currentProject.name}</span>
               </div>
             </div>
           )}
@@ -166,7 +166,7 @@ export default function Header() {
                   <p className="mt-2 text-base font-semibold tracking-[-0.03em]">
                     {user?.name || '사용자'}
                   </p>
-                  <p className="mt-1 truncate text-sm text-white/82">
+                  <p className="mt-1 truncate text-sm text-white/82" title={user?.email || 'user@example.com'}>
                     {user?.email || 'user@example.com'}
                   </p>
                 </div>

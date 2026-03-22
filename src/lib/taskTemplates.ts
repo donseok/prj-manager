@@ -394,7 +394,7 @@ export function generateTasksFromTemplate(params: {
         name: node.name,
         output: node.output,
         assigneeId: isLeaf ? pickMember() : null,
-        weight: isLeaf ? Number((100 / template.taskCount).toFixed(3)) : 0,
+        weight: isLeaf ? Math.round(100 / template.taskCount) : 0,
         durationDays: isLeaf ? durationDays : null,
         predecessorIds: [],
         taskSource: 'template',

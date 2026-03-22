@@ -768,6 +768,7 @@ export default function WBS() {
               setEditingCell({ taskId: task.id, columnId });
             }}
             style={{ paddingLeft: `${(task.depth || 0) * 20}px` }}
+            title={task.name || undefined}
           >
             {task.name || <span className="text-[color:var(--accent-danger)] opacity-70">⚠ 작업명 입력</span>}
           </span>
@@ -791,6 +792,7 @@ export default function WBS() {
           <span
             className={cn('truncate text-[color:var(--text-secondary)]', taskEditable && 'cursor-text')}
             onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
+            title={task.output || undefined}
           >
             {task.output || <span className="text-[color:var(--text-muted)]">-</span>}
           </span>
@@ -831,24 +833,32 @@ export default function WBS() {
         };
         return isEditing ? (
           <input
-            type="number"
-            value={task.weight}
-            onChange={(e) => handleCellChange(task.id, 'weight', Math.max(0, parseFloat(e.target.value) || 0))}
-            onBlur={() => commitWeight()}
+            type="text"
+            inputMode="numeric"
+            defaultValue={Math.round(task.weight)}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              const num = Math.max(0, parseInt(raw) || 0);
+              e.target.value = raw === '' ? '' : String(num);
+              if (raw !== '') {
+                handleCellChange(task.id, 'weight', num);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === 'Escape') commitWeight();
+              if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
             }}
+            onBlur={() => commitWeight()}
             className="cell-input text-right"
-            step="0.01"
-            min="0"
             autoFocus
+            onFocus={(e) => e.target.select()}
           />
         ) : (
           <span
             className={cn('text-right block', taskEditable && 'cursor-text')}
             onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
-            {task.weight.toFixed(3)}
+            {Math.round(task.weight)}
           </span>
         );
       }
@@ -1067,13 +1077,13 @@ export default function WBS() {
       {
         key: 'planStart',
         label: '계획시작',
-        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'planEnd',
         label: '계획종료',
-        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
@@ -1085,13 +1095,13 @@ export default function WBS() {
       {
         key: 'actualStart',
         label: '실적시작',
-        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actualEnd',
         label: '실적종료',
-        width: getResponsiveWidth(workspaceWidth * 0.095, 150, fullscreen ? 200 : 170),
+        width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
@@ -1257,7 +1267,7 @@ export default function WBS() {
         {/* Row 1: Title + Save/Status */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+            <h1 className="truncate text-xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]" title={`${currentProject?.name || '프로젝트'} WBS`}>
               {currentProject?.name || '프로젝트'} WBS
             </h1>
             {projectTone && (

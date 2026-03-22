@@ -156,8 +156,8 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
       children.forEach((c) => {
         const task = taskMap.get(c.id)!;
         task.weight = totalDuration > 0
-          ? Math.round(((c.durationDays || 1) / totalDuration) * 100 * 1000) / 1000
-          : Math.round((100 / children.length) * 1000) / 1000;
+          ? Math.round(((c.durationDays || 1) / totalDuration) * 100)
+          : Math.round(100 / children.length);
       });
       return children.reduce((s, c) => s + taskMap.get(c.id)!.weight, 0);
     }
@@ -168,7 +168,7 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
       const childChildren = childrenMap.get(c.id);
       if (childChildren && childChildren.length > 0) {
         const branchWeight = calculateBranch(c.id);
-        taskMap.get(c.id)!.weight = Math.round(branchWeight * 1000) / 1000;
+        taskMap.get(c.id)!.weight = Math.round(branchWeight);
         totalChildWeight += branchWeight;
       } else {
         // leaf 사이의 비율은 기간 기반
@@ -191,7 +191,7 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
     // 모든 task의 가중치를 비율로 조정
     const scale = 100 / totalPhaseWeight;
     taskMap.forEach((task) => {
-      task.weight = Math.round(task.weight * scale * 1000) / 1000;
+      task.weight = Math.round(task.weight * scale);
       task.updatedAt = new Date().toISOString();
     });
   }

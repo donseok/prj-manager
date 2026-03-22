@@ -477,7 +477,7 @@ export default function Dashboard() {
                   key={task.id}
                   className="rounded-[22px] border border-[rgba(203,75,95,0.16)] bg-[rgba(203,75,95,0.06)] p-4"
                 >
-                  <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
+                  <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full bg-[rgba(203,75,95,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-danger)]">
                       {getDelayDays(task)}일 지연
@@ -505,7 +505,7 @@ export default function Dashboard() {
             <ul className="space-y-3">
               {thisWeekTasks.map((task) => (
                 <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
+                  <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <p className="mt-2 flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
                     <Calendar className="h-3.5 w-3.5" />
                     {formatDate(task.planStart)} ~ {formatDate(task.planEnd)}
@@ -530,7 +530,7 @@ export default function Dashboard() {
             <ul className="space-y-3">
               {nextWeekTasks.map((task) => (
                 <li key={task.id} className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
+                  <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <p className="mt-2 flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
                     <Calendar className="h-3.5 w-3.5" />
                     {formatDate(task.planStart)} ~ {formatDate(task.planEnd)}
@@ -727,7 +727,7 @@ export default function Dashboard() {
                           className="h-3 w-3 rounded-full"
                           style={{ backgroundColor: WEIGHT_COLORS[i % WEIGHT_COLORS.length] }}
                         />
-                        <span className="text-sm font-medium text-[color:var(--text-primary)] truncate max-w-[120px]">
+                        <span className="text-sm font-medium text-[color:var(--text-primary)] truncate max-w-[120px]" title={item.name}>
                           {item.name}
                         </span>
                       </div>
@@ -754,7 +754,7 @@ export default function Dashboard() {
             <ul className="space-y-3">
               {recentlyCompleted.map((task) => (
                 <li key={task.id} className="rounded-[22px] border border-[rgba(31,163,122,0.16)] bg-[rgba(31,163,122,0.06)] p-4">
-                  <p className="truncate font-medium text-[color:var(--text-primary)]">{task.name}</p>
+                  <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full bg-[rgba(31,163,122,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-success)]">
                       완료

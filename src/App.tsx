@@ -348,7 +348,7 @@ function PopupProjectWrapper() {
     <div className="flex h-screen flex-col bg-[color:var(--bg-primary)]">
       <header className="flex h-12 flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-[color:var(--text-primary)] truncate">
+          <span className="text-sm font-semibold text-[color:var(--text-primary)] truncate" title={`${currentProject?.name || '프로젝트'} — ${page}`}>
             {currentProject?.name || '프로젝트'} — {page}
           </span>
           <span className="surface-badge !py-0.5 !px-2 !text-[10px]">팝업</span>
