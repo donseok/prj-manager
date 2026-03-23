@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings } from 'lucide-react';
+import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings, UserCog, Fingerprint, KeyRound, ShieldAlert, Activity, Lock } from 'lucide-react';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAllProfiles, updateUserSystemRole, updateAccountStatus } from '../lib/supabase';
@@ -17,6 +17,50 @@ interface ProfileItem {
 }
 
 type TabFilter = 'all' | AccountStatus;
+
+/* ------------------------------------------------------------------ */
+/*  Floating decorative components (hero)                              */
+/* ------------------------------------------------------------------ */
+function FloatingElement({
+  children,
+  className = '',
+  style = {},
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm ${className}`}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FloatingStatBubble({
+  value,
+  label,
+  className = '',
+  style = {},
+}: {
+  value: string;
+  label?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md ${className}`}
+      style={style}
+    >
+      <span className="text-2xl font-bold text-white/90">{value}</span>
+      {label && <span className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/50">{label}</span>}
+    </div>
+  );
+}
 
 const STATUS_BADGE: Record<AccountStatus, { label: string; className: string }> = {
   pending: {
@@ -136,6 +180,115 @@ export default function UserManagement() {
   ];
 
   return (
+    <div className="space-y-8">
+      {/* ── Hero Section ── */}
+      <section className="app-panel-dark relative min-h-[320px] overflow-hidden p-6 md:p-8 lg:min-h-[360px]">
+        {/* Glow backgrounds */}
+        <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(120,180,255,0.16),transparent_72%)] blur-3xl" />
+        <div className="pointer-events-none absolute right-[25%] top-[20%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.14),transparent_70%)] blur-3xl" />
+
+        {/* ---- Floating decorative elements (right side) — 사용자 관리 테마 ---- */}
+        <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+          {/* Stat bubbles */}
+          <FloatingStatBubble
+            value={String(profiles.length)}
+            label="사용자"
+            className="hero-float-1 h-[76px] w-[76px]"
+            style={{ top: '8%', right: '11%' }}
+          />
+          <FloatingStatBubble
+            value={String(pendingCount)}
+            label="대기"
+            className="hero-float-3 h-[68px] w-[68px]"
+            style={{ top: '40%', right: '5%' }}
+          />
+          <FloatingStatBubble
+            value="✓"
+            className="hero-float-2 h-[60px] w-[60px]"
+            style={{ top: '20%', right: '26%' }}
+          />
+
+          {/* Role summary card */}
+          <div
+            className="hero-float-2 pointer-events-none absolute rounded-2xl border border-white/[0.12] bg-white/[0.08] backdrop-blur-md"
+            style={{ top: '65%', right: '6%', width: '140px', padding: '10px 12px' }}
+          >
+            <div className="mb-2 flex items-center gap-1.5">
+              <ShieldCheck className="h-3 w-3 text-teal-400/60" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">역할 관리</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-1 w-full rounded-full bg-white/15" />
+              <div className="h-1 w-[85%] rounded-full bg-white/10" />
+              <div className="h-1 w-[70%] rounded-full bg-white/8" />
+            </div>
+          </div>
+
+          {/* Icon elements */}
+          <FloatingElement className="hero-float-4 h-11 w-11" style={{ top: '5%', right: '22%' }}>
+            <UserCog className="h-5 w-5 text-teal-400/50" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-2 h-10 w-10" style={{ top: '54%', right: '12%' }}>
+            <Fingerprint className="h-4.5 w-4.5 text-teal-300/50" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-1 h-10 w-10" style={{ top: '60%', right: '24%' }}>
+            <KeyRound className="h-4.5 w-4.5 text-amber-400/45" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-3 h-9 w-9" style={{ top: '30%', right: '3%' }}>
+            <ShieldAlert className="h-4 w-4 text-orange-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-4 h-10 w-10" style={{ top: '48%', right: '30%' }}>
+            <Shield className="h-4.5 w-4.5 text-teal-300/45" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-1 h-9 w-9" style={{ top: '78%', right: '18%' }}>
+            <Activity className="h-4 w-4 text-white/30" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-2 h-11 w-11" style={{ top: '12%', right: '38%' }}>
+            <Users className="h-5 w-5 text-amber-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-3 h-9 w-9" style={{ top: '72%', right: '34%' }}>
+            <Lock className="h-4 w-4 text-teal-300/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-4 h-10 w-10" style={{ top: '82%', right: '4%' }}>
+            <Search className="h-4.5 w-4.5 text-white/30" />
+          </FloatingElement>
+
+          {/* Decorative connecting gradient lines */}
+          <div
+            className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2"
+            style={{ top: '26%', right: '15%', transform: 'rotate(-20deg)' }}
+          />
+          <div
+            className="absolute h-px w-20 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-3"
+            style={{ top: '50%', right: '18%', transform: 'rotate(15deg)' }}
+          />
+          <div
+            className="absolute h-px w-14 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent hero-float-1"
+            style={{ top: '68%', right: '28%', transform: 'rotate(-10deg)' }}
+          />
+
+          {/* Decorative dots */}
+          <div className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1" style={{ top: '44%', right: '14%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-4" style={{ top: '35%', right: '20%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-amber-400/30 hero-float-2" style={{ top: '58%', right: '8%' }} />
+          <div className="absolute h-1.5 w-1.5 rounded-full bg-orange-400/25 hero-float-3" style={{ top: '16%', right: '6%' }} />
+        </div>
+
+        <div className="relative z-10 max-w-2xl">
+          <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
+            <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
+            Admin Console
+          </div>
+          <h1 className="mt-6 text-[clamp(2rem,4vw,3.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
+            DK Flow<br />사용자 관리
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-white/90 md:text-lg">
+            시스템에 등록된 사용자의 역할과 권한을 관리합니다. 가입 승인, 역할 변경, 계정 상태를 한 곳에서 제어하세요.
+          </p>
+        </div>
+      </section>
+
     <section className="app-panel p-6">
       {feedback && (
         <FeedbackNotice
@@ -146,14 +299,8 @@ export default function UserManagement() {
         />
       )}
 
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-[-0.02em]">사용자 관리</h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-            시스템 사용자 목록 및 역할을 관리합니다.
-          </p>
-        </div>
+      {/* Search */}
+      <div className="mb-6 flex items-center justify-end">
         <div className="flex items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2">
           <Search className="h-4 w-4 text-[color:var(--text-secondary)]" />
           <input
@@ -440,5 +587,6 @@ export default function UserManagement() {
         </div>
       </div>
     </section>
+    </div>
   );
 }
