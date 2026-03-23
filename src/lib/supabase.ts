@@ -268,13 +268,38 @@ export async function signOutSupabase() {
 export async function loadAllProfiles(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; accountStatus: AccountStatus; createdAt: string }>> {
   if (!isSupabaseConfigured) return [];
 
+  // RPC 함수로 RLS 우회하여 빠르게 조회 (관리자 전용)
+  const { data, error } = await supabase.rpc('admin_load_all_profiles');
+
+  if (error) {
+    // RPC 함수가 없으면 기존 방식으로 폴백
+    if (error.message.includes('admin_load_all_profiles')) {
+      console.warn('admin_load_all_profiles RPC not found, falling back to direct query');
+      return loadAllProfilesFallback();
+    }
+    console.error('Failed to load profiles:', error);
+    return [];
+  }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    email: (row.email as string) || '',
+    name: (row.name as string) || '',
+    systemRole: row.system_role as SystemRole,
+    accountStatus: ((row.account_status as AccountStatus) || 'active'),
+    createdAt: row.created_at as string,
+  }));
+}
+
+/** RPC 미설치 시 기존 직접 조회 폴백 */
+async function loadAllProfilesFallback(): Promise<Array<{ id: string; email: string; name: string; systemRole: SystemRole; accountStatus: AccountStatus; createdAt: string }>> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, name, system_role, account_status, created_at')
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('Failed to load profiles:', error);
+    console.error('Failed to load profiles (fallback):', error);
     return [];
   }
 
@@ -291,11 +316,16 @@ export async function loadAllProfiles(): Promise<Array<{ id: string; email: stri
 export async function loadPendingCount(): Promise<number> {
   if (!isSupabaseConfigured) return 0;
   try {
-    const { count, error } = await supabase
+    // RPC 함수로 RLS 우회하여 빠르게 카운트 (관리자 전용)
+    const { data, error } = await supabase.rpc('admin_pending_count');
+    if (!error && data !== null) return data as number;
+
+    // RPC 미설치 시 기존 방식 폴백
+    const { count, error: fallbackError } = await supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .eq('account_status', 'pending');
-    if (error) return 0; // 컬럼 없으면 0
+    if (fallbackError) return 0;
     return count ?? 0;
   } catch {
     return 0;
