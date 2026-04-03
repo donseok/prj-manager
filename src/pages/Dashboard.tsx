@@ -16,6 +16,7 @@ import {
   CalendarCheck,
   FileDown,
   Loader2,
+  Columns3,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -240,6 +241,12 @@ export default function Dashboard() {
                 <Button variant="outline" className={heroOutlineButtonClassName}>
                   <Calendar className="w-4 h-4" />
                   간트 차트
+                </Button>
+              </Link>
+              <Link to={`/projects/${projectId}/kanban`}>
+                <Button variant="outline" className={heroOutlineButtonClassName}>
+                  <Columns3 className="w-4 h-4" />
+                  칸반 보드
                 </Button>
               </Link>
               <Button

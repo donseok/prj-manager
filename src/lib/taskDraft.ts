@@ -2,6 +2,11 @@ import type { ProjectMember, Task } from '../types';
 import { generateId } from './utils';
 import { generateTasksFromTemplate, getTaskTemplate } from './taskTemplates';
 
+interface DraftAdditionTodo {
+  name: string;
+  output?: string;
+}
+
 interface DraftKeywordRule {
   keywords: string[];
   templateBoosts?: Record<string, number>;
@@ -10,6 +15,7 @@ interface DraftKeywordRule {
     activity: string;
     name: string;
     output?: string;
+    todos?: DraftAdditionTodo[];
   }>;
 }
 
@@ -40,6 +46,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '통합테스트',
         name: '현장 적용 검증',
         output: '현장 검증 보고서',
+        todos: [
+          { name: '현장 시운전 실시', output: '시운전 기록' },
+          { name: '현장 검증 보고서 작성', output: '현장 검증 보고서' },
+        ],
       },
     ],
   },
@@ -54,6 +64,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '타당성 검토',
         name: '환경·안전 인허가 확인',
         output: '인허가 체크리스트',
+        todos: [
+          { name: '인허가 요건 조사', output: '인허가 요건 목록' },
+          { name: '인허가 체크리스트 작성', output: '인허가 체크리스트' },
+        ],
       },
     ],
   },
@@ -69,6 +83,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: 'UX/UI 설계',
         name: '디자인 리뷰',
         output: '리뷰 노트',
+        todos: [
+          { name: '디자인 리뷰 진행', output: '리뷰 피드백' },
+          { name: '리뷰 노트 정리', output: '리뷰 노트' },
+        ],
       },
     ],
   },
@@ -84,6 +102,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '구현',
         name: '프론트엔드 통합 검증',
         output: 'UI 개선 목록',
+        todos: [
+          { name: 'UI 통합 테스트 수행', output: 'UI 테스트 결과' },
+          { name: 'UI 개선 사항 정리', output: 'UI 개선 목록' },
+        ],
       },
     ],
   },
@@ -100,6 +122,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '백엔드',
         name: '백엔드 준비 상태 점검',
         output: 'API 준비 체크리스트',
+        todos: [
+          { name: 'API 엔드포인트 점검', output: 'API 점검 결과' },
+          { name: 'API 준비 체크리스트 작성', output: 'API 준비 체크리스트' },
+        ],
       },
     ],
   },
@@ -111,12 +137,20 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '품질 관리',
         name: '인수 테스트',
         output: '인수 체크리스트',
+        todos: [
+          { name: '인수 테스트 시나리오 작성', output: '테스트 시나리오' },
+          { name: '인수 테스트 수행', output: '인수 체크리스트' },
+        ],
       },
       {
         phase: '검증',
         activity: '테스트',
         name: '회귀 테스트',
         output: '회귀 테스트 보고서',
+        todos: [
+          { name: '회귀 테스트 수행', output: '테스트 결과' },
+          { name: '회귀 테스트 보고서 작성', output: '회귀 테스트 보고서' },
+        ],
       },
     ],
   },
@@ -128,12 +162,20 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '릴리스',
         name: '오픈 체크리스트 점검',
         output: '오픈 체크리스트',
+        todos: [
+          { name: '오픈 전 점검 항목 확인', output: '점검 결과' },
+          { name: '오픈 체크리스트 최종 승인', output: '오픈 체크리스트' },
+        ],
       },
       {
         phase: '출시',
         activity: '릴리스',
         name: '출시 커뮤니케이션',
         output: '출시 안내문',
+        todos: [
+          { name: '출시 안내문 작성', output: '출시 안내문 초안' },
+          { name: '관계자 배포 및 공지', output: '출시 안내문' },
+        ],
       },
     ],
   },
@@ -148,6 +190,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '이관 작업',
         name: '원천 데이터 검증',
         output: '데이터 검증 보고서',
+        todos: [
+          { name: '원천 데이터 샘플 검증', output: '검증 결과' },
+          { name: '데이터 검증 보고서 작성', output: '데이터 검증 보고서' },
+        ],
       },
     ],
   },
@@ -163,6 +209,10 @@ const DRAFT_RULES: DraftKeywordRule[] = [
         activity: '정착 지원',
         name: '사용자 매뉴얼 완성',
         output: '사용자 매뉴얼',
+        todos: [
+          { name: '매뉴얼 초안 작성', output: '매뉴얼 초안' },
+          { name: '매뉴얼 검토 및 최종본 확정', output: '사용자 매뉴얼' },
+        ],
       },
     ],
   },
@@ -286,17 +336,32 @@ function appendDraftAdditions(tasks: Task[], projectId: string, normalizedPrompt
       if (exists) return;
 
       const siblingCount = tasks.filter((task) => (task.parentId ?? null) === activity.id).length;
-      tasks.push(
-        createStructuralTask({
-          projectId,
-          parentId: activity.id,
-          level: 3,
-          orderIndex: siblingCount,
-          name: addition.name,
-          output: addition.output,
-          taskSource: 'quick_draft',
-        })
-      );
+      const taskNode = createStructuralTask({
+        projectId,
+        parentId: activity.id,
+        level: 3,
+        orderIndex: siblingCount,
+        name: addition.name,
+        output: addition.output,
+        taskSource: 'quick_draft',
+      });
+      tasks.push(taskNode);
+
+      if (addition.todos && addition.todos.length > 0) {
+        addition.todos.forEach((todo, todoIdx) => {
+          tasks.push(
+            createStructuralTask({
+              projectId,
+              parentId: taskNode.id,
+              level: 4,
+              orderIndex: todoIdx,
+              name: todo.name,
+              output: todo.output,
+              taskSource: 'quick_draft',
+            })
+          );
+        });
+      }
     });
   });
 
