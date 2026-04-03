@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
 import { cn, formatDate } from '../../lib/utils';
+import { TASK_STATUS_LABELS } from '../../types';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
 
 interface KanbanCardProps {
@@ -43,6 +44,13 @@ function getProgressColor(task: Task): string {
   if (task.status === 'on_hold') return '#eab308';
   return '#9ca3af';
 }
+
+const STATUS_BADGE_STYLES: Record<TaskStatus, string> = {
+  pending: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  on_hold: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+};
 
 const MAX_CHECKLIST = 5;
 
@@ -127,7 +135,7 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
         </div>
       )}
 
-      {/* Bottom row: progress + assignee */}
+      {/* Bottom row: progress + status badge + assignee */}
       <div className="mt-3 flex items-center gap-3">
         {/* Progress bar */}
         <div className="flex-1 flex items-center gap-2">
@@ -144,6 +152,16 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
             {task.actualProgress}%
           </span>
         </div>
+
+        {/* Status badge */}
+        <span
+          className={cn(
+            'shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+            STATUS_BADGE_STYLES[task.status]
+          )}
+        >
+          {TASK_STATUS_LABELS[task.status]}
+        </span>
 
         {/* Assignee avatar */}
         {assignee && (
