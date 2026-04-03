@@ -89,7 +89,7 @@ const STATUS_LABEL_TO_CODE = Object.fromEntries(
   Object.entries(TASK_STATUS_LABELS).map(([code, label]) => [label, code as TaskStatus])
 );
 const LEVEL_TEXT_TO_NUMBER: Record<string, number> = {
-  phase: 1, activity: 2, task: 3,
+  phase: 1, activity: 2, task: 3, todo: 4,
 };
 
 // ── Shared helpers ─────────────────────────────────────────────
@@ -119,9 +119,10 @@ function statusFill(status: TaskStatus): { bg: string; fg: string } {
 
 function levelRowBg(level: number): string {
   switch (level) {
-    case 1: return C.phase;
-    case 2: return C.activity;
-    default: return C.task;
+    case 1: return C.phase;       // Phase - light blue
+    case 2: return C.activity;    // Activity - light purple
+    case 3: return 'F0FDF4';      // Task - light green
+    default: return C.task;       // Todo - white
   }
 }
 
@@ -129,7 +130,8 @@ function levelFontStyle(level: number): Partial<ExcelJS.Font> {
   switch (level) {
     case 1: return { bold: true, size: 11, color: { argb: C.phaseFont } };
     case 2: return { bold: true, size: 10, color: { argb: C.activityFont } };
-    default: return { size: 10, color: { argb: '334155' } };
+    case 3: return { bold: true, size: 10, color: { argb: '166534' } };  // Task - dark green
+    default: return { size: 10, color: { argb: '334155' } };              // Todo
   }
 }
 
@@ -765,14 +767,24 @@ export function generateWbsTemplate() {
   const examples: (string | number)[][] = [
     ['1',     '',  'Phase',    '분석',               '',              '',      '',  '',  '',            '',            ''],
     ['1.1',   '1', 'Activity', '현황 분석',           '',              '',      '',  '',  '',            '',            ''],
-    ['1.1.1', '1.1', 'Task',   '현행 시스템 분석',     'AS-IS 분석서',  '홍길동', 15,   5,  '2026-04-01', '2026-04-07', '대기'],
-    ['1.1.2', '1.1', 'Task',   '요구사항 수집',       '요구사항 정의서', '김영희', 15,   5,  '2026-04-08', '2026-04-14', '대기'],
+    ['1.1.1', '1.1', 'Task',   '현행 시스템 분석',     '',              '',      '',  '',  '',            '',            ''],
+    ['1.1.1.1', '1.1.1', 'Todo', 'AS-IS 현황 조사',   'AS-IS 분석서',  '홍길동', 10,   3,  '2026-04-01', '2026-04-03', '대기'],
+    ['1.1.1.2', '1.1.1', 'Todo', '문제점 도출',        '',              '홍길동',  5,   2,  '2026-04-04', '2026-04-07', '대기'],
+    ['1.1.2', '1.1', 'Task',   '요구사항 수집',       '',              '',      '',  '',  '',            '',            ''],
+    ['1.1.2.1', '1.1.2', 'Todo', '이해관계자 인터뷰',  '요구사항 정의서', '김영희', 10,   3,  '2026-04-08', '2026-04-10', '대기'],
+    ['1.1.2.2', '1.1.2', 'Todo', '요구사항 정리',      '',              '김영희',  5,   4,  '2026-04-11', '2026-04-14', '대기'],
     ['1.2',   '1', 'Activity', '개선방안 도출',       '',              '',      '',  '',  '',            '',            ''],
-    ['1.2.1', '1.2', 'Task',   '개선방안 수립',       'TO-BE 설계서',  '박철수', 20,   7,  '2026-04-15', '2026-04-23', '대기'],
+    ['1.2.1', '1.2', 'Task',   '개선방안 수립',       '',              '',      '',  '',  '',            '',            ''],
+    ['1.2.1.1', '1.2.1', 'Todo', '개선안 작성',        'TO-BE 설계서',  '박철수', 12,   4,  '2026-04-15', '2026-04-18', '대기'],
+    ['1.2.1.2', '1.2.1', 'Todo', '개선안 검토',        '',              '박철수',  8,   3,  '2026-04-21', '2026-04-23', '대기'],
     ['2',     '',  'Phase',    '설계',               '',              '',      '',  '',  '',            '',            ''],
     ['2.1',   '2', 'Activity', '상세 설계',           '',              '',      '',  '',  '',            '',            ''],
-    ['2.1.1', '2.1', 'Task',   '화면 설계',           '화면설계서',     '홍길동', 25,  10,  '2026-04-24', '2026-05-07', '대기'],
-    ['2.1.2', '2.1', 'Task',   'DB 설계',            'ERD 문서',      '김영희', 25,   7,  '2026-04-24', '2026-05-02', '대기'],
+    ['2.1.1', '2.1', 'Task',   '화면 설계',           '',              '',      '',  '',  '',            '',            ''],
+    ['2.1.1.1', '2.1.1', 'Todo', 'UI 와이어프레임',    '화면설계서',     '홍길동', 15,   5,  '2026-04-24', '2026-04-30', '대기'],
+    ['2.1.1.2', '2.1.1', 'Todo', 'UI 상세설계',       '',              '홍길동', 10,   5,  '2026-05-01', '2026-05-07', '대기'],
+    ['2.1.2', '2.1', 'Task',   'DB 설계',            '',              '',      '',  '',  '',            '',            ''],
+    ['2.1.2.1', '2.1.2', 'Todo', '테이블 설계',       'ERD 문서',      '김영희', 15,   4,  '2026-04-24', '2026-04-29', '대기'],
+    ['2.1.2.2', '2.1.2', 'Todo', '인덱스 설계',       '',              '김영희', 10,   3,  '2026-04-30', '2026-05-02', '대기'],
   ];
 
   examples.forEach((data) => {
@@ -789,6 +801,9 @@ export function generateWbsTemplate() {
     } else if (level === 'Activity') {
       bg = C.activity;
       nameFont = { bold: true, size: 10, color: { argb: C.activityFont } };
+    } else if (level === 'Task') {
+      bg = 'F0FDF4';
+      nameFont = { bold: true, size: 10, color: { argb: '166534' } };
     }
 
     row.eachCell({ includeEmpty: true }, (cell, colNum) => {
@@ -819,10 +834,10 @@ export function generateWbsTemplate() {
     ws.getCell(r, 3).dataValidation = {
       type: 'list',
       allowBlank: true,
-      formulae: ['"Phase,Activity,Task"'],
+      formulae: ['"Phase,Activity,Task,Todo"'],
       showErrorMessage: true,
       errorTitle: '입력 오류',
-      error: 'Phase, Activity, Task 중 선택하세요.',
+      error: 'Phase, Activity, Task, Todo 중 선택하세요.',
     };
   }
 
@@ -848,15 +863,16 @@ export function generateWbsTemplate() {
     ['WBS 업로드 양식 — 작성 가이드', ''],
     ['', ''],
     ['1. 기본 규칙', ''],
-    ['WBS코드', '계층 번호 체계입니다. 점(.)으로 레벨을 구분합니다.\n  Phase: 1, 2, 3 ...\n  Activity: 1.1, 1.2, 2.1 ...\n  Task: 1.1.1, 1.1.2, 2.1.1 ...'],
-    ['상위WBS코드', 'WBS코드에서 마지막 번호를 뺀 상위 코드입니다.\n  1.1의 상위 → 1\n  1.1.2의 상위 → 1.1\n  Phase(최상위)는 빈칸으로 둡니다.'],
-    ['구분', 'Phase(단계), Activity(활동), Task(작업) 중 하나를 선택합니다.\n드롭다운으로 선택할 수 있습니다.'],
+    ['WBS코드', '계층 번호 체계입니다. 점(.)으로 레벨을 구분합니다.\n  Phase: 1, 2, 3 ...\n  Activity: 1.1, 1.2, 2.1 ...\n  Task: 1.1.1, 1.1.2, 2.1.1 ...\n  Todo: 1.1.1.1, 1.1.1.2 ...'],
+    ['상위WBS코드', 'WBS코드에서 마지막 번호를 뺀 상위 코드입니다.\n  1.1의 상위 → 1\n  1.1.2의 상위 → 1.1\n  1.1.1.1의 상위 → 1.1.1\n  Phase(최상위)는 빈칸으로 둡니다.'],
+    ['구분', 'Phase(단계), Activity(활동), Task(작업), Todo(세부작업) 중 하나를 선택합니다.\n드롭다운으로 선택할 수 있습니다.'],
     ['작업명', '작업의 이름입니다. 필수 입력 항목입니다.'],
     ['', ''],
     ['2. 계층 구조', ''],
     ['Phase (1레벨)', '프로젝트의 대단계입니다. (예: 분석, 설계, 개발, 테스트)\n날짜/공정율/상태는 하위 작업에서 자동 계산되므로 비워두세요.'],
     ['Activity (2레벨)', 'Phase 하위의 주요 활동입니다.\n날짜/공정율/상태는 하위 작업에서 자동 계산되므로 비워두세요.'],
-    ['Task (3레벨)', '실제 수행하는 작업(리프 태스크)입니다.\n담당자, 가중치, 기간일수, 계획시작/종료, 상태를 입력하세요.'],
+    ['Task (3레벨)', '작업 단위입니다. 하위에 Todo가 있으면 자동 계산됩니다.\nTodo가 없으면 리프 태스크로서 직접 입력하세요.'],
+    ['Todo (4레벨)', '실제 수행하는 세부 작업(리프 태스크)입니다.\n담당자, 가중치, 기간일수, 계획시작/종료, 상태를 입력하세요.'],
     ['', ''],
     ['3. 필드 설명', ''],
     ['산출물', '해당 작업의 결과물 이름입니다. (선택)'],

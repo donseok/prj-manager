@@ -352,6 +352,7 @@ export default function UserManual() {
               ['Level 1', 'Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
               ['Level 2', 'Activity', '단계 내 활동'],
               ['Level 3', 'Task', '구체적 작업'],
+              ['Level 4', 'Todo', '구체적인 실행 항목 (체크리스트)'],
             ]} />
             <div className="mt-4">
               <Tip>상위 작업(Phase, Activity)의 일정, 공정율, 상태는 하위 작업을 기반으로 자동 계산됩니다. 직접 수정해도 다음 저장 시 하위 작업 기준으로 다시 계산됩니다.</Tip>

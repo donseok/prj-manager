@@ -1,5 +1,5 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck, Columns3 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
@@ -27,6 +27,7 @@ function getProjectNavItems(projectId: string): NavItem[] {
     { to: `/projects/${projectId}`, icon: LayoutDashboard, label: '대시보드', end: true },
     { to: `/projects/${projectId}/wbs`, icon: ListTree, label: 'WBS', popupPage: 'wbs' },
     { to: `/projects/${projectId}/gantt`, icon: Calendar, label: '간트 차트', popupPage: 'gantt' },
+    { to: `/projects/${projectId}/kanban`, icon: Columns3, label: '칸반 보드' },
     { to: `/projects/${projectId}/members`, icon: Users, label: '멤버' },
     { to: `/projects/${projectId}/attendance`, icon: CalendarCheck, label: '근태현황' },
     { to: `/projects/${projectId}/settings`, icon: Settings, label: '설정' },
@@ -115,6 +116,11 @@ const WORKFLOW_HINTS: Record<string, string[]> = {
     '마일스톤은 기간 0일로 설정하면 다이아몬드로 표시됩니다.',
     '간트 바를 클릭하면 상세 정보를 확인할 수 있습니다.',
   ],
+  kanban: [
+    '칸반 보드에서 작업 흐름을 시각적으로 확인하세요.',
+    '담당자별 보기로 전환하면 개인별 작업 현황을 파악할 수 있습니다.',
+    'Phase별, 담당자별, 상태별로 그룹을 전환할 수 있습니다.',
+  ],
   members: [
     '멤버 역할을 설정하면 자동배정 시 viewer는 제외됩니다.',
     '담당자별 작업량은 대시보드에서 한눈에 확인할 수 있습니다.',
@@ -134,6 +140,7 @@ function getWorkflowHint(pathname: string): string {
   let context = 'default';
   if (pathname.includes('/wbs')) context = 'wbs';
   else if (pathname.includes('/gantt')) context = 'gantt';
+  else if (pathname.includes('/kanban')) context = 'kanban';
   else if (pathname.includes('/members')) context = 'members';
   else if (pathname.includes('/settings')) context = 'settings';
   else if (/\/projects\/[^/]+$/.test(pathname) || pathname.endsWith('/')) context = 'dashboard';

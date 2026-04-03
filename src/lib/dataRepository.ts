@@ -30,6 +30,7 @@ interface ProjectMemberRow {
   user_id: string | null;
   name: string;
   role: ProjectMember['role'];
+  avatar_url?: string | null;
   created_at: string;
 }
 
@@ -365,6 +366,7 @@ function mapProjectMemberRow(row: ProjectMemberRow): ProjectMember {
     userId: row.user_id || undefined,
     name: row.name,
     role: row.role,
+    avatarUrl: row.avatar_url || undefined,
     createdAt: row.created_at,
   };
 }
@@ -376,6 +378,7 @@ function toProjectMemberRow(member: ProjectMember): ProjectMemberRow {
     user_id: member.userId || null,
     name: member.name,
     role: member.role,
+    avatar_url: member.avatarUrl || null,
     created_at: member.createdAt,
   };
 }

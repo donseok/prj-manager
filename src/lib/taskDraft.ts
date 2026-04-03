@@ -222,7 +222,7 @@ function createStructuralTask(params: {
     name: params.name,
     output: params.output,
     weight: 0,
-    durationDays: params.level >= 3 ? 2 : null,
+    durationDays: params.level >= 4 ? 2 : null,
     predecessorIds: [],
     taskSource: params.taskSource ?? 'quick_draft',
     planStart: null,

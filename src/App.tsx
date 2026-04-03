@@ -6,6 +6,7 @@ import ProjectList from './pages/ProjectList';
 import Dashboard from './pages/Dashboard';
 import WBS from './pages/WBS';
 import Gantt from './pages/Gantt';
+import Kanban from './pages/Kanban';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
 import Attendance from './pages/Attendance';
@@ -142,6 +143,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="wbs" element={<WBS />} />
             <Route path="gantt" element={<Gantt />} />
+            <Route path="kanban" element={<Kanban />} />
             <Route path="members" element={<Members />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="settings" element={<Settings />} />

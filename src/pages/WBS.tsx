@@ -155,7 +155,7 @@ export default function WBS() {
     } else if (y > height * 0.75) {
       pos = 'after';
     } else {
-      pos = targetTask.level < 3 ? 'child' : 'after';
+      pos = targetTask.level < 4 ? 'child' : 'after';
     }
 
     setDropTargetId(targetTask.id);
@@ -336,7 +336,7 @@ export default function WBS() {
 
   // 새 작업 추가
   const suggestOutput = (parentId: string | undefined, level: number): string | undefined => {
-    if (level < 3) return undefined;
+    if (level < 4) return undefined;
     // Phase 이름 기반으로 산출물 제안
     let phaseParentId = parentId;
     let current = tasks.find((t) => t.id === phaseParentId);
@@ -382,7 +382,7 @@ export default function WBS() {
       name: '',
       output,
       weight: 0,
-      durationDays: level >= 3 ? 2 : null,
+      durationDays: level >= 4 ? 2 : null,
       predecessorIds: [],
       taskSource: 'manual',
       planProgress: 0,
@@ -516,7 +516,7 @@ export default function WBS() {
       .filter((t) => t.parentId === task.parentId)
       .sort((a, b) => a.orderIndex - b.orderIndex);
     const idx = siblings.findIndex((s) => s.id === task.id);
-    if (idx <= 0 || task.level >= 3) return;
+    if (idx <= 0 || task.level >= 4) return;
     const newParent = siblings[idx - 1];
     moveTask(task.id, newParent.id, tasks.filter((t) => t.parentId === newParent.id).length);
   };
@@ -986,8 +986,8 @@ export default function WBS() {
 
       case 'actions': {
         if (!taskEditable && !permissions.canCreateTask) return null;
-        const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : null;
-        const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : null;
+        const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : task.level === 3 ? 'Todo' : null;
+        const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : task.level === 4 ? 'Todo' : null;
         return (
           <div className="flex items-center gap-0.5">
             {permissions.canCreateTask && childLabel && (
@@ -1161,13 +1161,16 @@ export default function WBS() {
           const nextTask = flatTasks[idx + 1];
           const isLastChildOfPhase = task.level >= 2 && (!nextTask || nextTask.level <= 1);
           const isLastChildOfActivity = task.level >= 3 && (!nextTask || nextTask.level <= 2);
-          const addLabel = isLastChildOfActivity ? 'Task' : isLastChildOfPhase ? 'Activity' : null;
-          const addParentId = isLastChildOfActivity
+          const isLastChildOfTask = task.level >= 4 && (!nextTask || nextTask.level <= 3);
+          const addLabel = isLastChildOfTask ? 'Todo' : isLastChildOfActivity ? 'Task' : isLastChildOfPhase ? 'Activity' : null;
+          const addParentId = isLastChildOfTask
             ? task.parentId || undefined
-            : isLastChildOfPhase
-              ? tasks.find((t) => t.id === task.parentId)?.parentId || undefined
-              : undefined;
-          const addLevel = isLastChildOfActivity ? 3 : isLastChildOfPhase ? 2 : 0;
+            : isLastChildOfActivity
+              ? task.parentId || undefined
+              : isLastChildOfPhase
+                ? tasks.find((t) => t.id === task.parentId)?.parentId || undefined
+                : undefined;
+          const addLevel = isLastChildOfTask ? 4 : isLastChildOfActivity ? 3 : isLastChildOfPhase ? 2 : 0;
 
           return (
             <React.Fragment key={task.id}>
@@ -1585,7 +1588,7 @@ export default function WBS() {
               .filter((t) => t.parentId === contextMenu.task.parentId)
               .sort((a, b) => a.orderIndex - b.orderIndex);
             const idx = siblings.findIndex((s) => s.id === contextMenu.task.id);
-            return idx > 0 && contextMenu.task.level < 3;
+            return idx > 0 && contextMenu.task.level < 4;
           })()}
           canOutdent={!!contextMenu.task.parentId}
           canMoveUp={(() => {

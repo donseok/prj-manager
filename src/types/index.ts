@@ -60,6 +60,7 @@ export interface ProjectMember {
   userId?: string;
   name: string;
   role: 'owner' | 'admin' | 'editor' | 'member' | 'restricted_member' | 'viewer';
+  avatarUrl?: string;
   createdAt: string;
 }
 
@@ -68,7 +69,7 @@ export interface Task {
   id: string;
   projectId: string;
   parentId?: string | null;
-  level: number; // 1=Phase, 2=Activity, 3=Task
+  level: number; // 1=Phase, 2=Activity, 3=Task, 4=Todo
   orderIndex: number;
 
   // 기본 정보
@@ -130,6 +131,7 @@ export const LEVEL_LABELS: Record<number, string> = {
   1: 'Phase',
   2: 'Activity',
   3: 'Task',
+  4: 'Todo',
 };
 
 // 근태 타입
@@ -231,4 +233,13 @@ export interface DashboardStats {
 export interface WeeklyTask {
   task: Task;
   type: 'thisWeek' | 'nextWeek' | 'delayed';
+}
+
+// 담당자별 주간보고 메모
+export interface MemberWeeklyNote {
+  memberId: string;
+  memberName: string;
+  thisWeekAchievements: string;
+  nextWeekPlans: string;
+  updatedAt: string;
 }
