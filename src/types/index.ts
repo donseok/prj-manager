@@ -85,7 +85,7 @@ export interface Task {
   weight: number;
   durationDays?: number | null;
   predecessorIds?: string[];
-  taskSource?: 'manual' | 'template' | 'quick_draft' | 'imported' | 'cloned';
+  taskSource?: 'manual' | 'template' | 'quick_draft' | 'imported' | 'cloned' | 'ai_generated';
 
   // 계획
   planStart?: string | null;
@@ -245,6 +245,15 @@ export interface DashboardStats {
 export interface WeeklyTask {
   task: Task;
   type: 'thisWeek' | 'nextWeek' | 'delayed';
+}
+
+// AI 관련 타입
+export type AIProvider = 'claude' | 'openai';
+
+export interface AISettings {
+  provider: AIProvider;
+  apiKey: string;
+  model?: string; // 예: 'claude-sonnet-4-5-20250929', 'gpt-4o'
 }
 
 // 담당자별 주간보고 메모

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  Bot,
   CalendarDays,
   ChevronRight,
+  Hand,
   LogOut,
   Moon,
   Settings,
@@ -16,16 +18,20 @@ import DKFlowLogo from '../common/DKFlowLogo';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useUIStore } from '../../store/uiStore';
+import { isAIConfigured } from '../../lib/ai';
 import { loadPendingCount, signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
   const { user, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { inputMode, setInputMode } = useUIStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const aiConfigured = isAIConfigured();
 
   const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
   const todayLabel = new Intl.DateTimeFormat('ko-KR', {
@@ -108,6 +114,36 @@ export default function Header() {
           <div className="hidden items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-2 text-sm text-[color:var(--text-secondary)] backdrop-blur-xl md:flex">
             <CalendarDays className="h-4 w-4 text-[color:var(--accent-secondary)]" />
             <span>{todayLabel}</span>
+          </div>
+
+          <div
+            className="relative hidden items-center md:flex"
+            title={!aiConfigured ? 'Settings에서 AI API Key를 먼저 설정하세요' : `현재 모드: ${inputMode === 'ai' ? 'AI 자동입력' : '수동입력'}`}
+          >
+            <button
+              type="button"
+              onClick={() => setInputMode(inputMode === 'ai' ? 'manual' : 'ai')}
+              disabled={!aiConfigured}
+              className={`group flex h-10 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition-all duration-200 ${
+                !aiConfigured
+                  ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-50'
+                  : inputMode === 'ai'
+                    ? 'border-[rgba(139,92,246,0.3)] bg-[rgba(139,92,246,0.1)] text-violet-500 hover:-translate-y-0.5 hover:bg-[rgba(139,92,246,0.16)] dark:text-violet-400'
+                    : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]'
+              }`}
+            >
+              {inputMode === 'ai' ? (
+                <>
+                  <Bot className="h-4 w-4" />
+                  <span>AI</span>
+                </>
+              ) : (
+                <>
+                  <Hand className="h-4 w-4" />
+                  <span>수동</span>
+                </>
+              )}
+            </button>
           </div>
 
           <button

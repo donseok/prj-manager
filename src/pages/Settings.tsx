@@ -12,6 +12,12 @@ import {
   Play,
   CheckCircle2,
   FileSpreadsheet,
+  Bot,
+  Eye,
+  EyeOff,
+  Loader2,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -29,8 +35,10 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import AuditLogPanel from '../components/common/AuditLogPanel';
 import { logAuditEvent } from '../lib/auditLog';
-import type { ProjectStatus, Task } from '../types';
+import type { AIProvider, ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
+import { loadAISettings, saveAISettings, hasEnvAIConfig, getDefaultModel } from '../lib/ai';
+import { testConnection } from '../lib/ai/aiClient';
 
 export default function Settings() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -50,6 +58,40 @@ export default function Settings() {
   const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { canEditProject, canDeleteProject, isReadOnly } = useProjectPermission();
+
+  // AI 설정 상태
+  const envAIConfigured = hasEnvAIConfig();
+  const [aiSettings, setAiSettings] = useState(() => loadAISettings());
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isAiTesting, setIsAiTesting] = useState(false);
+
+  const handleAiProviderChange = (provider: AIProvider) => {
+    const updated = { ...aiSettings, provider, model: getDefaultModel(provider) };
+    setAiSettings(updated);
+    saveAISettings(updated);
+    setAiTestResult(null);
+  };
+
+  const handleAiApiKeyChange = (apiKey: string) => {
+    const updated = { ...aiSettings, apiKey };
+    setAiSettings(updated);
+    saveAISettings(updated);
+    setAiTestResult(null);
+  };
+
+  const handleAiTestConnection = async () => {
+    setIsAiTesting(true);
+    setAiTestResult(null);
+    try {
+      const result = await testConnection(aiSettings);
+      setAiTestResult(result);
+    } catch {
+      setAiTestResult({ success: false, message: '연결 테스트 중 오류가 발생했습니다.' });
+    } finally {
+      setIsAiTesting(false);
+    }
+  };
 
   const [formData, setFormData] = useState<{
     name?: string;
@@ -660,6 +702,113 @@ export default function Settings() {
                 <FileSpreadsheet className="w-4 h-4" />
                 업로드 양식 다운로드
               </Button>
+            </div>
+          </div>
+
+          <div className="app-panel p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#7c3aed,#a78bfa)] text-white shadow-[0_18px_36px_-22px_rgba(124,58,237,0.7)]">
+                <Bot className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                  AI 설정
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                  AI 자동입력 모드에 사용할 API를 설정합니다.
+                </p>
+              </div>
+            </div>
+
+            {envAIConfigured && (
+              <div className="mt-4 rounded-[16px] border border-[rgba(31,163,122,0.2)] bg-[rgba(31,163,122,0.06)] px-4 py-3 text-sm text-[color:var(--accent-success)]">
+                환경변수로 AI API가 설정되어 있습니다. 환경변수 설정이 우선 적용됩니다.
+              </div>
+            )}
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="field-label">AI Provider</label>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {([
+                    { key: 'claude' as const, label: 'Claude (Anthropic)', desc: 'Claude Sonnet 4.5 등' },
+                    { key: 'openai' as const, label: 'OpenAI', desc: 'GPT-4o 등' },
+                  ]).map((provider) => {
+                    const isSelected = aiSettings.provider === provider.key;
+                    return (
+                      <button
+                        key={provider.key}
+                        type="button"
+                        onClick={() => handleAiProviderChange(provider.key)}
+                        disabled={envAIConfigured}
+                        className={`rounded-[18px] border p-3 text-left transition-all ${
+                          isSelected
+                            ? 'border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.08)]'
+                            : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
+                        } ${envAIConfigured ? 'cursor-not-allowed opacity-60' : ''}`}
+                      >
+                        <p className="font-medium text-[color:var(--text-primary)]">
+                          {provider.label}
+                          {isSelected && (
+                            <span className="ml-2 text-xs font-semibold text-violet-500">선택됨</span>
+                          )}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">{provider.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">API Key</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={aiSettings.apiKey}
+                      onChange={(e) => handleAiApiKeyChange(e.target.value)}
+                      disabled={envAIConfigured}
+                      placeholder={envAIConfigured ? '환경변수로 설정됨' : 'API Key를 입력하세요'}
+                      className={cn(
+                        'field-input pr-10',
+                        envAIConfigured && 'cursor-not-allowed opacity-60'
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]"
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleAiTestConnection()}
+                    disabled={!aiSettings.apiKey || isAiTesting}
+                  >
+                    {isAiTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : '연결 테스트'}
+                  </Button>
+                </div>
+                {aiTestResult && (
+                  <div className={cn(
+                    'mt-2 flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm',
+                    aiTestResult.success
+                      ? 'bg-[rgba(31,163,122,0.08)] text-[color:var(--accent-success)]'
+                      : 'bg-[rgba(203,75,95,0.08)] text-[color:var(--accent-danger)]'
+                  )}>
+                    {aiTestResult.success ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    {aiTestResult.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+                AI 모드가 활성화되면 WBS 자동 생성, 실적 자동 제안 등의 기능을 사용할 수 있습니다.
+                헤더의 AI/수동 토글로 모드를 전환하세요.
+              </div>
             </div>
           </div>
 

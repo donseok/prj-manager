@@ -20,6 +20,7 @@ import {
   FileText,
   Wand2,
   ClipboardList,
+  Bot,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -54,6 +55,12 @@ import { useAuthStore } from '../store/authStore';
 import { openPopup } from '../lib/popupWindow';
 import type { Task, TaskStatus, ProjectMember } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
+import { useUIStore } from '../store/uiStore';
+import { isAIConfigured } from '../lib/ai';
+import { generateWbsWithAI } from '../lib/ai/aiWbsGenerator';
+import { suggestProgressUpdates, type ProgressSuggestion } from '../lib/ai/aiProgressSuggestion';
+import AIReviewPanel from '../components/wbs/AIReviewPanel';
+import AISuggestionPanel from '../components/wbs/AISuggestionPanel';
 
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -94,6 +101,15 @@ export default function WBS() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: Task } | null>(null);
   const [copiedTask, setCopiedTask] = useState<Task | null>(null);
   const [editingNameBackup, setEditingNameBackup] = useState<string | null>(null);
+  const [templateTab, setTemplateTab] = useState<'template' | 'ai'>('template');
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiPreviewTasks, setAiPreviewTasks] = useState<Task[] | null>(null);
+  const inputMode = useUIStore((s) => s.inputMode);
+  const aiConfigured = isAIConfigured();
+  const [aiSuggestions, setAiSuggestions] = useState<ProgressSuggestion[]>([]);
+  const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
@@ -222,11 +238,16 @@ export default function WBS() {
     });
   };
 
+  // 셀이 실제로 수정되었는지 추적 (중복 히스토리 엔트리 방지)
+  const cellDirtyRef = useRef(false);
+
   // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
   const handleCellChange = (taskId: string, field: keyof Task, value: unknown, recordHistory = false) => {
     const task = tasks.find((t) => t.id === taskId);
     if (task && !canEditSpecificTask(permissions, task, currentMemberId)) return;
     const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
+
+    if (!recordHistory) cellDirtyRef.current = true;
 
     // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
     if (task && !hasChildren && isSyncableField(field)) {
@@ -244,10 +265,13 @@ export default function WBS() {
     updateTask(taskId, { [field]: value, updatedAt: new Date().toISOString() }, { recordHistory });
   };
 
-  // 셀 편집 완료 시 히스토리 기록
+  // 셀 편집 완료 시 히스토리 기록 (실제 변경이 있을 때만)
   const handleCellCommit = () => {
-    const { tasks: currentTasks } = useTaskStore.getState();
-    useTaskStore.getState().setTasks(currentTasks, undefined, { recordHistory: true });
+    if (cellDirtyRef.current) {
+      const { tasks: currentTasks } = useTaskStore.getState();
+      useTaskStore.getState().setTasks(currentTasks, undefined, { recordHistory: true });
+      cellDirtyRef.current = false;
+    }
     setEditingCell(null);
   };
 
@@ -261,10 +285,17 @@ export default function WBS() {
         switch (e.key) {
           case 'z':
             e.preventDefault();
+            // 셀 편집 중이면 먼저 커밋 후 undo (편집 내용 손실 방지)
+            if (useTaskStore.getState().editingCell) {
+              handleCellCommit();
+            }
             undo();
             break;
           case 'y':
             e.preventDefault();
+            if (useTaskStore.getState().editingCell) {
+              handleCellCommit();
+            }
             redo();
             break;
           case 's':
@@ -610,6 +641,103 @@ export default function WBS() {
     setSelectedTemplateId(result.templateId);
   };
 
+  const handleAIGenerate = async () => {
+    if (!projectId || !aiDescription.trim()) return;
+    setAiGenerating(true);
+    setAiPreviewTasks(null);
+    try {
+      const result = await generateWbsWithAI({
+        projectName: currentProject?.name || '프로젝트',
+        description: aiDescription.trim(),
+        startDate: currentProject?.startDate,
+        members,
+        projectId,
+      });
+      setAiPreviewTasks(result.tasks);
+    } catch (error) {
+      console.error('AI WBS generation failed:', error);
+      showFeedback({
+        tone: 'error',
+        title: 'AI WBS 생성 실패',
+        message: error instanceof Error ? error.message : 'AI를 사용한 WBS 생성에 실패했습니다.',
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const handleAIPreviewApply = (selectedTasks: Task[]) => {
+    if (selectedTasks.length === 0) return;
+    setTasks(selectedTasks, undefined, { recordHistory: true });
+    setIsTemplateModalOpen(false);
+    setAiPreviewTasks(null);
+    setAiDescription('');
+    showFeedback({
+      tone: 'success',
+      title: 'AI WBS 적용 완료',
+      message: `AI가 생성한 ${selectedTasks.length}개 작업을 적용했습니다.`,
+    });
+  };
+
+  const handleAISuggestProgress = async () => {
+    if (!aiConfigured || tasks.length === 0) return;
+    setAiSuggestionsLoading(true);
+    setShowAiSuggestions(true);
+    try {
+      const suggestions = await suggestProgressUpdates({
+        tasks,
+        members,
+        baseDate: currentProject?.baseDate || undefined,
+      });
+      setAiSuggestions(suggestions);
+      if (suggestions.length === 0) {
+        showFeedback({
+          tone: 'info',
+          title: 'AI 분석 완료',
+          message: '현재 변경이 필요한 작업이 없습니다.',
+        });
+      }
+    } catch (error) {
+      console.error('AI progress suggestion failed:', error);
+      showFeedback({
+        tone: 'error',
+        title: 'AI 실적 제안 실패',
+        message: error instanceof Error ? error.message : 'AI 실적 제안을 생성하지 못했습니다.',
+      });
+    } finally {
+      setAiSuggestionsLoading(false);
+    }
+  };
+
+  const handleAcceptSuggestion = (suggestion: ProgressSuggestion) => {
+    handleQuickProgressUpdate(suggestion.taskId, {
+      actualProgress: suggestion.suggestedProgress,
+      status: suggestion.suggestedStatus,
+      updatedAt: new Date().toISOString(),
+    });
+    setAiSuggestions((prev) => prev.filter((s) => s.taskId !== suggestion.taskId));
+  };
+
+  const handleAcceptAllSuggestions = (suggestions: ProgressSuggestion[]) => {
+    for (const suggestion of suggestions) {
+      handleQuickProgressUpdate(suggestion.taskId, {
+        actualProgress: suggestion.suggestedProgress,
+        status: suggestion.suggestedStatus,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    setAiSuggestions([]);
+    showFeedback({
+      tone: 'success',
+      title: 'AI 제안 전체 적용',
+      message: `${suggestions.length}개 작업의 실적을 업데이트했습니다.`,
+    });
+  };
+
+  const handleDismissSuggestion = (taskId: string) => {
+    setAiSuggestions((prev) => prev.filter((s) => s.taskId !== taskId));
+  };
+
   const handleAutoSchedule = () => {
     if (tasks.length === 0) {
       showFeedback({
@@ -771,6 +899,9 @@ export default function WBS() {
             title={task.name || undefined}
           >
             {task.name || <span className="text-[color:var(--accent-danger)] opacity-70">⚠ 작업명 입력</span>}
+            {task.taskSource === 'ai_generated' && (
+              <span title="AI 생성"><Sparkles className="ml-1 inline h-3 w-3 shrink-0 text-violet-400" /></span>
+            )}
           </span>
         );
       }
@@ -1294,10 +1425,10 @@ export default function WBS() {
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex <= 0}>
+            <Button variant="ghost" size="sm" onClick={() => { handleCellCommit(); undo(); }} disabled={historyIndex <= 0}>
               <Undo2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={redo} disabled={historyIndex >= history.length - 1}>
+            <Button variant="ghost" size="sm" onClick={() => { handleCellCommit(); redo(); }} disabled={historyIndex >= history.length - 1}>
               <Redo2 className="w-4 h-4" />
             </Button>
             <div className={cn(
@@ -1353,7 +1484,7 @@ export default function WBS() {
           <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
 
           {/* Generation & scheduling */}
-          <Button variant="outline" size="sm" onClick={() => setIsTemplateModalOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => { setTemplateTab(inputMode === 'ai' && aiConfigured ? 'ai' : 'template'); setIsTemplateModalOpen(true); }}>
             <Sparkles className="w-3.5 h-3.5" />
             초안 생성
           </Button>
@@ -1375,6 +1506,12 @@ export default function WBS() {
             <ClipboardList className="w-3.5 h-3.5" />
             실적 입력
           </Button>
+          {inputMode === 'ai' && aiConfigured && (
+            <Button variant="outline" size="sm" onClick={() => void handleAISuggestProgress()} disabled={tasks.length === 0 || aiSuggestionsLoading}>
+              {aiSuggestionsLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
+              AI 실적 제안
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
             <FileText className="w-3.5 h-3.5" />
             주간보고
@@ -1395,6 +1532,18 @@ export default function WBS() {
           </Button>
         </div>
       </section>
+
+      {showAiSuggestions && (
+        <AISuggestionPanel
+          suggestions={aiSuggestions}
+          isLoading={aiSuggestionsLoading}
+          onAccept={handleAcceptSuggestion}
+          onAcceptAll={handleAcceptAllSuggestions}
+          onDismiss={handleDismissSuggestion}
+          onRefresh={() => void handleAISuggestProgress()}
+          onClose={() => { setShowAiSuggestions(false); setAiSuggestions([]); }}
+        />
+      )}
 
       <div className="app-panel relative flex-1 overflow-hidden">
         {!isInPopup && projectId && (
@@ -1423,92 +1572,195 @@ export default function WBS() {
 
       <Modal
         isOpen={isTemplateModalOpen}
-        onClose={() => setIsTemplateModalOpen(false)}
+        onClose={() => { setIsTemplateModalOpen(false); setAiPreviewTasks(null); }}
         title="WBS 초안 생성"
         size="xl"
       >
         <div className="p-6 space-y-5">
-          {/* 키워드 자동 매칭 입력 */}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={draftPrompt}
-              onChange={(event) => setDraftPrompt(event.target.value)}
-              onKeyDown={(event) => { if (event.key === 'Enter') handleSmartMatch(); }}
-              placeholder="프로젝트 설명을 입력하면 최적 템플릿을 자동 선택합니다 (예: 냉연 설비 계량대 재구축)"
-              className="flex-1 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
-            />
-            <Button size="sm" onClick={handleSmartMatch} disabled={!draftPrompt.trim()}>
-              자동 선택
-            </Button>
+          {/* 탭 헤더 */}
+          <div className="flex items-center gap-1 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-1">
+            <button
+              type="button"
+              onClick={() => { setTemplateTab('template'); setAiPreviewTasks(null); }}
+              className={cn(
+                'flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-all',
+                templateTab === 'template'
+                  ? 'bg-[image:var(--gradient-primary)] text-white shadow-md'
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+              )}
+            >
+              <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
+              템플릿 기반
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplateTab('ai')}
+              disabled={!aiConfigured}
+              className={cn(
+                'flex-1 rounded-full px-4 py-2 text-sm font-semibold transition-all',
+                templateTab === 'ai'
+                  ? 'bg-[linear-gradient(135deg,#7c3aed,#a78bfa)] text-white shadow-md'
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]',
+                !aiConfigured && 'cursor-not-allowed opacity-40'
+              )}
+              title={!aiConfigured ? 'Settings에서 AI API Key를 먼저 설정하세요' : undefined}
+            >
+              <Bot className="mr-1.5 inline h-3.5 w-3.5" />
+              AI 생성
+            </button>
           </div>
 
-          {/* 템플릿 카드 목록 */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {templates.map((template) => {
-              const isSelected = template.id === selectedTemplate?.id;
-              return (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => setSelectedTemplateId(template.id)}
-                  className={cn(
-                    'rounded-[22px] border p-4 text-left transition-all',
-                    isSelected
-                      ? 'border-[rgba(15,118,110,0.4)] bg-[rgba(15,118,110,0.08)] shadow-[0_20px_40px_-28px_rgba(15,118,110,0.5)]'
-                      : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                      {template.name}
-                    </p>
-                    {isSelected && (
-                      <span className="shrink-0 rounded-full bg-[rgba(15,118,110,0.14)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--accent-primary)]">
-                        선택됨
-                      </span>
+          {templateTab === 'template' ? (
+            <>
+              {/* 키워드 자동 매칭 입력 */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={draftPrompt}
+                  onChange={(event) => setDraftPrompt(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') handleSmartMatch(); }}
+                  placeholder="프로젝트 설명을 입력하면 최적 템플릿을 자동 선택합니다 (예: 냉연 설비 계량대 재구축)"
+                  className="flex-1 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+                />
+                <Button size="sm" onClick={handleSmartMatch} disabled={!draftPrompt.trim()}>
+                  자동 선택
+                </Button>
+              </div>
+
+              {/* 템플릿 카드 목록 */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {templates.map((template) => {
+                  const isSelected = template.id === selectedTemplate?.id;
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => setSelectedTemplateId(template.id)}
+                      className={cn(
+                        'rounded-[22px] border p-4 text-left transition-all',
+                        isSelected
+                          ? 'border-[rgba(15,118,110,0.4)] bg-[rgba(15,118,110,0.08)] shadow-[0_20px_40px_-28px_rgba(15,118,110,0.5)]'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                          {template.name}
+                        </p>
+                        {isSelected && (
+                          <span className="shrink-0 rounded-full bg-[rgba(15,118,110,0.14)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--accent-primary)]">
+                            선택됨
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-sm leading-6 text-[color:var(--text-secondary)]">
+                        {template.description}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
+                        <span className="surface-badge">{template.audience}</span>
+                        <span className="surface-badge">{template.phases}개 Phase</span>
+                        <span className="surface-badge">{template.taskCount}건</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 선택된 템플릿 요약 + 적용 */}
+              {selectedTemplate && (
+                <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                        {selectedTemplate.name}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
+                        <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
+                        <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
+                        현재 WBS를 초안으로 교체합니다. 적용 후 편집기에서 바로 수정 가능합니다.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
+                        취소
+                      </Button>
+                      <Button onClick={handleApplyTemplate}>
+                        <Sparkles className="w-4 h-4" />
+                        초안 생성
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* AI 생성 탭 */}
+              {!aiPreviewTasks ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="field-label">프로젝트 설명</label>
+                    <textarea
+                      value={aiDescription}
+                      onChange={(e) => setAiDescription(e.target.value)}
+                      placeholder="프로젝트의 목표, 범위, 주요 기능 등을 자세히 설명해주세요. AI가 이 설명을 기반으로 WBS를 자동 생성합니다."
+                      className="field-textarea mt-2"
+                      rows={5}
+                    />
+                    {currentProject?.description && !aiDescription && (
+                      <button
+                        type="button"
+                        onClick={() => setAiDescription(currentProject.description || '')}
+                        className="mt-2 text-xs text-[color:var(--accent-primary)] hover:underline"
+                      >
+                        프로젝트 설명 불러오기
+                      </button>
                     )}
                   </div>
-                  <p className="mt-1.5 text-sm leading-6 text-[color:var(--text-secondary)]">
-                    {template.description}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
-                    <span className="surface-badge">{template.audience}</span>
-                    <span className="surface-badge">{template.phases}개 Phase</span>
-                    <span className="surface-badge">{template.taskCount}건</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
 
-          {/* 선택된 템플릿 요약 + 적용 */}
-          {selectedTemplate && (
-            <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                    {selectedTemplate.name}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
-                    <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
-                    <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
+                  <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
+                      <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
+                      <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
+                      <span>인원: <span className="font-medium text-[color:var(--text-primary)]">{members.length}명</span></span>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
+                      AI가 생성한 WBS를 미리보기한 후 선택적으로 적용할 수 있습니다.
+                    </p>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
-                    현재 WBS를 초안으로 교체합니다. 적용 후 편집기에서 바로 수정 가능합니다.
-                  </p>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
+                      취소
+                    </Button>
+                    <Button
+                      onClick={() => void handleAIGenerate()}
+                      disabled={!aiDescription.trim() || aiGenerating}
+                    >
+                      {aiGenerating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          AI 생성 중...
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="h-4 w-4" />
+                          AI로 WBS 생성
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
-                    취소
-                  </Button>
-                  <Button onClick={handleApplyTemplate}>
-                    <Sparkles className="w-4 h-4" />
-                    초안 생성
-                  </Button>
-                </div>
-              </div>
-            </div>
+              ) : (
+                <AIReviewPanel
+                  tasks={aiPreviewTasks}
+                  onApply={handleAIPreviewApply}
+                  onCancel={() => setAiPreviewTasks(null)}
+                />
+              )}
+            </>
           )}
         </div>
       </Modal>
