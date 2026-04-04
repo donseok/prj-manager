@@ -30,6 +30,8 @@ import {
   Lightbulb,
   Sparkles,
   Compass,
+  Kanban,
+  BrainCircuit,
 } from 'lucide-react';
 
 interface Section {
@@ -333,8 +335,9 @@ export default function UserManual() {
               ['표지', '프로젝트명, 상태, 생성일, 보고서 생성일'],
               ['프로젝트 개요', '기본 정보 테이블'],
               ['진행 지표', '계획/실적 공정율, 상태별 작업 수'],
-              ['Phase별 현황', '단계별 진행률 비교 테이블'],
-              ['담당자별 현황', '멤버별 작업 분배 테이블'],
+              ['Phase별 현황', '단계별 진행률 비교 차트 이미지 + 테이블'],
+              ['담당자별 현황', '멤버별 작업 완료 현황 차트 이미지 + 테이블'],
+              ['Phase 가중치 분포', '가중치 분포 차트 이미지 (데이터 존재 시)'],
               ['지연/금주/차주 작업', '상세 작업 목록'],
             ]} />
           </SectionCard>
@@ -400,6 +403,7 @@ export default function UserManual() {
               ['되돌리기 / 다시하기', 'Ctrl+Z / Ctrl+Y (최대 50단계)'],
               ['엑셀 다운로드', 'WBS를 엑셀(.xlsx) 파일로 내보내기'],
               ['크게 보기', 'WBS 테이블을 전체 화면 팝업으로 보기'],
+              ['칸반 보기', '칸반 보드 페이지로 이동'],
             ]} />
           </SectionCard>
           <SectionCard title="WBS 초안 생성">
@@ -422,10 +426,21 @@ export default function UserManual() {
               ['지연 작업', '지연된 작업과 지연 일수'],
             ]} />
           </SectionCard>
+          <SectionCard title="담당자 작성 탭">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">주간보고 모달의 "담당자 작성" 탭에서 각 멤버가 직접 주간 실적과 계획을 작성할 수 있습니다 (Supabase 연동 시):</p>
+            <InfoTable headers={['항목', '설명']} rows={[
+              ['금주 실적', '이번 주에 수행한 업무 내용을 자유 텍스트로 작성'],
+              ['차주 계획', '다음 주에 수행할 업무 계획을 자유 텍스트로 작성'],
+              ['저장', '멤버별 개별 저장 버튼으로 즉시 DB에 반영'],
+            ]} />
+            <div className="mt-4">
+              <Tip>담당자 작성 내용은 PPT/엑셀 내보내기 시 별도 슬라이드/시트로 자동 포함됩니다.</Tip>
+            </div>
+          </SectionCard>
           <SectionCard title="주간보고 내보내기">
             <InfoTable headers={['형식', '설명']} rows={[
               ['엑셀 (.xlsx)', '금주 실적, 차주 계획, 지연 작업, 근태현황을 시트별로 정리한 엑셀 파일'],
-              ['PPT (.pptx)', '주간보고 프레젠테이션 파일 — 금주 실적, 차주 계획, 지연 작업, 근태현황 슬라이드 포함'],
+              ['PPT (.pptx)', '주간보고 프레젠테이션 파일 — 금주 실적, 차주 계획, 지연 작업, 근태현황, 담당자 작성 슬라이드 포함'],
             ]} />
             <div className="mt-4">
               <Tip>PPT 내보내기에는 근태현황 슬라이드가 자동 포함되며, 금주/차주 근태를 요일+날짜 형태로 한 페이지에 통합 표시합니다.</Tip>
@@ -505,6 +520,58 @@ export default function UserManual() {
               간트 차트 페이지에서 엑셀 다운로드 버튼을 클릭하면 현재 필터가 적용된 상태의 간트 데이터를 엑셀(.xlsx) 파일로 내보낼 수 있습니다. 크게 보기 버튼으로 차트를 전체 화면으로 확대할 수도 있습니다.
             </p>
           </SectionCard>
+        </div>
+      ),
+    },
+    {
+      id: 'kanban',
+      title: '칸반 보드',
+      icon: <Kanban className="h-5 w-5" />,
+      content: (
+        <div className="space-y-6">
+          <SectionCard title="개요">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+              칸반 보드는 작업을 카드 형태로 시각화하여 진행 현황을 한눈에 파악할 수 있는 뷰입니다. 프로젝트 사이드바의 칸반 메뉴 또는 대시보드의 칸반 버튼으로 접근합니다.
+            </p>
+          </SectionCard>
+          <SectionCard title="그룹핑 옵션">
+            <InfoTable headers={['그룹', '설명']} rows={[
+              ['Phase별', 'Level 1 Phase를 기준으로 컬럼을 분류합니다'],
+              ['담당자별', '담당자를 기준으로 카드를 그룹핑합니다 (미지정 포함)'],
+              ['상태별', '대기/진행중/완료/보류 상태 컬럼으로 분류합니다'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="필터 및 검색">
+            <InfoTable headers={['기능', '설명']} rows={[
+              ['전체', '모든 작업 카드 표시'],
+              ['진행중', '미완료(대기/진행중/보류) 작업만 필터'],
+              ['완료', '완료된 작업만 필터'],
+              ['검색', '작업명 또는 담당자명으로 실시간 검색'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="칸반 카드">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">각 카드에는 다음 정보가 표시됩니다:</p>
+            <InfoTable headers={['요소', '설명']} rows={[
+              ['상태 바', '카드 상단에 상태별 색상 표시'],
+              ['작업명', '작업 이름 (Level 표시 포함)'],
+              ['담당자', '배정된 멤버 이름'],
+              ['진행률 바', '실적 공정율 프로그레스 바'],
+              ['상태 배지', '현재 상태 (대기/진행중/완료/보류)'],
+              ['체크리스트', '하위 Todo(Level 4) 항목을 최대 5개까지 표시'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="카드 편집">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">카드를 클릭하면 편집 모달이 열리며, 작업명, 산출물, 담당자, 상태, 계획/실적 일정, 공정율을 수정할 수 있습니다.</p>
+          </SectionCard>
+          <SectionCard title="히어로 영역">
+            <InfoTable headers={['지표', '설명']} rows={[
+              ['전체 작업', '칸반에 표시되는 총 작업 수'],
+              ['진행중', '현재 진행중인 작업 수'],
+              ['완료', '완료된 작업 수'],
+              ['전체 진행률', '프로젝트 전체 실적 공정율'],
+            ]} />
+          </SectionCard>
+          <Tip>칸반 보드는 크게 보기 버튼으로 별도 팝업 창에서 열 수도 있습니다.</Tip>
         </div>
       ),
     },
@@ -759,6 +826,57 @@ export default function UserManual() {
       ),
     },
     {
+      id: 'ai-mode',
+      title: 'AI 모드',
+      icon: <BrainCircuit className="h-5 w-5" />,
+      content: (
+        <div className="space-y-6">
+          <SectionCard title="개요">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
+              AI 모드를 활성화하면 WBS 작성과 실적 관리에 AI 지원 기능을 사용할 수 있습니다.
+              헤더 영역의 AI/수동 토글 버튼으로 모드를 전환합니다.
+            </p>
+            <InfoTable headers={['모드', '설명']} rows={[
+              ['AI (자동입력)', 'AI가 WBS 초안 생성과 실적 공정율 제안을 지원합니다'],
+              ['수동', '기존 방식으로 수동 입력합니다 (기본값)'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="AI 설정">
+            <StepList steps={[
+              '프로젝트 설정 페이지에서 AI 설정 섹션을 찾습니다.',
+              'AI 제공사를 선택합니다 (Claude 또는 OpenAI).',
+              'API Key를 입력합니다.',
+              '사용할 모델을 선택합니다.',
+              '저장 버튼을 클릭하면 AI 기능이 활성화됩니다.',
+            ]} />
+            <div className="mt-4">
+              <Tip type="warning">API Key는 브라우저 localStorage에 저장됩니다. 공용 PC에서는 사용 후 반드시 키를 삭제하세요.</Tip>
+            </div>
+          </SectionCard>
+          <SectionCard title="AI WBS 초안 생성">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">AI 모드에서 WBS 초안 생성 시 AI 탭이 기본 표시됩니다:</p>
+            <InfoTable headers={['기능', '설명']} rows={[
+              ['AI 생성', '프로젝트 설명을 기반으로 AI가 4단계(Phase→Activity→Task→Todo) WBS를 자동 생성합니다'],
+              ['검토 패널', 'AI가 생성한 작업 목록을 미리보기하고 선택적으로 적용할 수 있습니다'],
+              ['개별 선택', '각 작업을 선택/해제하여 원하는 항목만 적용 가능합니다'],
+            ]} />
+          </SectionCard>
+          <SectionCard title="AI 실적 제안">
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">AI 모드 활성화 시 WBS 페이지에 실적 제안 패널이 표시됩니다:</p>
+            <InfoTable headers={['기능', '설명']} rows={[
+              ['진행률 제안', 'AI가 현재 일정과 상태를 분석하여 각 작업의 실적 공정율을 제안합니다'],
+              ['상태 제안', '작업별 상태(대기/진행중/완료/보류) 변경을 함께 제안합니다'],
+              ['사유 표시', '각 제안의 근거(reasoning)를 함께 보여줍니다'],
+              ['개별 적용/해제', '각 제안을 개별적으로 수락하거나 무시할 수 있습니다'],
+              ['전체 적용', '모든 제안을 한 번에 적용하는 버튼을 제공합니다'],
+              ['새로고침', '제안을 다시 생성할 수 있습니다'],
+            ]} />
+          </SectionCard>
+          <Tip>AI 기능은 API Key가 설정된 경우에만 사용할 수 있습니다. 미설정 시 기존 수동 방식으로 동작합니다.</Tip>
+        </div>
+      ),
+    },
+    {
       id: 'theme',
       title: '테마 및 UI 설정',
       icon: <Palette className="h-5 w-5" />,
@@ -805,9 +923,9 @@ export default function UserManual() {
             <InfoTable headers={['기능', '위치', '형식']} rows={[
               ['WBS 엑셀 내보내기', 'WBS 페이지 / 설정 페이지', '.xlsx'],
               ['간트 차트 엑셀', '간트 차트 페이지', '.xlsx'],
-              ['현황 보고서', '대시보드 페이지', '.docx (Word)'],
+              ['현황 보고서', '대시보드 페이지', '.docx (Word) — 차트 이미지 자동 캡처 포함'],
               ['주간보고 엑셀', 'WBS 페이지 → 주간보고 팝업', '.xlsx'],
-              ['주간보고 PPT', 'WBS 페이지 → 주간보고 팝업', '.pptx'],
+              ['주간보고 PPT', 'WBS 페이지 → 주간보고 팝업', '.pptx — 담당자 작성 슬라이드 포함'],
             ]} />
           </SectionCard>
           <SectionCard title="가져오기 기능">
@@ -908,6 +1026,8 @@ export default function UserManual() {
             ['Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
             ['Activity', '단계 내 활동'],
             ['Task', '구체적 작업'],
+            ['Todo', '세부 실행 항목 (Level 4, 체크리스트 단위)'],
+            ['칸반', '작업을 카드로 시��화하여 상태/담당자/Phase별로 관리하는 보드 뷰'],
             ['가중치', '작업의 상대적 중요도/비중 (숫자)'],
             ['공정율', '작업 진행률 (0~100%)'],
             ['계획 공정율', '계획 기준 공정 진행률'],
@@ -937,6 +1057,8 @@ export default function UserManual() {
             { q: '프로젝트 삭제 후 복구할 수 있나요?', a: '아니요. 프로젝트 삭제는 영구적이며 되돌릴 수 없습니다. 삭제 전에 WBS 엑셀 내보내기로 데이터를 백업하세요.' },
             { q: 'DK Bot은 AI인가요?', a: 'DK Bot은 프로젝트 데이터를 분석하는 키워드 기반 어시스턴트입니다. 외부 AI API를 사용하지 않으며, 현재 프로젝트의 작업/멤버/일정 데이터를 기반으로 응답합니다.' },
             { q: '뷰어 역할은 어떤 제한이 있나요?', a: '뷰어는 모든 데이터를 조회할 수 있지만 작업 편집, 멤버 관리, 설정 변경은 할 수 없습니다. 대시보드와 간트 차트 조회, 보고서 다운로드는 가능합니다.' },
+            { q: '칸반 보드와 WBS의 차이는?', a: 'WBS는 테이블 형태의 상세 편집 뷰이고, 칸반 보드는 카드 형태의 시각적 현황 뷰입니다. 칸반에서도 카드를 클릭하여 작업을 편집할 수 있으며, Phase별/담당자별/상태별 그룹핑을 지원합니다.' },
+            { q: 'AI 모드를 사용하려면 무엇이 필요한가요?', a: 'AI 제공사(Claude 또는 OpenAI)의 API Key가 필요합니다. 프로젝트 설정 페이지에서 AI 설정을 완료한 후, 헤더의 AI/수동 토글로 AI 모드를 활성화할 수 있습니다.' },
           ].map((item, i) => (
             <SectionCard key={i}>
               <h4 className="flex items-start gap-2 text-base font-semibold text-[color:var(--text-primary)]">
@@ -1094,7 +1216,7 @@ export default function UserManual() {
         <div className="relative z-10 max-w-2xl">
           <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
             <BookOpen className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-            User Manual v3.0
+            User Manual v4.0
           </div>
           <h1 className="mt-6 text-[clamp(2rem,4vw,3.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
             DK Flow<br />사용자 매뉴얼

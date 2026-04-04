@@ -100,7 +100,7 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
       )}
 
       {/* Title */}
-      <h4 className="mt-1 font-semibold text-sm text-[var(--text-primary)] truncate pr-8">
+      <h4 className="mt-1 font-semibold text-sm text-[var(--text-primary)] break-words pr-8">
         {task.name}
       </h4>
 
@@ -114,7 +114,7 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
               ) : (
                 <Circle size={14} className="shrink-0 text-[var(--text-muted)]" />
               )}
-              <span className="truncate">{child.name}</span>
+              <span className="break-words">{child.name}</span>
             </li>
           ))}
           {remainingCount > 0 && (

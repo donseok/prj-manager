@@ -27,51 +27,68 @@ import {
   getDelayDays,
 } from './utils';
 
-// SVG를 PNG 버퍼로 변환
-async function svgToPng(svgElement: SVGSVGElement, scale: number = 2): Promise<Uint8Array> {
-  const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
-
-  // 배경색 추가
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('width', '100%');
-  rect.setAttribute('height', '100%');
-  rect.setAttribute('fill', '#ffffff');
-  svgClone.insertBefore(rect, svgClone.firstChild);
-
-  // CSS computed styles를 inline으로 복사
-  const applyStyles = (source: Element, target: Element) => {
-    if (source instanceof SVGElement && target instanceof SVGElement) {
-      const computed = window.getComputedStyle(source);
-      const importantProps = [
-        'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity',
-        'font-family', 'font-size', 'font-weight', 'text-anchor', 'dominant-baseline',
-        'color',
-      ];
-      importantProps.forEach(prop => {
-        const value = computed.getPropertyValue(prop);
-        if (value && value !== 'none' && value !== '') {
-          (target as SVGElement).style.setProperty(prop, value);
-        }
-      });
-    }
-    const sourceChildren = source.children;
-    const targetChildren = target.children;
-    for (let i = 0; i < sourceChildren.length && i < targetChildren.length; i++) {
-      applyStyles(sourceChildren[i], targetChildren[i]);
-    }
-  };
-  applyStyles(svgElement, svgClone);
-
-  // CSS 변수를 실제 값으로 치환
-  const svgStr = new XMLSerializer().serializeToString(svgClone);
-  const resolvedSvg = svgStr.replace(/var\(--[^)]+\)/g, (match) => {
+// CSS 변수를 실제 값으로 치환하는 헬퍼
+function resolveCssVar(value: string): string {
+  return value.replace(/var\(--[^)]+\)/g, (match) => {
     const varName = match.slice(4, -1).trim();
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#666666';
   });
+}
 
+// SVG를 PNG 버퍼로 변환
+async function svgToPng(svgElement: SVGSVGElement, scale: number = 2): Promise<Uint8Array> {
   const bbox = svgElement.getBoundingClientRect();
   const width = bbox.width || svgElement.viewBox?.baseVal?.width || 600;
   const height = bbox.height || svgElement.viewBox?.baseVal?.height || 300;
+
+  const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+
+  // 고정 크기 설정 (standalone 렌더링을 위해 100% → 픽셀)
+  svgClone.setAttribute('width', `${width}`);
+  svgClone.setAttribute('height', `${height}`);
+
+  // 배경색 추가
+  const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bgRect.setAttribute('width', `${width}`);
+  bgRect.setAttribute('height', `${height}`);
+  bgRect.setAttribute('fill', '#ffffff');
+  svgClone.insertBefore(bgRect, svgClone.firstChild);
+
+  // 원본의 모든 요소에서 computed style을 읽어 클론에 inline으로 적용
+  const sourceAll = svgElement.querySelectorAll('*');
+  const targetAll = svgClone.querySelectorAll('*');
+  const styleProps = [
+    'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-dasharray',
+    'stroke-opacity', 'opacity', 'font-family', 'font-size', 'font-weight',
+    'text-anchor', 'dominant-baseline', 'visibility', 'display',
+  ];
+
+  for (let i = 0; i < sourceAll.length && i < targetAll.length; i++) {
+    const src = sourceAll[i];
+    const tgt = targetAll[i];
+    if (!(src instanceof SVGElement) || !(tgt instanceof SVGElement)) continue;
+
+    const computed = window.getComputedStyle(src);
+    for (const prop of styleProps) {
+      const value = computed.getPropertyValue(prop);
+      if (value !== '') {
+        tgt.style.setProperty(prop, value);
+      }
+    }
+
+    // SVG 프레젠테이션 속성에 남아있는 CSS 변수도 치환
+    const attrs = ['fill', 'stroke', 'color', 'stop-color', 'flood-color'];
+    for (const attr of attrs) {
+      const attrVal = tgt.getAttribute(attr);
+      if (attrVal && attrVal.includes('var(')) {
+        tgt.setAttribute(attr, resolveCssVar(attrVal));
+      }
+    }
+  }
+
+  // 직렬화 후 혹시 남아있는 CSS 변수 최종 치환
+  const svgStr = new XMLSerializer().serializeToString(svgClone);
+  const resolvedSvg = resolveCssVar(svgStr);
 
   const canvas = document.createElement('canvas');
   canvas.width = width * scale;
@@ -108,7 +125,13 @@ async function captureChart(containerId: string): Promise<Uint8Array | null> {
   const container = document.getElementById(containerId);
   if (!container) return null;
 
-  const svg = container.querySelector('svg.recharts-surface') as SVGSVGElement | null;
+  // Recharts는 recharts-wrapper 안에 recharts-surface SVG를 렌더링함
+  // recharts-wrapper 내의 최상위 SVG를 우선 찾고, 없으면 아무 SVG나 찾음
+  const svg = (
+    container.querySelector('.recharts-wrapper > svg') ||
+    container.querySelector('svg.recharts-surface') ||
+    container.querySelector('svg')
+  ) as SVGSVGElement | null;
   if (!svg) return null;
 
   try {
