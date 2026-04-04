@@ -3,7 +3,7 @@
  * 주간보고 미리보기 및 내보내기 모달 — Premium Redesign
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Download,
   ChevronLeft,
@@ -21,9 +21,12 @@ import {
   ArrowDownRight,
   Minus,
   Presentation,
+  Save,
+  Loader2,
+  UserPen,
 } from 'lucide-react';
 import Modal from './common/Modal';
-import { cn } from '../lib/utils';
+import { cn, generateId } from '../lib/utils';
 import {
   generateWeeklyReport,
   type WeeklyReportSection,
@@ -35,10 +38,12 @@ import {
   compareSnapshots,
   getSnapshotByWeek,
 } from '../lib/weeklySnapshot';
+import { loadWeeklyMemberReports, upsertWeeklyMemberReport } from '../lib/dataRepository';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { addWeeks, startOfWeek, format } from 'date-fns';
 import type { Task, ProjectMember, Attendance } from '../types';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
-import type { WeeklyAttendanceSummary } from '../lib/weeklyReport';
+import type { WeeklyAttendanceSummary, WeeklyMemberReportEntry } from '../lib/weeklyReport';
 import { CalendarCheck } from 'lucide-react';
 
 interface WeeklyReportModalProps {
@@ -61,15 +66,95 @@ export default function WeeklyReportModal({
   attendances,
 }: WeeklyReportModalProps) {
   const [weekOffset, setWeekOffset] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'detail'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'detail' | 'member-write'>('overview');
 
   const baseDate = useMemo(() => {
     return addWeeks(new Date(), weekOffset);
   }, [weekOffset]);
 
+  const weekStartStr = useMemo(() => {
+    return format(startOfWeek(baseDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  }, [baseDate]);
+
+  // 담당자 작성 데이터
+  const [memberDrafts, setMemberDrafts] = useState<Map<string, { thisWeekResult: string; nextWeekPlan: string; reportId?: string }>>(new Map());
+  const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
+  const [savedMemberIds, setSavedMemberIds] = useState<Set<string>>(new Set());
+  const [memberReportsLoaded, setMemberReportsLoaded] = useState(false);
+
+  // DB에서 담당자 작성 데이터 로드
+  useEffect(() => {
+    if (!isOpen || !isSupabaseConfigured) return;
+    let cancelled = false;
+    setMemberReportsLoaded(false);
+    loadWeeklyMemberReports(projectId, weekStartStr).then((reports) => {
+      if (cancelled) return;
+      const drafts = new Map<string, { thisWeekResult: string; nextWeekPlan: string; reportId?: string }>();
+      for (const r of reports) {
+        drafts.set(r.memberId, {
+          thisWeekResult: r.thisWeekResult,
+          nextWeekPlan: r.nextWeekPlan,
+          reportId: r.id,
+        });
+      }
+      setMemberDrafts(drafts);
+      setMemberReportsLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, projectId, weekStartStr]);
+
+  const handleSaveMemberReport = useCallback(async (memberId: string) => {
+    const draft = memberDrafts.get(memberId);
+    if (!draft) return;
+    setSavingMemberId(memberId);
+    try {
+      const now = new Date().toISOString();
+      const saved = await upsertWeeklyMemberReport({
+        id: draft.reportId || generateId(),
+        projectId,
+        memberId,
+        weekStart: weekStartStr,
+        thisWeekResult: draft.thisWeekResult,
+        nextWeekPlan: draft.nextWeekPlan,
+        createdAt: draft.reportId ? now : now,
+        updatedAt: now,
+      });
+      setMemberDrafts((prev) => {
+        const next = new Map(prev);
+        next.set(memberId, { ...draft, reportId: saved.id });
+        return next;
+      });
+      setSavedMemberIds((prev) => new Set(prev).add(memberId));
+      setTimeout(() => setSavedMemberIds((prev) => {
+        const next = new Set(prev);
+        next.delete(memberId);
+        return next;
+      }), 2000);
+    } catch (err) {
+      console.error('Failed to save member report:', err);
+      alert(err instanceof Error ? err.message : '저장에 실패했습니다.');
+    } finally {
+      setSavingMemberId(null);
+    }
+  }, [memberDrafts, projectId, weekStartStr]);
+
+  // memberReports를 report에 주입
+  const memberReportEntries: WeeklyMemberReportEntry[] = useMemo(() => {
+    const memberMap = new Map(members.map((m) => [m.id, m.name]));
+    return Array.from(memberDrafts.entries())
+      .filter(([, d]) => d.thisWeekResult.trim() || d.nextWeekPlan.trim())
+      .map(([memberId, d]) => ({
+        memberName: memberMap.get(memberId) || '알 수 없음',
+        thisWeekResult: d.thisWeekResult,
+        nextWeekPlan: d.nextWeekPlan,
+      }));
+  }, [memberDrafts, members]);
+
   const report = useMemo(() => {
-    return generateWeeklyReport({ projectName, tasks, members, baseDate, attendances });
-  }, [projectName, tasks, members, baseDate, attendances]);
+    const r = generateWeeklyReport({ projectName, tasks, members, baseDate, attendances });
+    r.memberReports = memberReportEntries.length > 0 ? memberReportEntries : undefined;
+    return r;
+  }, [projectName, tasks, members, baseDate, attendances, memberReportEntries]);
 
   const previousSnapshot = useMemo(() => {
     const prevWeek = format(
@@ -201,6 +286,18 @@ export default function WeeklyReportModal({
             <Target className="h-3.5 w-3.5" />
             상세 작업
           </button>
+          {isSupabaseConfigured && (
+            <button
+              className={cn(
+                'weekly-report-tab',
+                activeTab === 'member-write' && 'weekly-report-tab-active'
+              )}
+              onClick={() => setActiveTab('member-write')}
+            >
+              <UserPen className="h-3.5 w-3.5" />
+              담당자 작성
+            </button>
+          )}
         </div>
 
         {/* 탭 콘텐츠 */}
@@ -213,8 +310,25 @@ export default function WeeklyReportModal({
               assigneeStats={assigneeStats}
               attendanceSummary={report.attendanceSummary}
             />
-          ) : (
+          ) : activeTab === 'detail' ? (
             <DetailTab report={report} />
+          ) : (
+            <MemberWriteTab
+              members={members}
+              drafts={memberDrafts}
+              onDraftChange={(memberId, field, value) => {
+                setMemberDrafts((prev) => {
+                  const next = new Map(prev);
+                  const current = next.get(memberId) || { thisWeekResult: '', nextWeekPlan: '' };
+                  next.set(memberId, { ...current, [field]: value });
+                  return next;
+                });
+              }}
+              onSave={handleSaveMemberReport}
+              savingMemberId={savingMemberId}
+              savedMemberIds={savedMemberIds}
+              loaded={memberReportsLoaded}
+            />
           )}
         </div>
       </div>
@@ -486,6 +600,113 @@ function DetailTab({ report }: { report: ReturnType<typeof generateWeeklyReport>
       <ReportSection section={report.completedThisWeek} accentColor="var(--accent-success)" />
       <ReportSection section={report.nextWeekPlan} accentColor="#6366f1" />
       <ReportSection section={report.delayed} accentColor="var(--accent-danger)" />
+    </div>
+  );
+}
+
+// ── Member Write Tab ────────────────────────────────────────
+
+interface MemberWriteTabProps {
+  members: ProjectMember[];
+  drafts: Map<string, { thisWeekResult: string; nextWeekPlan: string; reportId?: string }>;
+  onDraftChange: (memberId: string, field: 'thisWeekResult' | 'nextWeekPlan', value: string) => void;
+  onSave: (memberId: string) => Promise<void>;
+  savingMemberId: string | null;
+  savedMemberIds: Set<string>;
+  loaded: boolean;
+}
+
+function MemberWriteTab({
+  members,
+  drafts,
+  onDraftChange,
+  onSave,
+  savingMemberId,
+  savedMemberIds,
+  loaded,
+}: MemberWriteTabProps) {
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center py-12 text-[color:var(--text-muted)]">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        담당자 보고 데이터 로드 중...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-[color:var(--text-secondary)] leading-5">
+        각 담당자별로 금주 실적과 차주 계획을 작성하고 저장하세요. 저장된 내용은 PPT 출력 시 반영됩니다.
+      </p>
+      {members.map((member) => {
+        const draft = drafts.get(member.id) || { thisWeekResult: '', nextWeekPlan: '' };
+        const isSaving = savingMemberId === member.id;
+        const isSaved = savedMemberIds.has(member.id);
+
+        return (
+          <div key={member.id} className="weekly-report-detail-section">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-color)]">
+              <div className="flex items-center gap-3">
+                <div className="weekly-report-assignee-avatar">
+                  {member.name.slice(0, 1)}
+                </div>
+                <span className="text-sm font-semibold text-[color:var(--text-primary)]">
+                  {member.name}
+                </span>
+                <span className="text-[10px] text-[color:var(--text-muted)] bg-[color:var(--bg-elevated)] rounded-full px-2 py-0.5">
+                  {member.role === 'owner' ? '소유자' : member.role === 'admin' ? '관리자' : '멤버'}
+                </span>
+              </div>
+              <button
+                onClick={() => void onSave(member.id)}
+                disabled={isSaving}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  isSaved
+                    ? 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]'
+                    : 'bg-[color:var(--accent-primary)] text-white hover:opacity-90',
+                  isSaving && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                {isSaving ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> 저장 중...</>
+                ) : isSaved ? (
+                  <><CheckCircle2 className="h-3.5 w-3.5" /> 저장됨</>
+                ) : (
+                  <><Save className="h-3.5 w-3.5" /> 저장</>
+                )}
+              </button>
+            </div>
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-2">
+                  금주 실적
+                </label>
+                <textarea
+                  value={draft.thisWeekResult}
+                  onChange={(e) => onDraftChange(member.id, 'thisWeekResult', e.target.value)}
+                  placeholder="이번 주 수행한 작업 내용을 작성하세요..."
+                  rows={4}
+                  className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-2">
+                  차주 계획
+                </label>
+                <textarea
+                  value={draft.nextWeekPlan}
+                  onChange={(e) => onDraftChange(member.id, 'nextWeekPlan', e.target.value)}
+                  placeholder="다음 주 수행할 작업 계획을 작성하세요..."
+                  rows={4}
+                  className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

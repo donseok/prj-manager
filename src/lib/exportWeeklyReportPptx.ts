@@ -625,6 +625,90 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   });
 }
 
+// ── 담당자 작성 슬라이드 ────────────────────────────────────
+function addMemberReportSlides(pptx: PptxGenJS, report: WeeklyReportData) {
+  const entries = report.memberReports || [];
+  if (entries.length === 0) return;
+
+  const maxPerSlide = 4;
+  const chunks = chunk(entries, maxPerSlide);
+
+  chunks.forEach((group, pageIdx) => {
+    const slide = pptx.addSlide();
+
+    // 헤더 바 (동국블루)
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0, y: 0, w: '100%', h: 1.3,
+      fill: { color: C.darkBg },
+    });
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0, y: 1.3, w: '100%', h: 0.04,
+      fill: { color: C.accent },
+    });
+
+    slide.addText(report.projectName, {
+      x: 0.6, y: 0.25, w: 7, h: 0.35,
+      fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
+    });
+
+    const pageLabel = chunks.length > 1 ? ` (${pageIdx + 1}/${chunks.length})` : '';
+    slide.addText(`담당자 작성${pageLabel} · ${report.weekLabel}`, {
+      x: 0.6, y: 0.65, w: 7, h: 0.3,
+      fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
+    });
+
+    let curY = 1.5;
+    const contentW = 8.8;
+
+    group.forEach((entry) => {
+      // 담당자명 배경 바
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x: 0.4, y: curY, w: contentW, h: 0.32,
+        fill: { color: C.primary }, rectRadius: 0.05,
+      });
+      slide.addText(entry.memberName, {
+        x: 0.6, y: curY, w: contentW - 0.4, h: 0.32,
+        fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white,
+      });
+      curY += 0.38;
+
+      // 금주실적 / 차주계획 2칸 테이블
+      const colW = contentW / 2;
+      const headerRow: PptxGenJS.TableRow = [
+        { text: '금주 실적', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: 'Pretendard' } },
+        { text: '차주 계획', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: 'Pretendard' } },
+      ];
+      const dataRow: PptxGenJS.TableRow = [
+        {
+          text: entry.thisWeekResult || '(작성 없음)',
+          options: {
+            fontSize: 8, color: entry.thisWeekResult ? C.dark : C.gray400,
+            fill: { color: C.white }, fontFace: 'Pretendard',
+            valign: 'top' as const,
+          },
+        },
+        {
+          text: entry.nextWeekPlan || '(작성 없음)',
+          options: {
+            fontSize: 8, color: entry.nextWeekPlan ? C.dark : C.gray400,
+            fill: { color: C.white }, fontFace: 'Pretendard',
+            valign: 'top' as const,
+          },
+        },
+      ];
+
+      slide.addTable([headerRow, dataRow], {
+        x: 0.4, y: curY, w: contentW,
+        colW: [colW, colW],
+        border: { type: 'solid', pt: 0.5, color: C.gray200 },
+        rowH: [0.28, 0.9],
+        autoPage: false,
+      });
+      curY += 0.28 + 0.9 + 0.2;
+    });
+  });
+}
+
 // ── 메인 내보내기 함수 ──────────────────────────────────────
 export async function exportWeeklyReportPptx(report: WeeklyReportData) {
   const pptx = new PptxGenJS();
@@ -646,6 +730,9 @@ export async function exportWeeklyReportPptx(report: WeeklyReportData) {
   if (hasThisWeek || hasNextWeek) {
     addAttendanceCombinedSlide(pptx, report);
   }
+
+  // 담당자 작성 슬라이드
+  addMemberReportSlides(pptx, report);
 
   const filename = `${report.projectName}_주간보고_${report.weekStart}.pptx`;
   await pptx.writeFile({ fileName: filename });

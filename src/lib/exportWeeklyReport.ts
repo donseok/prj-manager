@@ -215,6 +215,47 @@ export function exportWeeklyReportExcel(report: WeeklyReportData) {
     }
   });
 
+  // ── 담당자 작성 ────────────────────────────────────────────
+  if (report.memberReports && report.memberReports.length > 0) {
+    const spacerMR = ws.addRow([]);
+    spacerMR.height = 6;
+
+    writeSectionHeader(ws, '담당자 작성', totalCols);
+
+    // 헤더
+    const mrHeader = ws.addRow(['', '담당자', '금주 실적', '', '', '차주 계획', '', '', '']);
+    ws.mergeCells(mrHeader.number, 3, mrHeader.number, 5);
+    ws.mergeCells(mrHeader.number, 6, mrHeader.number, 9);
+    mrHeader.height = 22;
+    mrHeader.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = fill(C.headerBg);
+      cell.font = font({ size: 9, bold: true, color: { argb: C.headerFont } });
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = thinBorder(C.border);
+    });
+
+    report.memberReports.forEach((entry, idx) => {
+      const row = ws.addRow([
+        '',
+        entry.memberName,
+        entry.thisWeekResult || '(작성 없음)',
+        '', '',
+        entry.nextWeekPlan || '(작성 없음)',
+        '', '', '',
+      ]);
+      ws.mergeCells(row.number, 3, row.number, 5);
+      ws.mergeCells(row.number, 6, row.number, 9);
+      row.height = 50;
+      const bg = idx % 2 === 0 ? C.rowEven : C.rowOdd;
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill = fill(bg);
+        cell.font = font({ size: 9 });
+        cell.alignment = { vertical: 'top', wrapText: true };
+        cell.border = thinBorder(C.borderLight);
+      });
+    });
+  }
+
   // ── 저장 ──────────────────────────────────────────────────
   const safeName = report.projectName
     // eslint-disable-next-line no-control-regex

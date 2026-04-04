@@ -1,4 +1,4 @@
-import type { Project, ProjectMember, Task, Attendance } from '../types';
+import type { Project, ProjectMember, Task, Attendance, WeeklyMemberReport } from '../types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { storage } from './utils';
 
@@ -561,4 +561,81 @@ export async function removeUserFromAllProjects(userId: string): Promise<void> {
     console.error('Failed to remove user from projects:', error);
     throw new Error(`프로젝트 멤버 제거 실패: ${error.message}`);
   }
+}
+
+// ─── Weekly Member Reports ──────────────────────────────────
+
+interface WeeklyMemberReportRow {
+  id: string;
+  project_id: string;
+  member_id: string;
+  week_start: string;
+  this_week_result: string;
+  next_week_plan: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapWmrRow(row: WeeklyMemberReportRow): WeeklyMemberReport {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    memberId: row.member_id,
+    weekStart: row.week_start,
+    thisWeekResult: row.this_week_result,
+    nextWeekPlan: row.next_week_plan,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toWmrRow(r: WeeklyMemberReport): WeeklyMemberReportRow {
+  return {
+    id: r.id,
+    project_id: r.projectId,
+    member_id: r.memberId,
+    week_start: r.weekStart,
+    this_week_result: r.thisWeekResult,
+    next_week_plan: r.nextWeekPlan,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+  };
+}
+
+export async function loadWeeklyMemberReports(
+  projectId: string,
+  weekStart: string,
+): Promise<WeeklyMemberReport[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('weekly_member_reports')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('week_start', weekStart);
+
+  if (error) {
+    console.error('Failed to load weekly member reports:', error);
+    return [];
+  }
+  return (data as WeeklyMemberReportRow[]).map(mapWmrRow);
+}
+
+export async function upsertWeeklyMemberReport(
+  report: WeeklyMemberReport,
+): Promise<WeeklyMemberReport> {
+  if (!isSupabaseConfigured) {
+    throw new Error('주간보고 담당자 작성은 데이터베이스 연결이 필요합니다.');
+  }
+  const row = toWmrRow(report);
+  const { data, error } = await supabase
+    .from('weekly_member_reports')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to upsert weekly member report:', error);
+    throw new Error(`담당자 주간보고 저장 실패: ${error.message}`);
+  }
+  return mapWmrRow(data as WeeklyMemberReportRow);
 }

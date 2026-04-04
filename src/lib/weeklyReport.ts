@@ -85,6 +85,14 @@ export interface WeeklyReportData {
   attendanceSummary?: WeeklyAttendanceSummary[];
   /** 차주 근태현황 (선택적) */
   nextWeekAttendanceSummary?: WeeklyAttendanceSummary[];
+  /** 담당자별 수기 작성 보고 */
+  memberReports?: WeeklyMemberReportEntry[];
+}
+
+export interface WeeklyMemberReportEntry {
+  memberName: string;
+  thisWeekResult: string;
+  nextWeekPlan: string;
 }
 
 export interface WeeklyAttendanceRecord {

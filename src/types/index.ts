@@ -181,6 +181,18 @@ export interface Attendance {
   updatedAt: string;
 }
 
+// 담당자별 주간보고
+export interface WeeklyMemberReport {
+  id: string;
+  projectId: string;
+  memberId: string;
+  weekStart: string; // YYYY-MM-DD
+  thisWeekResult: string;
+  nextWeekPlan: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 간트 차트 관련 타입
 export interface GanttBarData {
   taskId: string;
