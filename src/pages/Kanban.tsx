@@ -8,6 +8,7 @@ import {
   Target,
   Clock3,
   CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -25,6 +26,7 @@ import { getLeafTasks, getAssigneeName } from '../lib/taskAnalytics';
 import { calculateOverallProgress } from '../lib/utils';
 import type { Task, TaskStatus } from '../types';
 import { TASK_STATUS_LABELS } from '../types';
+import { openPopup } from '../lib/popupWindow';
 
 type GroupBy = 'phase' | 'assignee' | 'status';
 type FilterMode = 'all' | 'in_progress' | 'completed';
@@ -71,6 +73,8 @@ export default function Kanban() {
   const { currentProject, members, updateProject } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
+
+  const isInPopup = window.location.pathname.startsWith('/popup/');
 
   const [groupBy, setGroupBy] = useState<GroupBy>('phase');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
@@ -269,6 +273,113 @@ export default function Kanban() {
       .sort((a, b) => a.orderIndex - b.orderIndex);
   }, [editingTask, tasks]);
 
+  // ── 팝업 모드: 칸반 보드만 꽉 차게 표시 ──
+  if (isInPopup) {
+    return (
+      <div className="flex h-full flex-col">
+        {feedback && (
+          <FeedbackNotice
+            tone={feedback.tone}
+            title={feedback.title}
+            message={feedback.message}
+            onClose={clearFeedback}
+          />
+        )}
+
+        {/* 컴팩트 툴바 */}
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2">
+          <div className="relative flex-shrink-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="검색"
+              className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+            />
+          </div>
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilterMode(opt.value)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                filterMode === opt.value
+                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                  : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+          {GROUP_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setGroupBy(opt.value)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                  groupBy === opt.value
+                    ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {opt.label}
+              </button>
+            );
+          })}
+          <div className="ml-auto flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+            <span>{stats.total}개 작업</span>
+            <span>·</span>
+            <span>{stats.overallProgress}%</span>
+          </div>
+        </div>
+
+        {/* 칸반 보드 */}
+        <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden p-4">
+          {columns.length > 0 ? (
+            columns.map((col) => (
+              <KanbanColumn
+                key={col.id}
+                title={col.title}
+                tasks={col.tasks}
+                allTasks={tasks}
+                members={members}
+                canEditTask={canEditTask}
+                onEditTask={handleEditTask}
+                accentColor={col.accentColor}
+              />
+            ))
+          ) : (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="text-center">
+                <LayoutGrid className="mx-auto h-12 w-12 text-[color:var(--text-muted)]" />
+                <p className="mt-3 text-sm text-[color:var(--text-secondary)]">
+                  표시할 작업이 없습니다
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Edit Modal */}
+        {editingTask && (
+          <KanbanTaskEditModal
+            task={editingTask}
+            childTasks={editingChildTasks}
+            members={members}
+            isOpen={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            onSave={handleSaveTask}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col gap-6">
       {feedback && (
@@ -405,7 +516,16 @@ export default function Kanban() {
       </section>
 
       {/* Kanban Board */}
-      <section className="flex-1 overflow-x-auto overflow-y-hidden px-1">
+      <section className="relative flex-1 overflow-x-auto overflow-y-hidden px-1">
+        {currentProject && (
+          <button
+            onClick={() => openPopup({ projectId: currentProject.id, page: 'kanban' })}
+            className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+            title="새 창에서 열기"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        )}
         <div className="flex gap-4 h-full pb-4">
           {columns.length > 0 ? (
             columns.map((col) => (

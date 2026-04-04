@@ -163,6 +163,7 @@ function App() {
         <Route path="popup/projects/:projectId" element={<PopupProjectWrapper />}>
           <Route path="wbs" element={<WBS />} />
           <Route path="gantt" element={<Gantt />} />
+          <Route path="kanban" element={<Kanban />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

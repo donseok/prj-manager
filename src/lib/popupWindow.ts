@@ -7,7 +7,7 @@ setInterval(() => {
   }
 }, 2000);
 
-export function openPopup({ projectId, page }: { projectId: string; page: 'wbs' | 'gantt' }) {
+export function openPopup({ projectId, page }: { projectId: string; page: 'wbs' | 'gantt' | 'kanban' }) {
   const key = `${projectId}-${page}`;
   const existing = openPopups.get(key);
 
