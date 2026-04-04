@@ -65,6 +65,7 @@ export default function ProjectList() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
@@ -143,11 +144,13 @@ export default function ProjectList() {
     if (isCreating) return;
 
     setIsCreating(true);
+    setCreateError(null);
     const timeoutId = setTimeout(() => {
       setIsCreating(false);
-      showFeedback({ tone: 'error', title: '요청 시간 초과', message: '프로젝트 생성에 시간이 너무 오래 걸립니다. 다시 시도해주세요.' });
+      setCreateError('프로젝트 생성에 시간이 너무 오래 걸립니다. 다시 시도해주세요.');
     }, 15000);
 
+    let createdProjectId: string | null = null;
     try {
       const owner = user;
       const now = new Date().toISOString();
@@ -164,6 +167,7 @@ export default function ProjectList() {
       };
 
       const savedProject = await upsertProject(project);
+      createdProjectId = savedProject.id;
       if (newProject.creationMode === 'clone' && newProject.sourceProjectId) {
         const [sourceMembers, sourceTasks] = await Promise.all([
           loadProjectMembers(newProject.sourceProjectId),
@@ -215,13 +219,16 @@ export default function ProjectList() {
       navigate(`/projects/${savedProject.id}`);
     } catch (err) {
       console.error('Failed to create project:', err);
-      setShowCreateModal(false);
+      // 부분 생성된 프로젝트 롤백
+      if (createdProjectId) {
+        try {
+          await deleteProjectById(createdProjectId);
+        } catch (rollbackErr) {
+          console.error('Failed to rollback project:', rollbackErr);
+        }
+      }
       const msg = err instanceof Error ? err.message : String(err);
-      showFeedback({
-        tone: 'error',
-        title: '프로젝트 생성 실패',
-        message: msg,
-      });
+      setCreateError(msg);
     } finally {
       clearTimeout(timeoutId);
       setIsCreating(false);
@@ -800,8 +807,15 @@ export default function ProjectList() {
             </p>
           )}
 
+          {createError && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <p className="font-medium">프로젝트 생성 실패</p>
+              <p className="mt-1 text-xs opacity-80">{createError}</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
+            <Button variant="ghost" onClick={() => { setShowCreateModal(false); setCreateError(null); }}>
               취소
             </Button>
             <Button
