@@ -25,6 +25,8 @@ const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: 'weight-chart', label: 'Phase 가중치 분포', visible: true, order: 7 },
   { id: 'recent-completed', label: '최근 완료 작업', visible: true, order: 8 },
   { id: 'attendance', label: '금주 근태현황', visible: true, order: 9 },
+  { id: 'resource-workload', label: '리소스 워크로드', visible: true, order: 10 },
+  { id: 'evm-analysis', label: 'EVM 분석', visible: true, order: 11 },
 ];
 
 const STORAGE_KEY = 'dk-flow-dashboard-config';

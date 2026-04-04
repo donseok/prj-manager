@@ -46,6 +46,8 @@ import {
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAttendances } from '../lib/dataRepository';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import ResourceWidget from '../components/dashboard/ResourceWidget';
+import EVMWidget from '../components/dashboard/EVMWidget';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import {
   BarChart,
@@ -839,6 +841,21 @@ export default function Dashboard() {
           )}
         </QueueCard>
       </section>
+
+      {/* 리소스 워크로드 */}
+      <ResourceWidget tasks={tasks} members={members} />
+
+      {/* EVM 분석 */}
+      {currentProject?.startDate && currentProject?.endDate && (
+        <section className="app-panel p-6">
+          <EVMWidget
+            tasks={tasks}
+            projectStartDate={currentProject.startDate}
+            projectEndDate={currentProject.endDate}
+            baseDate={currentProject.baseDate}
+          />
+        </section>
+      )}
     </div>
   );
 }
