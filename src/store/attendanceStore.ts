@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Attendance } from '../types';
+import type { Attendance, ProjectMember } from '../types';
+import { generateDefaultAttendance } from '../lib/attendanceDefaults';
 
 interface AttendanceState {
   attendances: Attendance[];
@@ -13,6 +14,9 @@ interface AttendanceState {
 
   getByMember: (memberId: string) => Attendance[];
   getByDateRange: (start: string, end: string) => Attendance[];
+
+  /** 기본 출근(가상 레코드)을 포함한 근태 목록 반환 */
+  getWithDefaults: (members: ProjectMember[], start: string, end: string) => Attendance[];
 }
 
 export const useAttendanceStore = create<AttendanceState>((set, get) => ({
@@ -43,4 +47,10 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
   getByDateRange: (start, end) =>
     get().attendances.filter((a) => a.date >= start && a.date <= end),
+
+  getWithDefaults: (members, start, end) => {
+    const existing = get().attendances.filter((a) => a.date >= start && a.date <= end);
+    const defaults = generateDefaultAttendance(members, existing, start, end);
+    return [...existing, ...defaults];
+  },
 }));

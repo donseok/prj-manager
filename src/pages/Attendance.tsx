@@ -16,7 +16,7 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAttendances, upsertAttendance, deleteAttendanceById } from '../lib/dataRepository';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn } from '../lib/utils';
-import { generateDefaultAttendance, isDefaultAttendance } from '../lib/attendanceDefaults';
+import { isDefaultAttendance } from '../lib/attendanceDefaults';
 import { getKoreanHolidayNames } from '../lib/koreanHolidays';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -115,16 +115,13 @@ export default function Attendance() {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
-  // 기본 출근을 포함한 근태 데이터 (가상 레코드 병합)
+  // 기본 출근을 포함한 근태 데이터 (스토어 getWithDefaults 사용)
+  const getWithDefaults = useAttendanceStore((s) => s.getWithDefaults);
   const allAttendancesForMonth = useMemo(() => {
     const startStr = format(monthStart, 'yyyy-MM-dd');
     const endStr = format(monthEnd, 'yyyy-MM-dd');
-    const monthAttendances = attendances.filter(
-      (a) => a.date >= startStr && a.date <= endStr
-    );
-    const defaults = generateDefaultAttendance(members, monthAttendances, startStr, endStr);
-    return [...monthAttendances, ...defaults];
-  }, [attendances, monthStart, monthEnd, members]);
+    return getWithDefaults(members, startStr, endStr);
+  }, [attendances, monthStart, monthEnd, members, getWithDefaults]);
 
   const filteredAttendances = useMemo(() => {
     return allAttendancesForMonth.filter((a) => {

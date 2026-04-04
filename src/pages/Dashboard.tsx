@@ -138,21 +138,22 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [projectId, setAttendances]);
 
+  const getWithDefaults = useAttendanceStore((s) => s.getWithDefaults);
   const weekAttendanceSummary = useMemo(() => {
     const now = new Date();
     const ws = startOfWeek(now, { weekStartsOn: 1 });
     const we = endOfWeek(now, { weekStartsOn: 1 });
     const wsStr = format(ws, 'yyyy-MM-dd');
     const weStr = format(we, 'yyyy-MM-dd');
-    const weekRecords = attendances.filter((a) => a.date >= wsStr && a.date <= weStr);
+    const weekRecords = getWithDefaults(members, wsStr, weStr);
     const todayStr = format(now, 'yyyy-MM-dd');
-    const todayRecords = attendances.filter((a) => a.date === todayStr);
+    const todayRecords = weekRecords.filter((a) => a.date === todayStr);
     const leaveCount = weekRecords.filter((a) =>
       ['annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave'].includes(a.type)
     ).length;
     const tripCount = weekRecords.filter((a) => a.type === 'business_trip').length;
     return { total: weekRecords.length, todayCount: todayRecords.length, todayRecords, leaveCount, tripCount };
-  }, [attendances]);
+  }, [attendances, members, getWithDefaults]);
 
   // 보고서 다운로드
   const [isExporting, setIsExporting] = useState(false);
