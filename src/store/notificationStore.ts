@@ -78,14 +78,17 @@ export const useNotificationStore = create<NotificationState>()(
     }),
     {
       name: 'dk-flow-notifications',
-      partialize: (state) => ({
+      partialize: (state: NotificationState) => ({
         notifications: state.notifications,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.unreadCount = computeUnreadCount(state.notifications);
-        }
+      onRehydrateStorage: () => {
+        return (state: NotificationState | undefined) => {
+          if (state) {
+            state.unreadCount = computeUnreadCount(state.notifications);
+          }
+        };
       },
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as unknown as any
   )
 );

@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Users,
   Zap,
+  MessageCircle,
 } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
@@ -38,6 +39,7 @@ import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 import { getLeafTasks } from '../lib/taskAnalytics';
 import { calculateCriticalPath } from '../lib/criticalPath';
 import { useCommentStore } from '../store/commentStore';
+import TaskCommentPanel from '../components/common/TaskCommentPanel';
 
 
 type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
@@ -72,8 +74,23 @@ export default function Gantt() {
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
   const [showCriticalPath, setShowCriticalPath] = useState(false);
+  const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
   const isInPopup = window.location.pathname.startsWith('/popup/');
   const loadGanttComments = useCommentStore((s) => s.loadComments);
+  const ganttComments = useCommentStore((s) => s.comments);
+  const ganttCommentCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of ganttComments) {
+      map.set(c.taskId, (map.get(c.taskId) || 0) + 1);
+    }
+    return map;
+  }, [ganttComments]);
+  const setDependency = useCallback(
+    (taskId: string, predecessorIds: string[]) => {
+      updateTask(taskId, { predecessorIds });
+    },
+    [updateTask]
+  );
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();
   const currentMemberId = useCurrentMemberId();
@@ -121,15 +138,14 @@ export default function Gantt() {
     [updateTask]
   );
 
-  const { dragState, getDragLabel } = useGanttDrag({
+  const { dragState, handleMouseDown: handleDragStart, isLeafTask: isDragLeafTask, getDragLabel } = useGanttDrag({
     dayWidth: mainDayWidth,
     allTasks: tasks,
     onUpdate: handleDragUpdate,
     isReadOnly,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _dragLabel = dragState ? getDragLabel(dragState) : undefined;
+  const dragLabel = dragState ? getDragLabel(dragState) : undefined;
 
   const taskMap = useMemo(
     () => Object.fromEntries(tasks.map((task) => [task.id, task])),
@@ -225,8 +241,7 @@ export default function Gantt() {
   const activeCount = leafTasks.filter((task) => task.status !== 'completed').length;
 
   const criticalPathResult = useMemo(() => calculateCriticalPath(tasks), [tasks]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _criticalTaskIds = useMemo(
+  const criticalTaskIds = useMemo(
     () => new Set(criticalPathResult.criticalTasks),
     [criticalPathResult]
   );
