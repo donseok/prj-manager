@@ -413,6 +413,18 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
   const planChunks = planTasks.length > 0 ? chunk(planTasks, maxRowsPerSlide) : [[]];
   const pageCount = Math.max(actualChunks.length, planChunks.length);
 
+  // 금주/차주 날짜 범위 계산
+  const ws = new Date(report.weekStart + 'T00:00:00');
+  const we = new Date(report.weekEnd + 'T00:00:00');
+  const nws = new Date(ws);
+  nws.setDate(nws.getDate() + 7);
+  const nwe = new Date(we);
+  nwe.setDate(nwe.getDate() + 7);
+
+  const fmtDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const thisWeekRange = `(${fmtDate(ws)}~ ${fmtDate(we)})`;
+  const nextWeekRange = `(${fmtDate(nws)}~ ${fmtDate(nwe)})`;
+
   for (let p = 0; p < pageCount; p++) {
     const slide = pptx.addSlide();
 
@@ -456,10 +468,10 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
     });
 
     // 좌: 금주 실적
-    addTaskTable(slide, pptx, '금주 실적', actualChunks[p] || [], 0.4, C.primary);
+    addTaskTable(slide, pptx, `금주 실적 ${thisWeekRange}`, actualChunks[p] || [], 0.4, C.primary);
 
     // 우: 차주 계획
-    addTaskTable(slide, pptx, '차주 계획', planChunks[p] || [], 5.2, C.primaryLight);
+    addTaskTable(slide, pptx, `차주 계획 ${nextWeekRange}`, planChunks[p] || [], 5.2, C.primaryLight);
   }
 }
 
