@@ -31,3 +31,7 @@ nul
 .vercel
 .env*.local
 .claude/worktrees/
+.agent/
+.agents/
+.kiro/
+supabase/.temp/
