@@ -16,6 +16,8 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAttendances, upsertAttendance, deleteAttendanceById } from '../lib/dataRepository';
 import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn } from '../lib/utils';
+import { generateDefaultAttendance, isDefaultAttendance } from '../lib/attendanceDefaults';
+import { getKoreanHolidayNames } from '../lib/koreanHolidays';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
@@ -73,9 +75,10 @@ export default function Attendance() {
     }
   }, [addAttendance, updateAttendance, showFeedback]);
 
-  // 삭제 핸들러
+  // 삭제 핸들러 (가상 레코드는 삭제 불가)
   const confirmDelete = useCallback(async () => {
     if (!pendingDelete || !projectId) return;
+    if (isDefaultAttendance(pendingDelete.id)) { setPendingDelete(null); return; }
     try {
       await deleteAttendanceById(projectId, pendingDelete.id);
       removeAttendance(pendingDelete.id);
@@ -95,6 +98,8 @@ export default function Attendance() {
   };
 
   const handleEditClick = (record: Attendance) => {
+    // 가상 레코드(기본 출근)는 편집 불가
+    if (isDefaultAttendance(record.id)) return;
     setEditingRecord(record);
     setShowModal(true);
   };
@@ -110,13 +115,23 @@ export default function Attendance() {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
+  // 기본 출근을 포함한 근태 데이터 (가상 레코드 병합)
+  const allAttendancesForMonth = useMemo(() => {
+    const startStr = format(monthStart, 'yyyy-MM-dd');
+    const endStr = format(monthEnd, 'yyyy-MM-dd');
+    const monthAttendances = attendances.filter(
+      (a) => a.date >= startStr && a.date <= endStr
+    );
+    const defaults = generateDefaultAttendance(members, monthAttendances, startStr, endStr);
+    return [...monthAttendances, ...defaults];
+  }, [attendances, monthStart, monthEnd, members]);
+
   const filteredAttendances = useMemo(() => {
-    return attendances.filter((a) => {
-      const dateMatch = a.date >= format(monthStart, 'yyyy-MM-dd') && a.date <= format(monthEnd, 'yyyy-MM-dd');
+    return allAttendancesForMonth.filter((a) => {
       const memberMatch = filterMemberId === 'all' || a.memberId === filterMemberId;
-      return dateMatch && memberMatch;
+      return memberMatch;
     });
-  }, [attendances, monthStart, monthEnd, filterMemberId]);
+  }, [allAttendancesForMonth, filterMemberId]);
 
   const getMemberName = (memberId: string) =>
     members.find((m) => m.id === memberId)?.name || '알 수 없음';
@@ -380,6 +395,17 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
     weeks.push(days.slice(i, i + 7));
   }
 
+  // 공휴일 이름 맵 (캘린더에 표시되는 연도들)
+  const holidayNames = useMemo(() => {
+    const years = new Set<number>();
+    for (const d of days) years.add(d.getFullYear());
+    const map = new Map<string, string>();
+    for (const y of years) {
+      for (const [k, v] of getKoreanHolidayNames(y)) map.set(k, v);
+    }
+    return map;
+  }, [days]);
+
   const attendanceByDate = useMemo(() => {
     const map = new Map<string, Attendance[]>();
     for (const a of attendances) {
@@ -412,44 +438,70 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
             const today = isToday(d);
             const dayOfWeek = d.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const holiday = holidayNames.get(dateStr);
+            const isHoliday = Boolean(holiday);
+            const isNonWorkday = isWeekend || isHoliday;
+
+            // 기본 출근과 사용자 등록 근태 분리
+            const defaultRecords = dayAttendances.filter((a) => isDefaultAttendance(a.id));
+            const userRecords = dayAttendances.filter((a) => !isDefaultAttendance(a.id));
+            const defaultPresentCount = defaultRecords.filter((a) => a.type === 'present').length;
 
             return (
               <div
                 key={dateStr}
-                onClick={() => canEdit && inMonth && !isWeekend && onCellClick(d)}
+                onClick={() => canEdit && inMonth && !isNonWorkday && onCellClick(d)}
                 className={cn(
                   'min-h-[5.5rem] bg-[color:var(--bg-primary)] p-1.5 transition-colors',
                   !inMonth && 'opacity-30',
-                  canEdit && inMonth && !isWeekend && 'cursor-pointer hover:bg-[color:var(--bg-tertiary)]',
-                  isWeekend && 'bg-[color:var(--bg-elevated)]'
+                  canEdit && inMonth && !isNonWorkday && 'cursor-pointer hover:bg-[color:var(--bg-tertiary)]',
+                  isWeekend && 'bg-[color:var(--bg-elevated)]',
+                  isHoliday && !isWeekend && 'bg-red-50/60 dark:bg-red-950/20'
                 )}
               >
                 <div className={cn(
                   'mb-1 text-xs font-medium',
                   today && 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-white',
                   !today && dayOfWeek === 6 && 'text-blue-500',
-                  !today && dayOfWeek === 0 && 'text-red-500',
-                  !today && !isWeekend && 'text-[color:var(--text-secondary)]'
+                  !today && (dayOfWeek === 0 || isHoliday) && 'text-red-500',
+                  !today && !isWeekend && !isHoliday && 'text-[color:var(--text-secondary)]'
                 )}>
                   {format(d, 'd')}
                 </div>
-                <div className="space-y-0.5">
-                  {dayAttendances.slice(0, 3).map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={(e) => { e.stopPropagation(); onEditClick(a); }}
-                      className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight hover:bg-black/5 dark:hover:bg-white/5 truncate"
-                    >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
-                      <span className="truncate text-[color:var(--text-secondary)]" title={`${getMemberName(a.memberId)} ${ATTENDANCE_TYPE_LABELS[a.type]}`}>
-                        {getMemberName(a.memberId)} {ATTENDANCE_TYPE_LABELS[a.type]}
-                      </span>
-                    </button>
-                  ))}
-                  {dayAttendances.length > 3 && (
-                    <span className="block px-1 text-[10px] text-[color:var(--text-muted)]">+{dayAttendances.length - 3}건</span>
-                  )}
-                </div>
+                {/* 공휴일 표시 */}
+                {isHoliday && inMonth && (
+                  <div className="mb-0.5 truncate px-0.5 text-[9px] font-medium text-red-500" title={holiday}>
+                    {holiday}
+                  </div>
+                )}
+                {/* 근태 표시: 근무일만 */}
+                {!isNonWorkday && (
+                  <div className="space-y-0.5">
+                    {/* 기본 출근 요약 */}
+                    {defaultPresentCount > 0 && (
+                      <div className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight text-[color:var(--text-muted)]">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS.present }} />
+                        <span>출근 {defaultPresentCount}명</span>
+                      </div>
+                    )}
+                    {/* 사용자 등록 근태 (변경된 근태만 개별 표시) */}
+                    {userRecords.slice(0, 3).map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={(e) => { e.stopPropagation(); onEditClick(a); }}
+                        className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight hover:bg-black/5 dark:hover:bg-white/5 truncate"
+                      >
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
+                        <span className="truncate text-[color:var(--text-secondary)]" title={`${getMemberName(a.memberId)} ${ATTENDANCE_TYPE_LABELS[a.type]}`}>
+                          {getMemberName(a.memberId)} {ATTENDANCE_TYPE_LABELS[a.type]}
+                        </span>
+                      </button>
+                    ))}
+                    {userRecords.length > 3 && (
+                      <span className="block px-1 text-[10px] text-[color:var(--text-muted)]">+{userRecords.length - 3}건</span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })
@@ -498,31 +550,42 @@ function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canE
           </tr>
         </thead>
         <tbody>
-          {sorted.map((a) => (
-            <tr key={a.id} className="border-b border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)] transition-colors">
-              <td className="px-4 py-3 text-[color:var(--text-primary)] whitespace-nowrap">{a.date}</td>
-              <td className="px-4 py-3 text-[color:var(--text-primary)]">{getMemberName(a.memberId)}</td>
-              <td className="px-4 py-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ATTENDANCE_TYPE_COLORS[a.type]}18`, color: ATTENDANCE_TYPE_COLORS[a.type] }}>
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
-                  {ATTENDANCE_TYPE_LABELS[a.type]}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-[color:var(--text-secondary)]">{a.note || '-'}</td>
-              {canEdit && (
+          {sorted.map((a) => {
+            const isDefault = isDefaultAttendance(a.id);
+            return (
+              <tr key={a.id} className={cn(
+                'border-b border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)] transition-colors',
+                isDefault && 'opacity-60'
+              )}>
+                <td className="px-4 py-3 text-[color:var(--text-primary)] whitespace-nowrap">{a.date}</td>
+                <td className="px-4 py-3 text-[color:var(--text-primary)]">{getMemberName(a.memberId)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => onEditClick(a)} className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]">
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => onDeleteClick(a)} className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ATTENDANCE_TYPE_COLORS[a.type]}18`, color: ATTENDANCE_TYPE_COLORS[a.type] }}>
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
+                    {ATTENDANCE_TYPE_LABELS[a.type]}
+                    {isDefault && ' (자동)'}
+                  </span>
                 </td>
-              )}
-            </tr>
-          ))}
+                <td className="px-4 py-3 text-[color:var(--text-secondary)]">{a.note || (isDefault ? '기본 출근' : '-')}</td>
+                {canEdit && (
+                  <td className="px-4 py-3">
+                    {!isDefault ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <button onClick={() => onEditClick(a)} className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => onDeleteClick(a)} className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[color:var(--text-muted)]">-</span>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

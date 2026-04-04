@@ -163,26 +163,16 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
           {TASK_STATUS_LABELS[task.status]}
         </span>
 
-        {/* Assignee avatar */}
+        {/* Assignee name badge */}
         {assignee && (
-          <div className="relative group/avatar" title={assignee.name}>
-            {assignee.avatarUrl ? (
-              <img
-                src={assignee.avatarUrl}
-                alt={assignee.name}
-                className="w-7 h-7 rounded-full object-cover ring-2 ring-[var(--bg-secondary)]"
-              />
-            ) : (
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold ring-2 ring-[var(--bg-secondary)]"
-                style={{
-                  backgroundColor: AVATAR_COLORS[hashStringToIndex(assignee.name, AVATAR_COLORS.length)],
-                }}
-              >
-                {assignee.name.charAt(0)}
-              </div>
-            )}
-          </div>
+          <span
+            className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white whitespace-nowrap"
+            style={{
+              backgroundColor: AVATAR_COLORS[hashStringToIndex(assignee.name, AVATAR_COLORS.length)],
+            }}
+          >
+            {assignee.name}
+          </span>
         )}
       </div>
     </div>
