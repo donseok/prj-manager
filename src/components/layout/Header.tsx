@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import DKFlowLogo from '../common/DKFlowLogo';
+import NotificationBell from './NotificationBell';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -158,6 +159,8 @@ export default function Header() {
               <Moon className="h-5 w-5 text-slate-700 transition-all duration-300 group-hover:-rotate-12 group-hover:text-slate-900" />
             )}
           </button>
+
+          <NotificationBell />
 
           <div className="relative" ref={menuRef}>
             <button

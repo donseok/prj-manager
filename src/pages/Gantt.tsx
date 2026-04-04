@@ -14,6 +14,7 @@ import {
   ExternalLink,
   CalendarClock,
   Users,
+  Zap,
 } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useTaskStore } from '../store/taskStore';
@@ -28,12 +29,16 @@ import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { isSyncableField, syncTaskField } from '../lib/taskFieldSync';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
+import { useGanttDrag } from '../hooks/useGanttDrag';
 import { useProjectPermission, useCurrentMemberId } from '../hooks/useProjectPermission';
 import { canEditSpecificTask } from '../lib/permissions';
 import { openPopup } from '../lib/popupWindow';
 import type { Task } from '../types';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 import { getLeafTasks } from '../lib/taskAnalytics';
+import { calculateCriticalPath } from '../lib/criticalPath';
+import { useCommentStore } from '../store/commentStore';
+
 
 type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
 type DensityMode = 'compact' | 'comfortable';
@@ -66,7 +71,9 @@ export default function Gantt() {
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
   const isInPopup = window.location.pathname.startsWith('/popup/');
+  const loadGanttComments = useCommentStore((s) => s.loadComments);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();
   const currentMemberId = useCurrentMemberId();
@@ -78,6 +85,10 @@ export default function Gantt() {
   const [ganttScrollTop, setGanttScrollTop] = useState<number | undefined>(undefined);
   const rowHeight = density === 'compact' ? 34 : 42;
 
+
+  useEffect(() => {
+    if (loadedProjectId) loadGanttComments(loadedProjectId);
+  }, [loadedProjectId, loadGanttComments]);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -102,6 +113,23 @@ export default function Gantt() {
       ),
     [density, getResponsiveWidth, viewportWidth, isInPopup]
   );
+
+  const handleDragUpdate = useCallback(
+    (taskId: string, updates: Partial<Task>) => {
+      updateTask(taskId, updates);
+    },
+    [updateTask]
+  );
+
+  const { dragState, getDragLabel } = useGanttDrag({
+    dayWidth: mainDayWidth,
+    allTasks: tasks,
+    onUpdate: handleDragUpdate,
+    isReadOnly,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _dragLabel = dragState ? getDragLabel(dragState) : undefined;
 
   const taskMap = useMemo(
     () => Object.fromEntries(tasks.map((task) => [task.id, task])),
@@ -195,6 +223,13 @@ export default function Gantt() {
   const leafTasks = useMemo(() => getLeafTasks(tasks), [tasks]);
   const delayedCount = leafTasks.filter((task) => getDelayDays(task) > 0).length;
   const activeCount = leafTasks.filter((task) => task.status !== 'completed').length;
+
+  const criticalPathResult = useMemo(() => calculateCriticalPath(tasks), [tasks]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _criticalTaskIds = useMemo(
+    () => new Set(criticalPathResult.criticalTasks),
+    [criticalPathResult]
+  );
 
   // 마감 임박 작업 (leaf tasks only, sorted by planEnd ascending)
   const upcomingDeadlines = useMemo(() => {
@@ -398,6 +433,24 @@ export default function Gantt() {
           >
             주말
           </button>
+          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+          <button
+            onClick={() => setShowCriticalPath((prev) => !prev)}
+            className={cn(
+              'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+              showCriticalPath
+                ? 'bg-[rgba(203,75,95,0.12)] text-[#CB4B5F]'
+                : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+            )}
+          >
+            <Zap className="h-3 w-3" />
+            크리티컬 패스
+          </button>
+          {showCriticalPath && criticalPathResult.criticalTasks.length > 0 && (
+            <span className="rounded-full bg-[rgba(203,75,95,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#CB4B5F]">
+              {criticalPathResult.criticalTasks.length}개 작업, 총 {criticalPathResult.totalDuration}일
+            </span>
+          )}
         </div>
 
         {/* 간트 차트 (좌측 작업목록 + 우측 차트) */}
@@ -487,9 +540,15 @@ export default function Gantt() {
               dayWidth={mainDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
+              showCriticalPath={showCriticalPath}
+              criticalTaskIds={criticalTaskIds}
               onVerticalScroll={handleGanttScroll}
               externalScrollTop={ganttScrollTop}
               onToolbarHeightChange={setGanttToolbarHeight}
+              dragState={dragState}
+              onDragStart={handleDragStart}
+              isLeafTask={isDragLeafTask}
+              dragLabel={dragLabel}
             />
           </div>
         </div>
@@ -710,6 +769,19 @@ export default function Gantt() {
                 </div>
               )}
 
+              <button
+                onClick={() => setCommentTaskId(selectedTask.id)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm font-medium text-[color:var(--text-secondary)] transition-all hover:-translate-y-0.5 hover:border-[color:var(--accent-primary)] hover:text-[color:var(--accent-primary)]"
+              >
+                <MessageCircle className="h-4 w-4" />
+                코멘트
+                {(ganttCommentCountMap.get(selectedTask.id) || 0) > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] px-1 text-[10px] font-bold text-white">
+                    {ganttCommentCountMap.get(selectedTask.id)}
+                  </span>
+                )}
+              </button>
+
               <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                 <div data-testid="gantt-quick-edit">
                 <div className="flex flex-col gap-3 border-b border-[var(--border-color)] pb-4 md:flex-row md:items-center md:justify-between">
@@ -787,6 +859,17 @@ export default function Gantt() {
                       disabled={taskReadOnly}
                       data-testid="gantt-edit-output"
                       className={cn('field-input', taskReadOnly && 'cursor-not-allowed opacity-60')}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="field-label">선행 작업</label>
+                    <DependencyMultiSelect
+                      currentTaskId={selectedTask.id}
+                      selectedIds={selectedTask.predecessorIds || []}
+                      tasks={tasks}
+                      disabled={taskReadOnly}
+                      onChange={(ids) => setDependency(selectedTask.id, ids)}
                     />
                   </div>
 
@@ -1016,6 +1099,23 @@ export default function Gantt() {
             >
               주말 강조
             </button>
+            <button
+              onClick={() => setShowCriticalPath((prev) => !prev)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors',
+                showCriticalPath
+                  ? 'bg-[rgba(203,75,95,0.12)] text-[#CB4B5F]'
+                  : 'border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]'
+              )}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              크리티컬 패스
+            </button>
+            {showCriticalPath && criticalPathResult.criticalTasks.length > 0 && (
+              <div className="surface-badge border-[rgba(203,75,95,0.2)] bg-[rgba(203,75,95,0.06)] text-[#CB4B5F]">
+                크리티컬 패스: {criticalPathResult.criticalTasks.length}개 작업, 총 {criticalPathResult.totalDuration}일
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -1130,6 +1230,12 @@ export default function Gantt() {
               onVerticalScroll={handleGanttScroll}
               externalScrollTop={ganttScrollTop}
               onToolbarHeightChange={setGanttToolbarHeight}
+              showCriticalPath={showCriticalPath}
+              criticalTaskIds={criticalTaskIds}
+              dragState={dragState}
+              onDragStart={handleDragStart}
+              isLeafTask={isDragLeafTask}
+              dragLabel={dragLabel}
             />
           </div>
         </div>
@@ -1149,11 +1255,27 @@ export default function Gantt() {
           <span>오늘</span>
         </div>
         <div className="surface-badge">
+          <svg width="24" height="12" className="shrink-0"><path d="M2 6 L22 6" stroke="currentColor" strokeWidth="1.5" className="text-[color:var(--text-muted)]" /><polygon points="22,6 16,3 16,9" fill="currentColor" className="text-[color:var(--text-muted)]" /></svg>
+          <span>의존성</span>
+        </div>
+        <div className="surface-badge">
+          <svg width="24" height="12" className="shrink-0"><path d="M2 6 L22 6" stroke="#CB4B5F" strokeWidth="2" /><polygon points="22,6 16,3 16,9" fill="#CB4B5F" /></svg>
+          <span>크리티컬 패스</span>
+        </div>
+        <div className="surface-badge">
           <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-warning)]" />
           선택한 작업으로 차트가 자동 포커스됩니다
         </div>
       </div>
 
+      {commentTaskId && loadedProjectId && (
+        <TaskCommentPanel
+          taskId={commentTaskId}
+          projectId={loadedProjectId}
+          isOpen={!!commentTaskId}
+          onClose={() => setCommentTaskId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1198,4 +1320,150 @@ function formatSaveStatus(lastSavedAt: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   })} 저장됨`;
+}
+
+/** 선행 작업 멀티 셀렉트 드롭다운 */
+function DependencyMultiSelect({
+  currentTaskId,
+  selectedIds,
+  tasks,
+  disabled,
+  onChange,
+}: {
+  currentTaskId: string;
+  selectedIds: string[];
+  tasks: Task[];
+  disabled?: boolean;
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 자식이 있는 작업의 ID 집합 (부모 작업 = summary row)
+  const parentIds = useMemo(
+    () => new Set(tasks.filter((t) => t.parentId).map((t) => t.parentId!)),
+    [tasks]
+  );
+
+  // 후손 ID를 구해서 순환을 방지
+  const descendantIds = useMemo(() => {
+    const descendants = new Set<string>();
+    const collect = (pid: string) => {
+      tasks.filter((t) => t.parentId === pid).forEach((t) => {
+        descendants.add(t.id);
+        collect(t.id);
+      });
+    };
+    collect(currentTaskId);
+    return descendants;
+  }, [currentTaskId, tasks]);
+
+  // 선택 가능한 작업 (자기 자신, 자손, 부모(summary) 작업 제외)
+  const selectableTasks = useMemo(
+    () =>
+      tasks.filter(
+        (t) =>
+          t.id !== currentTaskId &&
+          !descendantIds.has(t.id) &&
+          !parentIds.has(t.id)
+      ),
+    [tasks, currentTaskId, descendantIds, parentIds]
+  );
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const taskNameMap = useMemo(
+    () => Object.fromEntries(tasks.map((t) => [t.id, t.name || '이름 없음'])),
+    [tasks]
+  );
+
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) {
+      onChange(selectedIds.filter((sid) => sid !== id));
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(!open)}
+        className={cn(
+          'field-input flex min-h-[2.5rem] flex-wrap items-center gap-1 text-left',
+          disabled && 'cursor-not-allowed opacity-60'
+        )}
+      >
+        {selectedIds.length === 0 ? (
+          <span className="text-sm text-[color:var(--text-muted)]">선행 작업 없음</span>
+        ) : (
+          selectedIds.map((id) => (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 rounded-full bg-[rgba(15,118,110,0.1)] px-2 py-0.5 text-xs font-medium text-[color:var(--accent-primary)]"
+            >
+              {taskNameMap[id] || id}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggle(id); }}
+                  className="ml-0.5 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
+                >
+                  x
+                </button>
+              )}
+            </span>
+          ))
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] shadow-xl">
+          {selectableTasks.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-[color:var(--text-muted)]">선택 가능한 작업이 없습니다</div>
+          ) : (
+            selectableTasks.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => toggle(t.id)}
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgba(15,118,110,0.05)]',
+                  selectedSet.has(t.id) && 'bg-[rgba(15,118,110,0.08)]'
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]',
+                    selectedSet.has(t.id)
+                      ? 'border-[color:var(--accent-primary)] bg-[color:var(--accent-primary)] text-white'
+                      : 'border-[var(--border-color)]'
+                  )}
+                >
+                  {selectedSet.has(t.id) && '\u2713'}
+                </span>
+                <span className="truncate text-[color:var(--text-primary)]" style={{ paddingLeft: `${(t.depth || 0) * 12}px` }}>
+                  {t.name || '이름 없음'}
+                </span>
+                <span className="ml-auto shrink-0 text-[10px] text-[color:var(--text-muted)]">
+                  {LEVEL_LABELS[t.level] || `L${t.level}`}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown } from 'lucide-react';
+import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown, Activity } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
+import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
 import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
@@ -15,10 +16,21 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import { useAuthStore } from '../store/authStore';
 import type { ProjectMember } from '../types';
+import { analyzeWorkload, type OverloadLevel } from '../lib/resourceAnalytics';
 
 export default function Members() {
   const { projectId } = useParams<{ projectId: string }>();
   const { members, membersLoadedProjectId, addMember, updateMember, removeMember, currentProject } = useProjectStore();
+  const tasks = useTaskStore((s) => s.tasks);
+
+  const workloadMap = useMemo(() => {
+    const summary = analyzeWorkload(tasks, members);
+    const map = new Map<string, { activeTasks: number; overloadLevel: OverloadLevel }>();
+    for (const w of summary.members) {
+      map.set(w.memberId, { activeTasks: w.activeTasks, overloadLevel: w.overloadLevel });
+    }
+    return map;
+  }, [tasks, members]);
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
   const [showAddModal, setShowAddModal] = useState(false);
@@ -447,8 +459,25 @@ export default function Members() {
                     )}
                   </div>
 
-                  <div className={`rounded-full px-3 py-1 text-xs font-semibold ${roleStyles[member.role]}`}>
-                    {roleLabels[member.role]}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className={`rounded-full px-3 py-1 text-xs font-semibold ${roleStyles[member.role]}`}>
+                      {roleLabels[member.role]}
+                    </div>
+                    {(() => {
+                      const wl = workloadMap.get(member.id);
+                      if (!wl) return null;
+                      const colors: Record<OverloadLevel, string> = { normal: '#2FA67C', warning: '#D88B44', critical: '#CB4B5F' };
+                      const labels: Record<OverloadLevel, string> = { normal: '정상', warning: '주의', critical: '과부하' };
+                      return (
+                        <div
+                          className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                          style={{ backgroundColor: `${colors[wl.overloadLevel]}14`, color: colors[wl.overloadLevel] }}
+                        >
+                          <Activity className="h-3 w-3" />
+                          {wl.activeTasks}개 · {labels[wl.overloadLevel]}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

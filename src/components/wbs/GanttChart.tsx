@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   format,
   startOfWeek,
@@ -16,6 +16,7 @@ import { cn } from '../../lib/utils';
 import { useThemeStore } from '../../store/themeStore';
 import { isKoreanHoliday } from '../../lib/holidays';
 import Button from '../common/Button';
+import type { DragState, DragMode } from '../../hooks/useGanttDrag';
 
 interface GanttChartProps {
   tasks: Task[];
@@ -27,10 +28,17 @@ interface GanttChartProps {
   rowHeight?: number;
   highlightWeekends?: boolean;
   showDependencies?: boolean;
+  showCriticalPath?: boolean;
+  criticalTaskIds?: Set<string>;
   onTaskClick?: (task: Task) => void;
   onVerticalScroll?: (scrollTop: number) => void;
   externalScrollTop?: number;
   onToolbarHeightChange?: (height: number) => void;
+  // Drag support
+  dragState?: DragState | null;
+  onDragStart?: (e: React.MouseEvent, task: Task, mode: DragMode) => void;
+  isLeafTask?: (taskId: string) => boolean;
+  dragLabel?: string;
 }
 
 const DEFAULT_DAY_WIDTH = 44;
@@ -39,7 +47,7 @@ const HEADER_HEIGHT = 68;
 
 export { HEADER_HEIGHT };
 
-export default function GanttChart({
+function GanttChartInner({
   tasks,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   allTasks: _allTasks,
@@ -50,10 +58,16 @@ export default function GanttChart({
   rowHeight = DEFAULT_ROW_HEIGHT,
   highlightWeekends = true,
   showDependencies = true,
+  showCriticalPath = false,
+  criticalTaskIds,
   onTaskClick,
   onVerticalScroll,
   externalScrollTop,
   onToolbarHeightChange,
+  dragState,
+  onDragStart,
+  isLeafTask,
+  dragLabel,
 }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -430,56 +444,46 @@ export default function GanttChart({
 
             {/* Dependency lines */}
             {showDependencies && (
-              <svg
-                className="pointer-events-none absolute inset-0 z-10"
-                style={{
-                  width: dateRange.length * dayWidth,
-                  height: tasks.length * rowHeight,
-                }}
-              >
-                {tasks.map((task, rowIndex) => {
-                  if (!task.predecessorIds || task.predecessorIds.length === 0) return null;
-                  return task.predecessorIds.map((predId) => {
-                    const predIndex = tasks.findIndex((t) => t.id === predId);
-                    if (predIndex < 0) return null;
-                    const predTask = tasks[predIndex];
-                    const predBar = calculateBar(predTask.planStart, predTask.planEnd);
-                    const taskBar = calculateBar(task.planStart, task.planEnd);
-                    if (!predBar || !taskBar) return null;
-
-                    const fromX = predBar.left + predBar.width;
-                    const fromY = predIndex * rowHeight + planBarTop + barHeight / 2;
-                    const toX = taskBar.left;
-                    const toY = rowIndex * rowHeight + planBarTop + barHeight / 2;
-                    const midX = (fromX + toX) / 2;
-
-                    return (
-                      <g key={`${predId}-${task.id}`}>
-                        <path
-                          d={`M ${fromX} ${fromY} C ${midX} ${fromY}, ${midX} ${toY}, ${toX} ${toY}`}
-                          fill="none"
-                          stroke={isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}
-                          strokeWidth={1.5}
-                          strokeDasharray="4 2"
-                        />
-                        {/* Arrow head */}
-                        <polygon
-                          points={`${toX},${toY} ${toX - 6},${toY - 3} ${toX - 6},${toY + 3}`}
-                          fill={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'}
-                        />
-                      </g>
-                    );
-                  });
-                })}
-              </svg>
+              <DependencyArrows
+                tasks={tasks}
+                rowHeight={rowHeight}
+                dayWidth={dayWidth}
+                planBarTop={planBarTop}
+                barHeight={barHeight}
+                dateRangeLength={dateRange.length}
+                calculateBar={calculateBar}
+                isDark={isDark}
+                showCriticalPath={showCriticalPath}
+                criticalTaskIds={criticalTaskIds}
+              />
             )}
 
             {tasks.map((task, rowIndex) => {
-              const planBar = calculateBar(task.planStart, task.planEnd);
+              const isDragging = dragState?.taskId === task.id;
+              const canDrag = onDragStart && isLeafTask && isLeafTask(task.id) && task.planStart && task.planEnd;
+
+              // Calculate drag-adjusted bar for the dragged task
+              let planBar: { left: number; width: number } | null;
+              let ghostBar: { left: number; width: number } | null = null;
+
+              if (isDragging && dragState) {
+                // Ghost bar at original position
+                ghostBar = calculateBar(task.planStart, task.planEnd);
+                // Active bar at new position
+                const newStartStr = format(dragState.newStart, 'yyyy-MM-dd');
+                const newEndStr = format(dragState.newEnd, 'yyyy-MM-dd');
+                planBar = calculateBar(newStartStr, newEndStr);
+              } else {
+                planBar = calculateBar(task.planStart, task.planEnd);
+              }
+
               // actualEnd가 없으면 오늘 날짜를 시각적 종료일로 사용 (진행 중인 작업)
               const actualEndForDisplay = task.actualEnd || (task.actualStart ? format(today, 'yyyy-MM-dd') : null);
               const actualBar = calculateBar(task.actualStart, actualEndForDisplay);
               const isSelected = task.id === selectedTaskId;
+              const isCritical = showCriticalPath && criticalTaskIds?.has(task.id);
+              const isFaded = showCriticalPath && criticalTaskIds && criticalTaskIds.size > 0 && !isCritical;
+              const resizeHandleWidth = 5;
 
               return (
                 <div
@@ -489,23 +493,97 @@ export default function GanttChart({
                     task.level === 1 && 'bg-[color:var(--bg-tertiary)]',
                     isSelected && 'bg-[rgba(15,118,110,0.08)]'
                   )}
-                  style={{ height: rowHeight, minHeight: rowHeight, maxHeight: rowHeight }}
+                  style={{
+                    height: rowHeight,
+                    minHeight: rowHeight,
+                    maxHeight: rowHeight,
+                    opacity: isFaded ? 0.35 : 1,
+                    transition: 'opacity 0.2s',
+                  }}
                   onClick={() => onTaskClick?.(task)}
                 >
+                  {/* Ghost bar (original position during drag) */}
+                  {isDragging && ghostBar && (
+                    <div
+                      className="absolute rounded-full border border-dashed border-blue-400/40 bg-blue-400/10"
+                      style={{
+                        left: ghostBar.left,
+                        top: planBarTop,
+                        width: ghostBar.width,
+                        height: barHeight,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
+
                   {planBar && (
                     <div
                       className={cn(
-                        'absolute rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6,#60a5fa)] shadow-[0_12px_24px_-16px_rgba(59,130,246,0.7)] transition-all',
-                        isSelected && 'ring-2 ring-[rgba(59,130,246,0.22)] ring-offset-1 ring-offset-transparent'
+                        'absolute rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6,#60a5fa)] shadow-[0_12px_24px_-16px_rgba(59,130,246,0.7)]',
+                        !isDragging && 'transition-all',
+                        isSelected && !isDragging && 'ring-2 ring-[rgba(59,130,246,0.22)] ring-offset-1 ring-offset-transparent',
+                        isDragging && 'opacity-90 ring-2 ring-blue-400/50 ring-offset-1 ring-offset-transparent z-30',
+                        canDrag && !isDragging && 'cursor-grab',
+                        isDragging && 'cursor-grabbing',
+                        isCritical && 'ring-2 ring-[#CB4B5F] ring-offset-1 ring-offset-transparent'
                       )}
                       style={{
                         left: planBar.left,
                         top: planBarTop,
                         width: planBar.width,
                         height: barHeight,
+                        ...(isCritical ? { borderColor: '#CB4B5F' } : {}),
                       }}
-                      title={`계획: ${task.planStart} ~ ${task.planEnd}`}
-                    />
+                      title={isDragging ? undefined : `계획: ${task.planStart} ~ ${task.planEnd}${isCritical ? ' (크리티컬)' : ''}`}
+                      onMouseDown={canDrag ? (e) => {
+                        // Determine if clicking near edges for resize
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const relX = e.clientX - rect.left;
+                        if (relX <= resizeHandleWidth) {
+                          onDragStart(e, task, 'resize-left');
+                        } else if (relX >= rect.width - resizeHandleWidth) {
+                          onDragStart(e, task, 'resize-right');
+                        } else {
+                          onDragStart(e, task, 'move');
+                        }
+                      } : undefined}
+                    >
+                      {/* Left resize handle */}
+                      {canDrag && !isDragging && (
+                        <div
+                          className="absolute left-0 top-0 h-full cursor-col-resize rounded-l-full opacity-0 transition-opacity hover:opacity-100 hover:bg-blue-300/30"
+                          style={{ width: resizeHandleWidth }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onDragStart!(e, task, 'resize-left');
+                          }}
+                        />
+                      )}
+                      {/* Right resize handle */}
+                      {canDrag && !isDragging && (
+                        <div
+                          className="absolute right-0 top-0 h-full cursor-col-resize rounded-r-full opacity-0 transition-opacity hover:opacity-100 hover:bg-blue-300/30"
+                          style={{ width: resizeHandleWidth }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onDragStart!(e, task, 'resize-right');
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Date label tooltip during drag */}
+                  {isDragging && planBar && dragLabel && (
+                    <div
+                      className="pointer-events-none absolute z-40 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg"
+                      style={{
+                        left: planBar.left + planBar.width / 2,
+                        top: planBarTop - 20,
+                      }}
+                    >
+                      {dragLabel}
+                    </div>
                   )}
 
                   {actualBar && (
@@ -557,3 +635,113 @@ export default function GanttChart({
     </div>
   );
 }
+
+/** Memoized dependency arrows overlay */
+const DependencyArrows = memo(function DependencyArrows({
+  tasks,
+  rowHeight,
+  dayWidth,
+  planBarTop,
+  barHeight,
+  dateRangeLength,
+  calculateBar,
+  isDark,
+  showCriticalPath,
+  criticalTaskIds,
+}: {
+  tasks: Task[];
+  rowHeight: number;
+  dayWidth: number;
+  planBarTop: number;
+  barHeight: number;
+  dateRangeLength: number;
+  calculateBar: (start: string | null | undefined, end: string | null | undefined) => { left: number; width: number } | null;
+  isDark: boolean;
+  showCriticalPath?: boolean;
+  criticalTaskIds?: Set<string>;
+}) {
+  const CRITICAL_COLOR = '#CB4B5F';
+  const normalColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
+  const normalArrowFill = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)';
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-10"
+      style={{
+        width: dateRangeLength * dayWidth,
+        height: tasks.length * rowHeight,
+      }}
+    >
+      <defs>
+        <marker
+          id="arrowhead-normal"
+          markerWidth="8"
+          markerHeight="6"
+          refX="8"
+          refY="3"
+          orient="auto"
+        >
+          <polygon points="0,0 8,3 0,6" fill={normalArrowFill} />
+        </marker>
+        <marker
+          id="arrowhead-critical"
+          markerWidth="8"
+          markerHeight="6"
+          refX="8"
+          refY="3"
+          orient="auto"
+        >
+          <polygon points="0,0 8,3 0,6" fill={CRITICAL_COLOR} />
+        </marker>
+      </defs>
+      {tasks.map((task, rowIndex) => {
+        if (!task.predecessorIds || task.predecessorIds.length === 0) return null;
+        return task.predecessorIds.map((predId) => {
+          const predIndex = tasks.findIndex((t) => t.id === predId);
+          if (predIndex < 0) return null;
+          const predTask = tasks[predIndex];
+          const predBar = calculateBar(predTask.planStart, predTask.planEnd);
+          const taskBar = calculateBar(task.planStart, task.planEnd);
+          if (!predBar || !taskBar) return null;
+
+          const isCriticalEdge =
+            showCriticalPath &&
+            criticalTaskIds?.has(predId) &&
+            criticalTaskIds?.has(task.id);
+
+          const fromX = predBar.left + predBar.width;
+          const fromY = predIndex * rowHeight + planBarTop + barHeight / 2;
+          const toX = taskBar.left;
+          const toY = rowIndex * rowHeight + planBarTop + barHeight / 2;
+
+          // Elbow path: right from pred -> down/up -> right to successor
+          const gap = Math.max(dayWidth * 0.4, 8);
+          const midX = fromX + gap;
+
+          const pathD = toX > midX
+            ? `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`
+            : `M ${fromX} ${fromY} C ${(fromX + toX) / 2} ${fromY}, ${(fromX + toX) / 2} ${toY}, ${toX} ${toY}`;
+
+          const strokeColor = isCriticalEdge ? CRITICAL_COLOR : normalColor;
+          const markerId = isCriticalEdge ? 'url(#arrowhead-critical)' : 'url(#arrowhead-normal)';
+          const opacity = showCriticalPath && criticalTaskIds && criticalTaskIds.size > 0 && !isCriticalEdge ? 0.3 : 1;
+
+          return (
+            <path
+              key={`dep-${predId}-${task.id}`}
+              d={pathD}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={isCriticalEdge ? 2 : 1.5}
+              markerEnd={markerId}
+              opacity={opacity}
+            />
+          );
+        });
+      })}
+    </svg>
+  );
+});
+
+const GanttChart = memo(GanttChartInner);
+export default GanttChart;

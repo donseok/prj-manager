@@ -3,6 +3,7 @@ import type { Task } from '../types';
 import { buildTaskTree, flattenTaskTree, calculateParentProgress } from '../lib/utils';
 import { normalizeTaskHierarchy } from '../lib/projectTaskSync';
 import { broadcastTasks, onTasksUpdated } from '../lib/broadcastSync';
+import { checkAndGenerateNotifications } from '../lib/notificationGenerator';
 
 interface TaskState {
   tasks: Task[];
@@ -48,6 +49,7 @@ interface TaskState {
   getChildTasks: (parentId: string) => Task[];
   calculateProgress: (taskId: string) => number;
 
+  setDependency: (taskId: string, dependencyIds: string[]) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -98,6 +100,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
 
     set(nextState as TaskState);
+
+    // 알림 생성: 실제 사용자 편집일 때만 (초기 로드/리셋/원격 수신 제외)
+    if (!shouldResetHistory && !options?._fromRemote && currentState.tasks.length > 0) {
+      checkAndGenerateNotifications(tasksWithExpanded, currentState.tasks);
+    }
 
     // Broadcast to other windows (skip if this update came from remote)
     if (!options?._fromRemote) {
@@ -267,6 +274,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       .sort((a, b) => a.orderIndex - b.orderIndex),
 
   calculateProgress: (taskId) => calculateParentProgress(get().tasks, taskId),
+
+  setDependency: (taskId, dependencyIds) => {
+    const { tasks } = get();
+    const newTasks = tasks.map((t) =>
+      t.id === taskId ? { ...t, predecessorIds: dependencyIds, updatedAt: new Date().toISOString() } : t
+    );
+    get().setTasks(newTasks, undefined, { recordHistory: true });
+  },
 
   setLoading: (isLoading) => set({ isLoading }),
 }));

@@ -1,5 +1,5 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck, Columns3 } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck, Columns3, Briefcase } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore } from '../../store/projectStore';
@@ -38,6 +38,7 @@ function getGlobalNavItems(pendingBadge: number): NavItem[] {
   return [
     { to: '/', icon: LayoutDashboard, label: '홈', end: true },
     { to: '/projects', icon: FolderOpen, label: '전체 프로젝트' },
+    { to: '/portfolio', icon: Briefcase, label: '포트폴리오' },
     { to: '/admin/users', icon: ShieldCheck, label: '사용자 관리', adminOnly: true, badge: pendingBadge },
     { to: '/manual', icon: BookOpen, label: '사용자 매뉴얼' },
   ];

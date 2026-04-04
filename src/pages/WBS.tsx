@@ -21,6 +21,9 @@ import {
   Wand2,
   ClipboardList,
   Bot,
+  MessageCircle,
+  RefreshCw,
+  BookmarkPlus,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -52,6 +55,8 @@ import { useProjectPermission, useCurrentMemberId } from '../hooks/useProjectPer
 import { canEditSpecificTask } from '../lib/permissions';
 import { logAuditEvent } from '../lib/auditLog';
 import { useAuthStore } from '../store/authStore';
+import { useCommentStore } from '../store/commentStore';
+import TaskCommentPanel from '../components/common/TaskCommentPanel';
 import { openPopup } from '../lib/popupWindow';
 import type { Task, TaskStatus, ProjectMember } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
@@ -61,6 +66,10 @@ import { generateWbsWithAI } from '../lib/ai/aiWbsGenerator';
 import { suggestProgressUpdates, type ProgressSuggestion } from '../lib/ai/aiProgressSuggestion';
 import AIReviewPanel from '../components/wbs/AIReviewPanel';
 import AISuggestionPanel from '../components/wbs/AISuggestionPanel';
+import RecurringTaskModal from '../components/common/RecurringTaskModal';
+import SaveTemplateModal from '../components/common/SaveTemplateModal';
+import { loadCustomTemplates, applyCustomTemplate } from '../lib/customTemplates';
+import { useRecurringTasks } from '../hooks/useRecurringTasks';
 
 export default function WBS() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -110,6 +119,11 @@ export default function WBS() {
   const [aiSuggestions, setAiSuggestions] = useState<ProgressSuggestion[]>([]);
   const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
   const [showAiSuggestions, setShowAiSuggestions] = useState(false);
+  const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
+  const commentCounts = useCommentStore((s) => s.comments);
+  const loadComments = useCommentStore((s) => s.loadComments);
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
@@ -121,7 +135,29 @@ export default function WBS() {
   const authUser = useAuthStore((s) => s.user);
   const isInPopup = window.location.pathname.startsWith('/popup/');
   const templates = listTaskTemplates();
+  const customTemplates = loadCustomTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
+
+  const commentCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of commentCounts) {
+      map.set(c.taskId, (map.get(c.taskId) || 0) + 1);
+    }
+    return map;
+  }, [commentCounts]);
+
+  useEffect(() => {
+    if (projectId) loadComments(projectId);
+  }, [projectId, loadComments]);
+
+  // Auto-generate recurring tasks on WBS entry
+  useRecurringTasks(projectId, (count) => {
+    showFeedback({
+      tone: 'success',
+      title: '반복 작업 자동 생성',
+      message: `반복 작업 ${count}건이 자동 생성되었습니다.`,
+    });
+  });
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -607,7 +643,26 @@ export default function WBS() {
 
   // 셀 값 변경 (텍스트 입력 중에는 히스토리 기록 안 함, blur 시 기록)
   const handleApplyTemplate = () => {
-    if (!projectId || !selectedTemplate) return;
+    if (!projectId) return;
+
+    // Handle custom templates
+    if (selectedTemplateId.startsWith('custom:')) {
+      const customId = selectedTemplateId.replace('custom:', '');
+      const ct = customTemplates.find((t) => t.id === customId);
+      if (!ct) return;
+      const generatedTasks = applyCustomTemplate(customId, projectId);
+      setTasks(generatedTasks, undefined, { recordHistory: true });
+      setIsTemplateModalOpen(false);
+      setDraftPrompt('');
+      showFeedback({
+        tone: 'success',
+        title: 'WBS 초안 생성 완료',
+        message: `"${ct.name}" 템플릿으로 ${generatedTasks.length}개 작업을 생성했습니다.`,
+      });
+      return;
+    }
+
+    if (!selectedTemplate) return;
 
     const generatedTasks = generateTasksFromTemplate({
       templateId: selectedTemplate.id,
@@ -1115,6 +1170,20 @@ export default function WBS() {
           </select>
         );
 
+      case 'predecessors': {
+        const predNames = (task.predecessorIds || [])
+          .map((id) => tasks.find((t) => t.id === id)?.name)
+          .filter(Boolean);
+        return (
+          <span
+            className="truncate text-xs text-[color:var(--text-secondary)]"
+            title={predNames.join(', ') || undefined}
+          >
+            {predNames.length > 0 ? predNames.join(', ') : <span className="text-[color:var(--text-muted)]">-</span>}
+          </span>
+        );
+      }
+
       case 'actions': {
         if (!taskEditable && !permissions.canCreateTask) return null;
         const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : task.level === 3 ? 'Todo' : null;
@@ -1140,6 +1209,18 @@ export default function WBS() {
                 <Plus className="w-3.5 h-3.5" />
               </button>
             )}
+            <button
+              onClick={() => setCommentTaskId(task.id)}
+              className="relative flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(15,118,110,0.08)] hover:text-[color:var(--accent-primary)]"
+              title="코멘트"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              {(commentCountMap.get(task.id) || 0) > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] px-0.5 text-[9px] font-bold text-white">
+                  {commentCountMap.get(task.id)}
+                </span>
+              )}
+            </button>
             {permissions.canDeleteTask && (
               <button
                 onClick={() => handleDeleteTask(task.id)}
@@ -1498,6 +1579,14 @@ export default function WBS() {
             <Wand2 className="w-3.5 h-3.5" />
             자동채움
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsRecurringModalOpen(true)}>
+            <RefreshCw className="w-3.5 h-3.5" />
+            반복 작업
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsSaveTemplateModalOpen(true)} disabled={tasks.length === 0}>
+            <BookmarkPlus className="w-3.5 h-3.5" />
+            템플릿 저장
+          </Button>
 
           <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
 
@@ -1666,13 +1755,56 @@ export default function WBS() {
                 })}
               </div>
 
+              {/* 내 템플릿 */}
+              {customTemplates.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">내 템플릿</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {customTemplates.map((ct) => {
+                      const isSelected = selectedTemplateId === `custom:${ct.id}`;
+                      return (
+                        <button
+                          key={ct.id}
+                          type="button"
+                          onClick={() => setSelectedTemplateId(`custom:${ct.id}`)}
+                          className={cn(
+                            'rounded-[22px] border p-4 text-left transition-all',
+                            isSelected
+                              ? 'border-[rgba(15,118,110,0.4)] bg-[rgba(15,118,110,0.08)] shadow-[0_20px_40px_-28px_rgba(15,118,110,0.5)]'
+                              : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:border-[rgba(15,118,110,0.2)] hover:bg-[color:var(--bg-secondary-solid)]'
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+                              {ct.name}
+                            </p>
+                            {isSelected && (
+                              <span className="shrink-0 rounded-full bg-[rgba(15,118,110,0.14)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--accent-primary)]">
+                                선택됨
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
+                            <span className="surface-badge">내 템플릿</span>
+                            <span className="surface-badge">{ct.phases}개 Phase</span>
+                            <span className="surface-badge">{ct.taskCount}건</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
               {/* 선택된 템플릿 요약 + 적용 */}
-              {selectedTemplate && (
+              {(selectedTemplate || selectedTemplateId.startsWith('custom:')) && (
                 <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                        {selectedTemplate.name}
+                        {selectedTemplateId.startsWith('custom:')
+                          ? customTemplates.find((ct) => ct.id === selectedTemplateId.replace('custom:', ''))?.name ?? '커스텀 템플릿'
+                          : selectedTemplate?.name}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
                         <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
@@ -1815,6 +1947,44 @@ export default function WBS() {
         tasks={tasks}
         members={members}
         onUpdateTask={handleQuickProgressUpdate}
+      />
+
+      {commentTaskId && projectId && (
+        <TaskCommentPanel
+          taskId={commentTaskId}
+          projectId={projectId}
+          isOpen={!!commentTaskId}
+          onClose={() => setCommentTaskId(null)}
+        />
+      )}
+
+      {projectId && (
+        <RecurringTaskModal
+          isOpen={isRecurringModalOpen}
+          onClose={() => setIsRecurringModalOpen(false)}
+          projectId={projectId}
+          members={members}
+          onTasksGenerated={(count) => {
+            showFeedback({
+              tone: 'success',
+              title: '반복 작업 생성',
+              message: `반복 작업 ${count}건이 생성되었습니다.`,
+            });
+          }}
+        />
+      )}
+
+      <SaveTemplateModal
+        isOpen={isSaveTemplateModalOpen}
+        onClose={() => setIsSaveTemplateModalOpen(false)}
+        tasks={tasks}
+        onSaved={(templateName) => {
+          showFeedback({
+            tone: 'success',
+            title: '템플릿 저장 완료',
+            message: `"${templateName}" 템플릿이 저장되었습니다.`,
+          });
+        }}
       />
 
       {contextMenu && (

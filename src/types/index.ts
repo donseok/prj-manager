@@ -230,6 +230,7 @@ export const DEFAULT_WBS_COLUMNS: WBSColumn[] = [
   { id: 'actualEnd', header: '실적종료', width: 150, accessor: 'actualEnd', type: 'date', editable: true },
   { id: 'actualProgress', header: '실적공정율', width: 90, accessor: 'actualProgress', type: 'progress', editable: true },
   { id: 'status', header: '상태', width: 90, accessor: 'status', type: 'select', editable: true },
+  { id: 'predecessors', header: '선행 작업', width: 160, accessor: 'predecessorIds', type: 'readonly', editable: false },
 ];
 
 // 대시보드 관련 타입
@@ -254,6 +255,63 @@ export interface AISettings {
   provider: AIProvider;
   apiKey: string;
   model?: string; // 예: 'claude-sonnet-4-5-20250929', 'gpt-4o'
+}
+
+// 작업 코멘트
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  projectId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// 반복 작업 규칙
+export interface RecurringRule {
+  id: string;
+  projectId: string;
+  templateTaskName: string;
+  parentId?: string;         // 생성할 상위 작업
+  level: number;
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  dayOfWeek?: number;        // weekly: 0(일)~6(토)
+  dayOfMonth?: number;       // monthly: 1~31
+  assigneeId?: string;
+  output?: string;
+  isActive: boolean;
+  lastGeneratedAt?: string;
+  createdAt: string;
+}
+
+export const FREQUENCY_LABELS: Record<RecurringRule['frequency'], string> = {
+  daily: '매일',
+  weekly: '매주',
+  biweekly: '격주',
+  monthly: '매월',
+};
+
+export const DAY_OF_WEEK_LABELS: Record<number, string> = {
+  0: '일',
+  1: '월',
+  2: '화',
+  3: '수',
+  4: '목',
+  5: '금',
+  6: '토',
+};
+
+// 커스텀 템플릿
+export interface CustomTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  phases: number;
+  taskCount: number;
+  tasks: Omit<Task, 'projectId' | 'createdAt' | 'updatedAt'>[];
+  createdAt: string;
 }
 
 // 담당자별 주간보고 메모
