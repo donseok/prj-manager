@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, Sparkles, Sun, Moon } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, Sparkles, Sun, Moon, Settings, Zap, GitBranch, Target, Lightbulb, BarChart3, Clock } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
