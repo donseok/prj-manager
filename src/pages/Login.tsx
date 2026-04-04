@@ -87,8 +87,8 @@ export default function Login() {
           <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
 
           <div className="relative text-center">
-            <div className="mx-auto mb-8 w-fit shadow-[0_32px_64px_-32px_rgba(15,118,110,0.9)] rounded-[22px] overflow-hidden">
-              <DKFlowLogo size={80} />
+            <div className="mx-auto mb-8 w-fit shadow-[0_32px_64px_-32px_rgba(15,118,110,0.9)] rounded-[22px] bg-[#1b2a2a]">
+              <DKFlowLogo size={80} className="rounded-[22px] block" />
             </div>
             <div className="surface-badge mx-auto border-white/12 bg-white/[0.14] text-white/90">
               <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
@@ -141,8 +141,8 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* 모바일 로고 */}
           <div className="mb-10 flex flex-col items-center gap-3 lg:hidden">
-            <div className="shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] rounded-[16px] overflow-hidden">
-              <DKFlowLogo size={56} />
+            <div className="shadow-[0_24px_45px_-26px_rgba(15,118,110,0.82)] rounded-[16px] bg-[#1b2a2a]">
+              <DKFlowLogo size={56} className="rounded-[16px] block" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-[-0.02em]">DK Flow</h1>

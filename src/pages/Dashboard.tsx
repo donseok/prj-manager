@@ -807,13 +807,13 @@ export default function Dashboard() {
                   const memberName = members.find((m) => m.id === a.memberId)?.name || '알 수 없음';
                   return (
                     <li key={a.id} className="flex items-center gap-3 rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: (ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type] }} />
                       <span className="flex-1 text-sm font-medium text-[color:var(--text-primary)]">{memberName}</span>
                       <span
                         className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                        style={{ backgroundColor: `${ATTENDANCE_TYPE_COLORS[a.type]}18`, color: ATTENDANCE_TYPE_COLORS[a.type] }}
+                        style={{ backgroundColor: `${(ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type]}18`, color: (ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type] }}
                       >
-                        {ATTENDANCE_TYPE_LABELS[a.type]}
+                        {(ATTENDANCE_TYPE_LABELS as Record<string, string>)[a.type]}
                       </span>
                     </li>
                   );
