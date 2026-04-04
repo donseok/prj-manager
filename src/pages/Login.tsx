@@ -82,11 +82,116 @@ export default function Login() {
 
       {/* 왼쪽: 브랜드 패널 */}
       <div className="relative hidden flex-1 items-center justify-center overflow-hidden lg:flex">
-        <div className="app-panel-dark relative mx-10 flex h-[calc(100vh-5rem)] w-full max-w-xl flex-col items-center justify-center overflow-hidden rounded-[36px] p-12">
-          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />
-          <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
+        <div className="relative mx-10 flex h-[calc(100vh-5rem)] w-full max-w-xl flex-col items-center justify-center overflow-hidden rounded-[36px] p-12" style={{ background: 'linear-gradient(135deg, #0f1117 0%, #1a1d2e 100%)' }}>
+          {/* Ambient glows */}
+          <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.10),transparent_70%)] blur-3xl" />
+          <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.10),transparent_72%)] blur-3xl" />
+          <div className="pointer-events-none absolute left-[30%] top-[40%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.12),transparent_70%)] blur-3xl" />
 
-          <div className="relative text-center">
+          {/* ---- Floating decorative elements ---- */}
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            {/* Stat bubbles (large) */}
+            <div
+              className="absolute flex flex-col items-center justify-center rounded-3xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm hero-float-1"
+              style={{ width: 84, height: 84, top: '8%', left: '8%' }}
+            >
+              <span className="text-[22px] font-bold text-white/85">29</span>
+              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/40">tasks</span>
+            </div>
+            <div
+              className="absolute flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hero-float-3"
+              style={{ width: 76, height: 76, top: '18%', right: '10%' }}
+            >
+              <span className="text-[20px] font-bold text-white/80">58</span>
+              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/40">%</span>
+            </div>
+            <div
+              className="absolute flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-2"
+              style={{ width: 72, height: 72, bottom: '14%', right: '14%' }}
+            >
+              <span className="text-[18px] font-bold text-white/80">11</span>
+              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/40">done</span>
+            </div>
+
+            {/* Icon cards (small) */}
+            <div
+              className="absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm hero-float-4"
+              style={{ width: 44, height: 44, top: '5%', right: '30%' }}
+            >
+              <Settings className="h-5 w-5 text-white/35" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hero-float-2"
+              style={{ width: 42, height: 42, top: '32%', left: '5%' }}
+            >
+              <Zap className="h-4.5 w-4.5 text-amber-400/50" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm hero-float-1"
+              style={{ width: 40, height: 40, top: '52%', right: '6%' }}
+            >
+              <GitBranch className="h-4 w-4 text-white/30" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm hero-float-3"
+              style={{ width: 42, height: 42, bottom: '22%', left: '10%' }}
+            >
+              <Target className="h-4.5 w-4.5 text-orange-400/40" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hero-float-4"
+              style={{ width: 40, height: 40, top: '60%', left: '22%' }}
+            >
+              <Lightbulb className="h-4.5 w-4.5 text-amber-400/45" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm hero-float-1"
+              style={{ width: 38, height: 38, bottom: '8%', left: '32%' }}
+            >
+              <BarChart3 className="h-4 w-4 text-teal-400/45" />
+            </div>
+            <div
+              className="absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm hero-float-2"
+              style={{ width: 40, height: 40, top: '42%', right: '26%' }}
+            >
+              <Clock className="h-4.5 w-4.5 text-teal-400/40" />
+            </div>
+
+            {/* Decorative dots */}
+            <div
+              className="absolute h-2 w-2 rounded-full bg-white/20 hero-float-1"
+              style={{ top: '28%', left: '20%' }}
+            />
+            <div
+              className="absolute h-1.5 w-1.5 rounded-full bg-teal-400/30 hero-float-4"
+              style={{ top: '70%', right: '30%' }}
+            />
+            <div
+              className="absolute h-1.5 w-1.5 rounded-full bg-white/15 hero-float-3"
+              style={{ top: '15%', left: '28%' }}
+            />
+            <div
+              className="absolute h-1 w-1 rounded-full bg-amber-400/25 hero-float-2"
+              style={{ bottom: '30%', right: '38%' }}
+            />
+
+            {/* Decorative gradient lines */}
+            <div
+              className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2"
+              style={{ top: '25%', right: '18%', transform: 'rotate(-20deg)' }}
+            />
+            <div
+              className="absolute h-px w-20 bg-gradient-to-r from-transparent via-white/8 to-transparent hero-float-3"
+              style={{ top: '48%', left: '14%', transform: 'rotate(15deg)' }}
+            />
+            <div
+              className="absolute h-px w-14 bg-gradient-to-r from-transparent via-white/6 to-transparent hero-float-1"
+              style={{ bottom: '35%', right: '10%', transform: 'rotate(-10deg)' }}
+            />
+          </div>
+
+          {/* ---- Main content (above floating elements) ---- */}
+          <div className="relative z-10 text-center">
             <div className="mx-auto mb-8 w-fit rounded-[20px] overflow-hidden relative" style={{ boxShadow: '0 32px 64px -32px rgba(15,118,110,0.9), inset 0 0 0 1px rgba(0,0,0,0.3)' }}>
               <DKFlowLogo size={80} className="block scale-[1.06]" />
             </div>
@@ -104,24 +209,9 @@ export default function Login() {
               <br />
               프로젝트의 시작부터 완료까지 선명하게.
             </p>
-
-            <div className="mx-auto mt-10 grid max-w-xs grid-cols-3 gap-4">
-              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
-                <p className="text-2xl font-semibold text-white">WBS</p>
-                <p className="mt-1 text-[11px] text-white/84">작업분류체계</p>
-              </div>
-              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
-                <p className="text-2xl font-semibold text-white">Gantt</p>
-                <p className="mt-1 text-[11px] text-white/84">일정 관리</p>
-              </div>
-              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
-                <p className="text-2xl font-semibold text-white">Team</p>
-                <p className="mt-1 text-[11px] text-white/84">팀 협업</p>
-              </div>
-            </div>
           </div>
 
-          <p className="absolute bottom-6 text-xs text-white/84">
+          <p className="absolute bottom-6 z-10 text-xs text-white/84">
             &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
           </p>
         </div>
