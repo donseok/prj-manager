@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Plus, Save } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Save, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import type { Attendance, AttendanceType, ProjectMember } from '../../types';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../../types';
 import { generateId } from '../../lib/utils';
+import { isKoreanHoliday, getKoreanHolidayNames } from '../../lib/koreanHolidays';
 
 interface AttendanceModalProps {
   isOpen: boolean;
@@ -63,6 +64,20 @@ export default function AttendanceModal({
 
   const isEdit = Boolean(editingAttendance);
 
+  // 공휴일 경고
+  const holidayWarning = useMemo(() => {
+    if (!date) return null;
+    const d = new Date(date + 'T00:00:00');
+    const dayOfWeek = d.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) return '주말입니다.';
+    if (isKoreanHoliday(d)) {
+      const names = getKoreanHolidayNames(d.getFullYear());
+      const name = names.get(date);
+      return name ? `공휴일(${name})입니다.` : '공휴일입니다.';
+    }
+    return null;
+  }, [date]);
+
   const handleSubmit = () => {
     if (!memberId || !date) return;
 
@@ -72,8 +87,8 @@ export default function AttendanceModal({
       const end = new Date(endDate);
       while (current <= end) {
         const dayOfWeek = current.getDay();
-        // 주말 제외 (토:6, 일:0)
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // 주말 및 공휴일 제외
+        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isKoreanHoliday(current)) {
           const now = new Date().toISOString();
           onSave({
             id: generateId(),
@@ -159,6 +174,12 @@ export default function AttendanceModal({
               </>
             )}
           </div>
+          {holidayWarning && (
+            <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {holidayWarning} 근태 등록이 필요한지 확인하세요.
+            </div>
+          )}
         </div>
 
         {/* 근태유형 */}

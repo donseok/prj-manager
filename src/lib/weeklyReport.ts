@@ -19,6 +19,7 @@ import type { Task, ProjectMember, Attendance, AttendanceType } from '../types';
 import { TASK_STATUS_LABELS, LEVEL_LABELS, ATTENDANCE_TYPE_LABELS } from '../types';
 import { getLeafTasks } from './taskAnalytics';
 import { parseDate } from './utils';
+import { generateDefaultAttendance } from './attendanceDefaults';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -234,19 +235,23 @@ export function generateWeeklyReport({
     issues.push(`담당자 미지정 작업 ${unassigned.length}건`);
   }
 
-  // 근태 요약 생성 (금주 + 차주)
+  // 근태 요약 생성 (금주 + 차주) — 기본 출근 포함
   let attendanceSummary: WeeklyAttendanceSummary[] | undefined;
   let nextWeekAttendanceSummary: WeeklyAttendanceSummary[] | undefined;
-  if (attendances && attendances.length > 0) {
+  if (members.length > 0) {
     const buildAttendanceSummary = (rangeStart: Date, rangeEnd: Date): WeeklyAttendanceSummary[] => {
       const startStr = format(rangeStart, 'yyyy-MM-dd');
       const endStr = format(rangeEnd, 'yyyy-MM-dd');
-      const filtered = attendances.filter(
+      const existingInRange = (attendances || []).filter(
         (a) => a.date >= startStr && a.date <= endStr
       );
 
+      // 기본 출근 가상 레코드 생성 후 합침
+      const defaults = generateDefaultAttendance(members, existingInRange, startStr, endStr);
+      const allRecords = [...existingInRange, ...defaults];
+
       const byMember = new Map<string, Attendance[]>();
-      for (const a of filtered) {
+      for (const a of allRecords) {
         const list = byMember.get(a.memberId) || [];
         list.push(a);
         byMember.set(a.memberId, list);
