@@ -39,6 +39,9 @@ const C = {
   successBg: 'E2F5EA',
 };
 
+// ── 글꼴 ────────────────────────────────────────────────────
+const FONT = 'Malgun Gothic';
+
 // ── 유틸 ────────────────────────────────────────────────────
 function statusColor(status: string): { bg: string; font: string } {
   switch (status) {
@@ -61,49 +64,61 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return result;
 }
 
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max) + '...' : text;
+}
+
+// ── 공통 헤더 ────────────────────────────────────────────────
+const HEADER_H = 1.05;
+
+function addSlideHeader(
+  slide: PptxGenJS.Slide,
+  pptx: PptxGenJS,
+  projectName: string,
+  subtitle: string,
+) {
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: 0, w: '100%', h: HEADER_H,
+    fill: { color: C.darkBg },
+  });
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: HEADER_H, w: '100%', h: 0.04,
+    fill: { color: C.accent },
+  });
+  slide.addText(projectName, {
+    x: 0.6, y: 0.2, w: 7, h: 0.35,
+    fontSize: 16, fontFace: FONT, bold: true, color: C.white,
+  });
+  slide.addText(subtitle, {
+    x: 0.6, y: 0.58, w: 7, h: 0.3,
+    fontSize: 10, fontFace: FONT, color: C.gray400,
+  });
+}
+
 // ── 슬라이드 1: 요약 현황 ───────────────────────────────────
 function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const slide = pptx.addSlide();
 
-  // 상단 배경 바 (동국블루)
+  // 공통 헤더 (요약은 제목이 더 크므로 직접 그림)
   slide.addShape(pptx.ShapeType.rect, {
-    x: 0,
-    y: 0,
-    w: '100%',
-    h: 1.3,
+    x: 0, y: 0, w: '100%', h: HEADER_H,
     fill: { color: C.darkBg },
   });
-  // 동국레드 악센트 라인
   slide.addShape(pptx.ShapeType.rect, {
-    x: 0,
-    y: 1.3,
-    w: '100%',
-    h: 0.04,
+    x: 0, y: HEADER_H, w: '100%', h: 0.04,
     fill: { color: C.accent },
   });
 
-  // 프로젝트명 + 주차
   slide.addText(report.projectName, {
-    x: 0.6,
-    y: 0.25,
-    w: 7,
-    h: 0.4,
-    fontSize: 20,
-    fontFace: 'Pretendard',
-    bold: true,
-    color: C.white,
+    x: 0.6, y: 0.18, w: 7, h: 0.4,
+    fontSize: 20, fontFace: FONT, bold: true, color: C.white,
   });
   slide.addText(`주간보고 · ${report.weekLabel} · ${report.generatedAt} 기준`, {
-    x: 0.6,
-    y: 0.7,
-    w: 7,
-    h: 0.3,
-    fontSize: 10,
-    fontFace: 'Pretendard',
-    color: C.gray400,
+    x: 0.6, y: 0.6, w: 7, h: 0.3,
+    fontSize: 10, fontFace: FONT, color: C.gray400,
   });
 
-  // KPI 카드 4개
+  // KPI 카드 4개 (압축)
   const kpis = [
     { label: '전체 작업', value: `${report.summary.totalLeafTasks}건`, color: C.primary },
     { label: '완료', value: `${report.summary.completedTasks}건`, color: C.success },
@@ -114,16 +129,14 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const cardW = 2.05;
   const cardGap = 0.2;
   const startX = 0.6;
+  const cardH = 0.72;
+  const kpiStartY = 1.25;
 
   kpis.forEach((kpi, i) => {
     const x = startX + i * (cardW + cardGap);
-    const y = 1.65;
 
     slide.addShape(pptx.ShapeType.roundRect, {
-      x,
-      y,
-      w: cardW,
-      h: 1.0,
+      x, y: kpiStartY, w: cardW, h: cardH,
       fill: { color: C.white },
       shadow: { type: 'outer', blur: 6, offset: 2, color: '00000010' },
       rectRadius: 0.08,
@@ -132,48 +145,26 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
 
     // 색 인디케이터
     slide.addShape(pptx.ShapeType.rect, {
-      x,
-      y,
-      w: 0.06,
-      h: 1.0,
-      fill: { color: kpi.color },
-      rectRadius: 0.08,
+      x, y: kpiStartY, w: 0.06, h: cardH,
+      fill: { color: kpi.color }, rectRadius: 0.08,
     });
 
     slide.addText(kpi.label, {
-      x: x + 0.2,
-      y: y + 0.12,
-      w: cardW - 0.3,
-      h: 0.25,
-      fontSize: 9,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.gray500,
+      x: x + 0.2, y: kpiStartY + 0.08, w: cardW - 0.3, h: 0.22,
+      fontSize: 8, fontFace: FONT, bold: true, color: C.gray500,
     });
 
     slide.addText(kpi.value, {
-      x: x + 0.2,
-      y: y + 0.42,
-      w: cardW - 0.3,
-      h: 0.4,
-      fontSize: 22,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.dark,
+      x: x + 0.2, y: kpiStartY + 0.32, w: cardW - 0.3, h: 0.32,
+      fontSize: 18, fontFace: FONT, bold: true, color: C.dark,
     });
   });
 
-  // 계획 vs 실적 프로그레스 바
-  const barY = 3.0;
+  // 계획 vs 실적 프로그레스 바 (동적 Y)
+  const barY = kpiStartY + cardH + 0.25;
   slide.addText('계획 vs 실적', {
-    x: 0.6,
-    y: barY,
-    w: 4,
-    h: 0.3,
-    fontSize: 11,
-    fontFace: 'Pretendard',
-    bold: true,
-    color: C.dark,
+    x: 0.6, y: barY, w: 4, h: 0.3,
+    fontSize: 11, fontFace: FONT, bold: true, color: C.dark,
   });
 
   const planPct = report.summary.overallPlanProgress;
@@ -183,90 +174,58 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
 
   // 계획
   slide.addText(`계획 공정율   ${Math.round(planPct)}%`, {
-    x: 0.6,
-    y: barY + 0.35,
-    w: 4,
-    h: 0.2,
-    fontSize: 9,
-    fontFace: 'Pretendard',
-    color: C.gray600,
+    x: 0.6, y: barY + 0.35, w: 4, h: 0.2,
+    fontSize: 9, fontFace: FONT, color: C.gray600,
   });
   slide.addShape(pptx.ShapeType.roundRect, {
-    x: 0.6,
-    y: barY + 0.6,
-    w: barW,
-    h: barH,
-    fill: { color: C.primaryTint },
-    rectRadius: 0.1,
+    x: 0.6, y: barY + 0.6, w: barW, h: barH,
+    fill: { color: C.primaryTint }, rectRadius: 0.1,
   });
   if (planPct > 0) {
     slide.addShape(pptx.ShapeType.roundRect, {
-      x: 0.6,
-      y: barY + 0.6,
-      w: barW * (planPct / 100),
-      h: barH,
-      fill: { color: C.primaryLight },
-      rectRadius: 0.1,
+      x: 0.6, y: barY + 0.6, w: barW * (planPct / 100), h: barH,
+      fill: { color: C.primaryLight }, rectRadius: 0.1,
     });
   }
 
   // 실적
   slide.addText(`실적 공정율   ${Math.round(actualPct)}%`, {
-    x: 0.6,
-    y: barY + 0.95,
-    w: 4,
-    h: 0.2,
-    fontSize: 9,
-    fontFace: 'Pretendard',
-    color: C.gray600,
+    x: 0.6, y: barY + 0.95, w: 4, h: 0.2,
+    fontSize: 9, fontFace: FONT, color: C.gray600,
   });
   slide.addShape(pptx.ShapeType.roundRect, {
-    x: 0.6,
-    y: barY + 1.2,
-    w: barW,
-    h: barH,
-    fill: { color: C.primaryTint },
-    rectRadius: 0.1,
+    x: 0.6, y: barY + 1.2, w: barW, h: barH,
+    fill: { color: C.primaryTint }, rectRadius: 0.1,
   });
   if (actualPct > 0) {
     slide.addShape(pptx.ShapeType.roundRect, {
-      x: 0.6,
-      y: barY + 1.2,
-      w: barW * (actualPct / 100),
-      h: barH,
-      fill: { color: C.primary },
-      rectRadius: 0.1,
+      x: 0.6, y: barY + 1.2, w: barW * (actualPct / 100), h: barH,
+      fill: { color: C.primary }, rectRadius: 0.1,
     });
   }
 
-  // 이슈 / 리스크
+  // 프로그레스 바 섹션 끝 Y
+  let sectionEndY = barY + 1.2 + barH + 0.15;
+
+  // 이슈 / 리스크 (동적 Y)
   if (report.issues.length > 0) {
-    const issueY = 4.6;
+    const issueY = sectionEndY;
     slide.addText('이슈 / 리스크', {
-      x: 0.6,
-      y: issueY,
-      w: 4,
-      h: 0.3,
-      fontSize: 11,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.accent,
+      x: 0.6, y: issueY, w: 4, h: 0.3,
+      fontSize: 11, fontFace: FONT, bold: true, color: C.accent,
     });
     report.issues.slice(0, 4).forEach((issue, i) => {
       slide.addText(`${i + 1}. ${issue}`, {
-        x: 0.8,
-        y: issueY + 0.35 + i * 0.28,
-        w: 8,
-        h: 0.25,
-        fontSize: 9,
-        fontFace: 'Pretendard',
-        color: C.gray700,
+        x: 0.8, y: issueY + 0.35 + i * 0.28, w: 8, h: 0.25,
+        fontSize: 9, fontFace: FONT, color: C.gray700,
       });
     });
+    sectionEndY = issueY + 0.35 + Math.min(report.issues.length, 4) * 0.28 + 0.15;
   }
 
-  // 하단 섹션 요약 리본
-  const ribbonY = report.issues.length > 0 ? 4.6 + 0.35 + Math.min(report.issues.length, 4) * 0.28 + 0.2 : 4.6;
+  // 하단 섹션 요약 리본 (동적 Y, 압축)
+  const ribbonY = sectionEndY;
+  const ribbonH = 0.48;
   const ribbons = [
     { label: '금주 실적', count: report.thisWeekActual.tasks.length, color: C.primary },
     { label: '금주 완료', count: report.completedThisWeek.tasks.length, color: C.success },
@@ -276,40 +235,21 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
   ribbons.forEach((r, i) => {
     const x = startX + i * (cardW + cardGap);
     slide.addShape(pptx.ShapeType.roundRect, {
-      x,
-      y: ribbonY,
-      w: cardW,
-      h: 0.55,
-      fill: { color: C.gray50 },
-      rectRadius: 0.06,
+      x, y: ribbonY, w: cardW, h: ribbonH,
+      fill: { color: C.gray50 }, rectRadius: 0.06,
       line: { color: C.gray200, width: 0.5 },
     });
     slide.addShape(pptx.ShapeType.rect, {
-      x,
-      y: ribbonY,
-      w: 0.05,
-      h: 0.55,
+      x, y: ribbonY, w: 0.05, h: ribbonH,
       fill: { color: r.color },
     });
     slide.addText(r.label, {
-      x: x + 0.15,
-      y: ribbonY + 0.05,
-      w: cardW - 0.2,
-      h: 0.2,
-      fontSize: 8,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.gray500,
+      x: x + 0.15, y: ribbonY + 0.04, w: cardW - 0.2, h: 0.18,
+      fontSize: 8, fontFace: FONT, bold: true, color: C.gray500,
     });
     slide.addText(`${r.count}건`, {
-      x: x + 0.15,
-      y: ribbonY + 0.25,
-      w: cardW - 0.2,
-      h: 0.25,
-      fontSize: 14,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.dark,
+      x: x + 0.15, y: ribbonY + 0.22, w: cardW - 0.2, h: 0.22,
+      fontSize: 12, fontFace: FONT, bold: true, color: C.dark,
     });
   });
 }
@@ -324,55 +264,48 @@ function addTaskTable(
   titleColor: string
 ) {
   const colW = 4.2;
+  const sectionY = 1.2;
+  const tableY = 1.65;
 
   // 섹션 제목
   slide.addShape(pptx.ShapeType.roundRect, {
-    x,
-    y: 1.45,
-    w: colW,
-    h: 0.35,
-    fill: { color: titleColor },
-    rectRadius: 0.05,
+    x, y: sectionY, w: colW, h: 0.35,
+    fill: { color: titleColor }, rectRadius: 0.05,
   });
   slide.addText(title, {
-    x,
-    y: 1.45,
-    w: colW,
-    h: 0.35,
-    fontSize: 11,
-    fontFace: 'Pretendard',
-    bold: true,
-    color: C.white,
-    align: 'center',
+    x, y: sectionY, w: colW, h: 0.35,
+    fontSize: 11, fontFace: FONT, bold: true, color: C.white, align: 'center',
   });
 
   // 테이블 헤더
   const headerRow: PptxGenJS.TableRow = [
-    { text: '작업명', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: 'Pretendard' } },
-    { text: '담당자', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: 'Pretendard' } },
-    { text: '상태', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: 'Pretendard' } },
-    { text: '공정율', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: 'Pretendard' } },
+    { text: '작업명', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: FONT } },
+    { text: '담당자', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: FONT } },
+    { text: '상태', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: FONT } },
+    { text: '공정율', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center', fontFace: FONT } },
   ];
 
   const dataRows: PptxGenJS.TableRow[] = tasks.map((t, i) => {
     const rowBg = i % 2 === 0 ? C.white : C.gray50;
     const sc = statusColor(t.status);
+    const taskName = truncate(t.name, 30);
+    const parentLabel = t.parentName ? `\n(${truncate(t.parentName, 15)})` : '';
     return [
       {
-        text: t.name + (t.parentName ? `\n(${t.parentName})` : ''),
-        options: { fontSize: 7.5, color: C.dark, fill: { color: rowBg }, fontFace: 'Pretendard', valign: 'middle' as const },
+        text: taskName + parentLabel,
+        options: { fontSize: 7.5, color: C.dark, fill: { color: rowBg }, fontFace: FONT, valign: 'middle' as const },
       },
       {
         text: t.assigneeName,
-        options: { fontSize: 7.5, color: C.gray600, fill: { color: rowBg }, align: 'center' as const, fontFace: 'Pretendard', valign: 'middle' as const },
+        options: { fontSize: 7.5, color: C.gray600, fill: { color: rowBg }, align: 'center' as const, fontFace: FONT, valign: 'middle' as const },
       },
       {
         text: t.statusLabel,
-        options: { fontSize: 7, bold: true, color: sc.font, fill: { color: sc.bg }, align: 'center' as const, fontFace: 'Pretendard', valign: 'middle' as const },
+        options: { fontSize: 7, bold: true, color: sc.font, fill: { color: sc.bg }, align: 'center' as const, fontFace: FONT, valign: 'middle' as const },
       },
       {
         text: `${t.actualProgress}%`,
-        options: { fontSize: 7.5, color: C.dark, fill: { color: rowBg }, align: 'center' as const, fontFace: 'Pretendard', valign: 'middle' as const },
+        options: { fontSize: 7.5, color: C.dark, fill: { color: rowBg }, align: 'center' as const, fontFace: FONT, valign: 'middle' as const },
       },
     ];
   });
@@ -382,30 +315,23 @@ function addTaskTable(
       {
         text: '해당 작업 없음',
         options: {
-          fontSize: 8,
-          color: C.gray400,
-          fill: { color: C.gray50 },
-          align: 'center' as const,
-          fontFace: 'Pretendard',
-          colspan: 4,
+          fontSize: 8, color: C.gray400, fill: { color: C.gray50 },
+          align: 'center' as const, fontFace: FONT, colspan: 4,
         },
       },
     ]);
   }
 
   slide.addTable([headerRow, ...dataRows], {
-    x,
-    y: 1.9,
-    w: colW,
+    x, y: tableY, w: colW,
     colW: [colW * 0.42, colW * 0.2, colW * 0.2, colW * 0.18],
     border: { type: 'solid', pt: 0.5, color: C.gray200 },
-    rowH: 0.32,
-    autoPage: false,
+    rowH: 0.32, autoPage: false,
   });
 }
 
 function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
-  const maxRowsPerSlide = 12;
+  const maxRowsPerSlide = 14;
   const actualTasks = report.thisWeekActual.tasks;
   const planTasks = report.nextWeekPlan.tasks;
 
@@ -427,45 +353,8 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData) {
 
   for (let p = 0; p < pageCount; p++) {
     const slide = pptx.addSlide();
-
-    // 헤더 바 (동국블루)
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0,
-      y: 0,
-      w: '100%',
-      h: 1.3,
-      fill: { color: C.darkBg },
-    });
-    // 동국레드 악센트 라인
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0,
-      y: 1.3,
-      w: '100%',
-      h: 0.04,
-      fill: { color: C.accent },
-    });
-
-    slide.addText(report.projectName, {
-      x: 0.6,
-      y: 0.25,
-      w: 7,
-      h: 0.35,
-      fontSize: 16,
-      fontFace: 'Pretendard',
-      bold: true,
-      color: C.white,
-    });
-
     const pageLabel = pageCount > 1 ? ` (${p + 1}/${pageCount})` : '';
-    slide.addText(`상세 작업 현황${pageLabel} · ${report.weekLabel}`, {
-      x: 0.6,
-      y: 0.65,
-      w: 7,
-      h: 0.3,
-      fontSize: 10,
-      fontFace: 'Pretendard',
-      color: C.gray400,
-    });
+    addSlideHeader(slide, pptx, report.projectName, `상세 작업 현황${pageLabel} · ${report.weekLabel}`);
 
     // 좌: 금주 실적
     addTaskTable(slide, pptx, `금주 실적 ${thisWeekRange}`, actualChunks[p] || [], 0.4, C.primary);
@@ -494,36 +383,21 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   };
 
   const thisWeekDays = getDayHeaders(report.weekStart);
-  // 차주 시작일: 금주 시작일 + 7일
   const nws = new Date(report.weekStart + 'T00:00:00');
   nws.setDate(nws.getDate() + 7);
   const nextWeekStartStr = `${nws.getFullYear()}-${String(nws.getMonth() + 1).padStart(2, '0')}-${String(nws.getDate()).padStart(2, '0')}`;
   const nextWeekDays = getDayHeaders(nextWeekStartStr);
 
-  // 헤더 바 (동국블루)
-  slide.addShape(pptx.ShapeType.rect, {
-    x: 0, y: 0, w: '100%', h: 1.3,
-    fill: { color: C.darkBg },
-  });
-  // 동국레드 악센트 라인
-  slide.addShape(pptx.ShapeType.rect, {
-    x: 0, y: 1.3, w: '100%', h: 0.04,
-    fill: { color: C.accent },
-  });
+  // 공통 헤더
+  addSlideHeader(slide, pptx, report.projectName, `근태현황 · ${report.weekLabel}`);
 
-  slide.addText(report.projectName, {
-    x: 0.6, y: 0.25, w: 7, h: 0.35,
-    fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
-  });
-
-  slide.addText(`근태현황 · ${report.weekLabel}`, {
-    x: 0.6, y: 0.65, w: 7, h: 0.3,
-    fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
-  });
+  // 멤버가 많으면 rowH 축소
+  const totalMembers = Math.max(thisWeek.length, nextWeek.length);
+  const rowH = totalMembers > 10 ? 0.24 : 0.28;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cellOpts = (opts: Record<string, any> = {}): Record<string, any> => ({
-    fontSize: 7, fontFace: 'Pretendard', align: 'center', valign: 'middle', ...opts,
+    fontSize: 7, fontFace: FONT, align: 'center', valign: 'middle', ...opts,
   });
 
   // 테이블 빌드 함수
@@ -586,25 +460,25 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   const colWidths = [tableW * 0.17, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.13, tableW * 0.18];
 
   // ── 금주 근태현황 ──
-  let curY = 1.45;
+  let curY = 1.2;
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.4, y: curY, w: tableW, h: 0.32,
     fill: { color: C.primary }, rectRadius: 0.05,
   });
   slide.addText('금주 근태현황', {
     x: 0.4, y: curY, w: tableW, h: 0.32,
-    fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
+    fontSize: 10, fontFace: FONT, bold: true, color: C.white, align: 'center',
   });
   curY += 0.38;
 
   const thisTable = buildAttendanceTable(thisWeek, thisWeekDays);
-  const thisRowCount = 1 + Math.max(thisTable.rows.length, 1); // header + data
+  const thisRowCount = 1 + Math.max(thisTable.rows.length, 1);
   slide.addTable([thisTable.header, ...thisTable.rows], {
     x: 0.4, y: curY, w: tableW, colW: colWidths,
     border: { type: 'solid', pt: 0.5, color: C.gray200 },
-    rowH: 0.28, autoPage: false,
+    rowH, autoPage: false,
   });
-  curY += thisRowCount * 0.28 + 0.25;
+  curY += thisRowCount * rowH + 0.25;
 
   // ── 차주 근태현황 ──
   slide.addShape(pptx.ShapeType.roundRect, {
@@ -613,7 +487,7 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   });
   slide.addText('차주 근태현황', {
     x: 0.4, y: curY, w: tableW, h: 0.32,
-    fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white, align: 'center',
+    fontSize: 10, fontFace: FONT, bold: true, color: C.white, align: 'center',
   });
   curY += 0.38;
 
@@ -621,7 +495,7 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData) {
   slide.addTable([nextTable.header, ...nextTable.rows], {
     x: 0.4, y: curY, w: tableW, colW: colWidths,
     border: { type: 'solid', pt: 0.5, color: C.gray200 },
-    rowH: 0.28, autoPage: false,
+    rowH, autoPage: false,
   });
 }
 
@@ -630,34 +504,21 @@ function addMemberReportSlides(pptx: PptxGenJS, report: WeeklyReportData) {
   const entries = report.memberReports || [];
   if (entries.length === 0) return;
 
-  const maxPerSlide = 4;
+  // 내용 길이에 따라 슬라이드당 개수 결정
+  const maxTextLen = Math.max(
+    ...entries.map((e) => Math.max((e.thisWeekResult || '').length, (e.nextWeekPlan || '').length)),
+    0,
+  );
+  const maxPerSlide = maxTextLen > 200 ? 3 : 4;
   const chunks = chunk(entries, maxPerSlide);
 
   chunks.forEach((group, pageIdx) => {
     const slide = pptx.addSlide();
 
-    // 헤더 바 (동국블루)
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0, y: 0, w: '100%', h: 1.3,
-      fill: { color: C.darkBg },
-    });
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0, y: 1.3, w: '100%', h: 0.04,
-      fill: { color: C.accent },
-    });
-
-    slide.addText(report.projectName, {
-      x: 0.6, y: 0.25, w: 7, h: 0.35,
-      fontSize: 16, fontFace: 'Pretendard', bold: true, color: C.white,
-    });
-
     const pageLabel = chunks.length > 1 ? ` (${pageIdx + 1}/${chunks.length})` : '';
-    slide.addText(`담당자 작성${pageLabel} · ${report.weekLabel}`, {
-      x: 0.6, y: 0.65, w: 7, h: 0.3,
-      fontSize: 10, fontFace: 'Pretendard', color: C.gray400,
-    });
+    addSlideHeader(slide, pptx, report.projectName, `담당자 작성${pageLabel} · ${report.weekLabel}`);
 
-    let curY = 1.5;
+    let curY = 1.25;
     const contentW = 8.8;
 
     group.forEach((entry) => {
@@ -668,31 +529,36 @@ function addMemberReportSlides(pptx: PptxGenJS, report: WeeklyReportData) {
       });
       slide.addText(entry.memberName, {
         x: 0.6, y: curY, w: contentW - 0.4, h: 0.32,
-        fontSize: 10, fontFace: 'Pretendard', bold: true, color: C.white,
+        fontSize: 10, fontFace: FONT, bold: true, color: C.white,
       });
       curY += 0.38;
 
-      // 금주실적 / 차주계획 2칸 테이블
+      // 내용 길이에 따라 rowH 동적 조정
+      const entryMaxLen = Math.max((entry.thisWeekResult || '').length, (entry.nextWeekPlan || '').length);
+      const dataRowH = entryMaxLen > 200 ? 1.1 : 0.8;
+
+      // 텍스트 300자 초과 시 말줄임
+      const thisText = truncate(entry.thisWeekResult || '(작성 없음)', 300);
+      const nextText = truncate(entry.nextWeekPlan || '(작성 없음)', 300);
+
       const colW = contentW / 2;
       const headerRow: PptxGenJS.TableRow = [
-        { text: '금주 실적', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: 'Pretendard' } },
-        { text: '차주 계획', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: 'Pretendard' } },
+        { text: '금주 실적', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: FONT } },
+        { text: '차주 계획', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.dark }, align: 'center' as const, fontFace: FONT } },
       ];
       const dataRow: PptxGenJS.TableRow = [
         {
-          text: entry.thisWeekResult || '(작성 없음)',
+          text: thisText,
           options: {
             fontSize: 8, color: entry.thisWeekResult ? C.dark : C.gray400,
-            fill: { color: C.white }, fontFace: 'Pretendard',
-            valign: 'top' as const,
+            fill: { color: C.white }, fontFace: FONT, valign: 'top' as const,
           },
         },
         {
-          text: entry.nextWeekPlan || '(작성 없음)',
+          text: nextText,
           options: {
             fontSize: 8, color: entry.nextWeekPlan ? C.dark : C.gray400,
-            fill: { color: C.white }, fontFace: 'Pretendard',
-            valign: 'top' as const,
+            fill: { color: C.white }, fontFace: FONT, valign: 'top' as const,
           },
         },
       ];
@@ -701,10 +567,10 @@ function addMemberReportSlides(pptx: PptxGenJS, report: WeeklyReportData) {
         x: 0.4, y: curY, w: contentW,
         colW: [colW, colW],
         border: { type: 'solid', pt: 0.5, color: C.gray200 },
-        rowH: [0.28, 0.9],
+        rowH: [0.28, dataRowH],
         autoPage: false,
       });
-      curY += 0.28 + 0.9 + 0.2;
+      curY += 0.28 + dataRowH + 0.15;
     });
   });
 }
