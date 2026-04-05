@@ -2,6 +2,29 @@ import type { Project, ProjectMember, Task, Attendance, WeeklyMemberReport } fro
 import { supabase, isSupabaseConfigured } from './supabase';
 import { storage } from './utils';
 
+// ─── Auth error detection ───────────────────────────────────
+// Supabase API 호출 실패 시 인증 오류인지 판별하고, 맞으면 세션을 정리한다.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isAuthError(error: any): boolean {
+  const status = error?.status ?? error?.code;
+  const msg = typeof error?.message === 'string' ? error.message : '';
+  return status === 401 || status === 403 ||
+    msg.includes('JWT') || msg.includes('token') ||
+    msg.includes('Refresh Token') || msg.includes('Not authorized');
+}
+
+let _sessionExpiredHandled = false;
+
+function handleSessionExpired() {
+  if (_sessionExpiredHandled) return;
+  _sessionExpiredHandled = true;
+  // 순환 의존 방지를 위해 동적 import
+  void import('../store/authStore').then(({ useAuthStore }) => {
+    useAuthStore.getState().logout();
+    _sessionExpiredHandled = false;
+  });
+}
+
 // ─── localStorage keys ──────────────────────────────────────
 function lsProjectsKey() { return 'dk_projects'; }
 function lsMembersKey(pid: string) { return `dk_members_${pid}`; }
@@ -73,6 +96,7 @@ export async function loadProjects(): Promise<Project[]> {
     .order('updated_at', { ascending: false });
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return []; }
     console.error('Failed to load projects:', error);
     return [];
   }
@@ -155,6 +179,7 @@ export async function loadProjectMembers(projectId: string): Promise<ProjectMemb
     .order('created_at', { ascending: true });
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return []; }
     console.error('Failed to load members:', error);
     return [];
   }
@@ -218,6 +243,7 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
     .order('order_index', { ascending: true });
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return []; }
     console.error('Failed to load tasks:', error);
     return [];
   }
@@ -314,6 +340,7 @@ export async function loadProjectIdsForUser(userId: string): Promise<Set<string>
     .eq('user_id', userId);
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return new Set(); }
     console.error('Failed to load project IDs for user:', error);
     return new Set();
   }
@@ -502,6 +529,7 @@ export async function loadAttendances(projectId: string): Promise<Attendance[]> 
     .order('date', { ascending: false });
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return []; }
     console.error('Failed to load attendance:', error);
     return [];
   }

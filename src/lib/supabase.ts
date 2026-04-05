@@ -356,21 +356,27 @@ export async function signUpWithEmail(email: string, password: string, name: str
 export async function ensureSupabaseSession(): Promise<User | null> {
   if (!isSupabaseConfigured) return null;
 
+  // getSession은 localStorage 캐시만 확인하므로 만료 토큰도 반환할 수 있음.
+  // refreshSession을 통해 실제 유효성을 서버에서 검증한다.
   const {
     data: { session },
     error: sessionError,
   } = await supabase.auth.getSession();
 
-  if (sessionError) {
-    console.error('Failed to get Supabase session:', sessionError);
+  if (sessionError || !session?.user) {
+    if (sessionError) console.error('Failed to get Supabase session:', sessionError);
     return null;
   }
 
-  if (session?.user) {
-    return toAppUser(session.user);
+  // 토큰 만료 여부를 서버에 확인 — 만료 시 갱신 시도
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !refreshed.session?.user) {
+    console.warn('세션이 만료되었습니다. 재로그인이 필요합니다.');
+    await supabase.auth.signOut().catch(() => {});
+    return null;
   }
 
-  return null;
+  return toAppUser(refreshed.session.user);
 }
 
 export function subscribeToSupabaseAuthChanges(callback: (user: User | null) => void) {
