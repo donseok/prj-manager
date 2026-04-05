@@ -151,7 +151,7 @@ export default function ProjectList() {
     const timeoutId = setTimeout(() => {
       setIsCreating(false);
       setCreateError(t('projectList.createTimeout'));
-    }, 15000);
+    }, 45000);
 
     let createdProjectId: string | null = null;
     try {
@@ -194,15 +194,16 @@ export default function ProjectList() {
         };
 
         const nextMembers = hasOwner ? clonedMembers : [ownerMember, ...clonedMembers];
-        await syncProjectMembers(savedProject.id, nextMembers);
-        await syncProjectTasks(
-          savedProject.id,
-          cloneProjectTasks({
-            sourceTasks,
-            targetProjectId: savedProject.id,
-            memberIdMap,
-          })
-        );
+        const clonedTasks = cloneProjectTasks({
+          sourceTasks,
+          targetProjectId: savedProject.id,
+          memberIdMap,
+        });
+        // 멤버와 태스크를 병렬 저장 (신규 프로젝트이므로 cleanup 스킵)
+        await Promise.all([
+          syncProjectMembers(savedProject.id, nextMembers, { skipCleanup: true }),
+          syncProjectTasks(savedProject.id, clonedTasks),
+        ]);
       } else {
         const ownerMember: ProjectMember = {
           id: generateId(),
@@ -213,7 +214,7 @@ export default function ProjectList() {
           createdAt: now,
         };
 
-        await syncProjectMembers(savedProject.id, [ownerMember]);
+        await syncProjectMembers(savedProject.id, [ownerMember], { skipCleanup: true });
       }
 
       addProject(savedProject);

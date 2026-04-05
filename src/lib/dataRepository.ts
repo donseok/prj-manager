@@ -114,37 +114,37 @@ export async function upsertProject(project: Project): Promise<Project> {
   }
   const row = toProjectRow(project);
 
-  // 기존 프로젝트면 UPDATE, 신규면 INSERT (upsert는 RLS INSERT 정책을 먼저 체크하므로 분리)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
-  const { data: updatedRows, error: updateError } = await supabase
+  // INSERT 먼저 시도 (신규 프로젝트인 경우가 더 빈번) → 충돌 시 UPDATE
+  const { data: inserted, error: insertError } = await supabase
     .from('projects')
-    .update(updateFields)
-    .eq('id', project.id)
-    .select();
+    .insert(row)
+    .select()
+    .single();
 
-  if (!updateError && updatedRows && updatedRows.length > 0) {
-    return mapProjectRow(updatedRows[0] as ProjectRow);
-  }
-
-  // UPDATE 실패 시 (행이 없는 경우 등) INSERT 시도
-  if (!updateError) {
-    const { data: inserted, error: insertError } = await supabase
-      .from('projects')
-      .insert(row)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Failed to insert project:', { code: insertError.code, message: insertError.message, details: insertError.details, hint: insertError.hint });
-      throw new Error(`프로젝트 생성 실패 [${insertError.code}]: ${insertError.message}${insertError.hint ? ` (${insertError.hint})` : ''}`);
-    }
-
+  if (!insertError && inserted) {
     return mapProjectRow(inserted as ProjectRow);
   }
 
-  console.error('Failed to update project:', { code: updateError?.code, message: updateError?.message, details: updateError?.details, hint: updateError?.hint });
-  throw new Error(`프로젝트 저장 실패 [${updateError?.code}]: ${updateError?.message}${updateError?.hint ? ` (${updateError.hint})` : ''}`);
+  // PK 충돌(23505) 또는 RLS INSERT 정책 위반 → 기존 프로젝트 UPDATE
+  if (insertError && (insertError.code === '23505' || insertError.code === '42501' || insertError.message?.includes('duplicate'))) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, owner_id: _oid, created_at: _cat, ...updateFields } = row;
+    const { data: updatedRows, error: updateError } = await supabase
+      .from('projects')
+      .update(updateFields)
+      .eq('id', project.id)
+      .select();
+
+    if (!updateError && updatedRows && updatedRows.length > 0) {
+      return mapProjectRow(updatedRows[0] as ProjectRow);
+    }
+
+    console.error('Failed to update project:', { code: updateError?.code, message: updateError?.message, details: updateError?.details, hint: updateError?.hint });
+    throw new Error(`프로젝트 저장 실패 [${updateError?.code}]: ${updateError?.message}${updateError?.hint ? ` (${updateError.hint})` : ''}`);
+  }
+
+  console.error('Failed to insert project:', { code: insertError.code, message: insertError.message, details: insertError.details, hint: insertError.hint });
+  throw new Error(`프로젝트 생성 실패 [${insertError.code}]: ${insertError.message}${insertError.hint ? ` (${insertError.hint})` : ''}`);
 }
 
 export async function deleteProjectById(projectId: string) {
@@ -187,7 +187,7 @@ export async function loadProjectMembers(projectId: string): Promise<ProjectMemb
   return (data as ProjectMemberRow[]).map(mapProjectMemberRow);
 }
 
-export async function syncProjectMembers(projectId: string, members: ProjectMember[]) {
+export async function syncProjectMembers(projectId: string, members: ProjectMember[], options?: { skipCleanup?: boolean }) {
   if (!isSupabaseConfigured) { storage.set(lsMembersKey(projectId), members); return; }
   const rows = members.map(toProjectMemberRow);
   const currentIds = new Set(rows.map((row) => row.id));
@@ -201,6 +201,9 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
       console.error('Failed to upsert members:', upsertError);
       throw new Error(`멤버 저장 실패: ${upsertError.message}`);
     }
+
+    // 신규 프로젝트 등 삭제 멤버가 없는 경우 정리 스킵 (불필요한 SELECT+DELETE 제거)
+    if (options?.skipCleanup) return;
 
     // 삭제된 멤버 정리
     const { data: existingRows, error: selectError } = await supabase
