@@ -1274,7 +1274,6 @@ export default function WBS() {
         key: 'output',
         label: t('wbs.colOutput'),
         width: getResponsiveWidth(workspaceWidth * 0.12, 140, fullscreen ? 260 : 210),
-        sticky: true,
         className: 'text-center',
       },
       {
