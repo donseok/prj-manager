@@ -1281,14 +1281,12 @@ export default function WBS() {
         key: 'assignee',
         label: t('wbs.colAssignee'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 120, fullscreen ? 190 : 160),
-        sticky: true,
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'weight',
         label: t('wbs.colWeight'),
         width: getResponsiveWidth(workspaceWidth * 0.055, 88, fullscreen ? 120 : 104),
-        sticky: true,
         className: 'text-center whitespace-nowrap',
       },
       {

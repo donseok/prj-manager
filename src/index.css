@@ -660,10 +660,8 @@ select {
 .sticky-col-1 { left: 72px; }
 .sticky-col-2 { left: 172px; }
 .sticky-col-3 { left: 432px; }
-.sticky-col-4 { left: 572px; }
-.sticky-col-5 { left: 692px; }
 
-.sticky-col-5::after {
+.sticky-col-3::after {
   content: "";
   position: absolute;
   top: 0;
@@ -674,7 +672,7 @@ select {
   background: linear-gradient(to right, rgba(0, 0, 0, 0.06), transparent);
 }
 
-.dark .sticky-col-5::after {
+.dark .sticky-col-3::after {
   background: linear-gradient(to right, rgba(0, 0, 0, 0.25), transparent);
 }
 
