@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Save, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -55,6 +56,7 @@ export default function AttendanceModal({
   defaultDate,
   defaultMemberId,
 }: AttendanceModalProps) {
+  const { t } = useTranslation();
   const [memberId, setMemberId] = useState(() => getInitialMemberId(editingAttendance, defaultMemberId, members));
   const [date, setDate] = useState(() => getInitialDate(editingAttendance, defaultDate));
   const [endDate, setEndDate] = useState('');
@@ -120,18 +122,18 @@ export default function AttendanceModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '근태 수정' : '근태 등록'} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? t('attendanceModal.editTitle') : t('attendanceModal.createTitle')} size="md">
       <div className="space-y-4 p-6">
         {/* 담당자 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">담당자</label>
+          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('attendanceModal.assignee')}</label>
           <select
             value={memberId}
             onChange={(e) => setMemberId(e.target.value)}
             className="field-select w-full py-2.5"
             disabled={isEdit}
           >
-            <option value="">선택하세요</option>
+            <option value="">{t('attendanceModal.selectPlaceholder')}</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
@@ -141,7 +143,7 @@ export default function AttendanceModal({
         {/* 날짜 */}
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-sm font-medium text-[color:var(--text-secondary)]">날짜</label>
+            <label className="text-sm font-medium text-[color:var(--text-secondary)]">{t('attendanceModal.date')}</label>
             {!isEdit && (
               <label className="flex items-center gap-1.5 text-xs text-[color:var(--text-secondary)] cursor-pointer">
                 <input
@@ -150,7 +152,7 @@ export default function AttendanceModal({
                   onChange={(e) => setUseRange(e.target.checked)}
                   className="rounded border-[var(--border-color)]"
                 />
-                범위 선택
+                {t('attendanceModal.dateRange')}
               </label>
             )}
           </div>
@@ -184,24 +186,24 @@ export default function AttendanceModal({
 
         {/* 근태유형 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">근태유형</label>
+          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('attendanceModal.attendanceType')}</label>
           <div className="grid grid-cols-2 gap-2">
-            {attendanceTypes.map((t) => (
+            {attendanceTypes.map((at) => (
               <button
-                key={t}
+                key={at}
                 type="button"
-                onClick={() => setType(t)}
+                onClick={() => setType(at)}
                 className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
-                  type === t
+                  type === at
                     ? 'border-[var(--accent-primary)] bg-[rgba(15,118,110,0.08)] text-[color:var(--text-primary)]'
                     : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:border-[rgba(15,118,110,0.2)]'
                 }`}
               >
                 <span
                   className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[t] }}
+                  style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[at] }}
                 />
-                {ATTENDANCE_TYPE_LABELS[t]}
+                {ATTENDANCE_TYPE_LABELS[at]}
               </button>
             ))}
           </div>
@@ -209,22 +211,22 @@ export default function AttendanceModal({
 
         {/* 사유/비고 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">사유/비고</label>
+          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('attendanceModal.reasonNote')}</label>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="field-input w-full py-2.5"
-            placeholder="사유를 입력하세요 (선택)"
+            placeholder={t('attendanceModal.reasonPlaceholder')}
           />
         </div>
 
         {/* 버튼 */}
         <div className="flex justify-end gap-3 border-t border-[var(--border-color)] pt-4">
-          <Button variant="ghost" onClick={onClose}>취소</Button>
+          <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={!memberId || !date}>
             {isEdit ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {isEdit ? '수정' : useRange && endDate ? '일괄 등록' : '등록'}
+            {isEdit ? t('attendanceModal.update') : useRange && endDate ? t('attendanceModal.bulkRegister') : t('attendanceModal.register')}
           </Button>
         </div>
       </div>

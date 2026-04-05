@@ -226,6 +226,21 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
 }
 
 export async function syncProjectTasks(projectId: string, tasks: Task[]) {
+  try {
+    await _syncProjectTasksInner(projectId, tasks);
+  } catch (err) {
+    // Lock 충돌 에러인 경우 1회 재시도
+    if (err instanceof Error && (err.message.includes('Lock') || err.message.includes('lock') || err.message.includes('steal'))) {
+      console.warn('[tasks] Lock 충돌 감지, 500ms 후 재시도...');
+      await new Promise(r => setTimeout(r, 500));
+      await _syncProjectTasksInner(projectId, tasks);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function _syncProjectTasksInner(projectId: string, tasks: Task[]) {
   if (!isSupabaseConfigured) { storage.set(lsTasksKey(projectId), tasks); return; }
   const rows = tasks
     .map(toTaskRow)

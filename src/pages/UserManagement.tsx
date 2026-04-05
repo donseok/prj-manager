@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings, UserCog, Fingerprint, KeyRound, ShieldAlert, Activity, Lock } from 'lucide-react';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { usePageFeedback } from '../hooks/usePageFeedback';
@@ -62,22 +63,14 @@ function FloatingStatBubble({
   );
 }
 
-const STATUS_BADGE: Record<AccountStatus, { label: string; className: string }> = {
-  pending: {
-    label: '대기',
-    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  },
-  active: {
-    label: '활성',
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  },
-  suspended: {
-    label: '정지',
-    className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  },
+const STATUS_BADGE_CLASS: Record<AccountStatus, string> = {
+  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  suspended: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export default function UserManagement() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { settings: systemSettings, setSettings: setSystemSettings } = useSystemSettingsStore();
@@ -130,7 +123,7 @@ export default function UserManagement() {
     } else {
       showFeedback({
         tone: 'error',
-        title: '??븷 蹂寃??ㅽ뙣',
+        title: t('userManagement.roleChangeFail'),
         message: error,
       });
     }
@@ -148,7 +141,7 @@ export default function UserManagement() {
     } else {
       showFeedback({
         tone: 'error',
-        title: '怨꾩젙 ?곹깭 蹂寃??ㅽ뙣',
+        title: t('userManagement.statusChangeFail'),
         message: error,
       });
     }
@@ -162,21 +155,21 @@ export default function UserManagement() {
       await setSystemSettings({ ...systemSettings, projectCreationPolicy: policy });
       showFeedback({
         tone: 'success',
-        title: '정책 변경 완료',
-        message: policy === 'all' ? '모든 사용자가 프로젝트를 생성할 수 있습니다.' : '관리자만 프로젝트를 생성할 수 있습니다.',
+        title: t('userManagement.policyChangeSuccess'),
+        message: policy === 'all' ? t('userManagement.policyAllUsers') : t('userManagement.policyAdminOnly'),
       });
     } catch {
-      showFeedback({ tone: 'error', title: '정책 변경 실패', message: '프로젝트 생성 정책을 변경하지 못했습니다.' });
+      showFeedback({ tone: 'error', title: t('userManagement.policyChangeFail'), message: t('userManagement.policyChangeFailMsg') });
     } finally {
       setSavingPolicy(false);
     }
   };
 
   const tabs: { key: TabFilter; label: string; count?: number }[] = [
-    { key: 'all', label: '전체', count: profiles.length },
-    { key: 'pending', label: '승인 대기', count: pendingCount },
-    { key: 'active', label: '활성', count: activeCount },
-    { key: 'suspended', label: '정지', count: suspendedCount },
+    { key: 'all', label: t('userManagement.tabs.all'), count: profiles.length },
+    { key: 'pending', label: t('userManagement.tabs.pending'), count: pendingCount },
+    { key: 'active', label: t('userManagement.tabs.active'), count: activeCount },
+    { key: 'suspended', label: t('userManagement.tabs.suspended'), count: suspendedCount },
   ];
 
   return (
@@ -193,13 +186,13 @@ export default function UserManagement() {
           {/* Stat bubbles */}
           <FloatingStatBubble
             value={String(profiles.length)}
-            label="사용자"
+            label={t('userManagement.floatingUsers')}
             className="hero-float-1 h-[76px] w-[76px]"
             style={{ top: '8%', right: '11%' }}
           />
           <FloatingStatBubble
             value={String(pendingCount)}
-            label="대기"
+            label={t('userManagement.floatingPending')}
             className="hero-float-3 h-[68px] w-[68px]"
             style={{ top: '40%', right: '5%' }}
           />
@@ -216,7 +209,7 @@ export default function UserManagement() {
           >
             <div className="mb-2 flex items-center gap-1.5">
               <ShieldCheck className="h-3 w-3 text-teal-400/60" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">역할 관리</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">{t('userManagement.roleManagement')}</span>
             </div>
             <div className="space-y-1.5">
               <div className="h-1 w-full rounded-full bg-white/15" />
@@ -281,10 +274,10 @@ export default function UserManagement() {
             Admin Console
           </div>
           <h1 className="mt-6 text-[clamp(2rem,4vw,3.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
-            DK Flow<br />사용자 관리
+            DK Flow<br />{t('userManagement.pageTitle')}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-white/90 md:text-lg">
-            시스템에 등록된 사용자의 역할과 권한을 관리합니다. 가입 승인, 역할 변경, 계정 상태를 한 곳에서 제어하세요.
+            {t('userManagement.pageDesc')}
           </p>
         </div>
       </section>
@@ -307,7 +300,7 @@ export default function UserManagement() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="이름 또는 이메일 검색..."
+            placeholder={t('userManagement.searchPlaceholder')}
             className="w-48 bg-transparent text-sm outline-none placeholder:text-[color:var(--text-secondary)]"
           />
         </div>
@@ -318,28 +311,28 @@ export default function UserManagement() {
         <div className="rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
           <div className="flex items-center gap-2 text-[color:var(--text-secondary)]">
             <Users className="h-4 w-4" />
-            <span className="text-xs font-medium">전체 사용자</span>
+            <span className="text-xs font-medium">{t('userManagement.totalUsers')}</span>
           </div>
           <p className="mt-1 text-xl font-bold">{profiles.length}</p>
         </div>
         <div className="rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
           <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
             <Clock className="h-4 w-4" />
-            <span className="text-xs font-medium">승인 대기</span>
+            <span className="text-xs font-medium">{t('userManagement.tabs.pending')}</span>
           </div>
           <p className="mt-1 text-xl font-bold">{pendingCount}</p>
         </div>
         <div className="rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
           <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
             <UserCheck className="h-4 w-4" />
-            <span className="text-xs font-medium">활성</span>
+            <span className="text-xs font-medium">{t('userManagement.tabs.active')}</span>
           </div>
           <p className="mt-1 text-xl font-bold">{activeCount}</p>
         </div>
         <div className="rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
           <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
             <UserX className="h-4 w-4" />
-            <span className="text-xs font-medium">정지</span>
+            <span className="text-xs font-medium">{t('userManagement.tabs.suspended')}</span>
           </div>
           <p className="mt-1 text-xl font-bold">{suspendedCount}</p>
         </div>
@@ -347,29 +340,29 @@ export default function UserManagement() {
 
       {/* Tabs */}
       <div className="mb-4 flex gap-1 rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-1">
-        {tabs.map((t) => (
+        {tabs.map((tabItem) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tabItem.key}
+            onClick={() => setTab(tabItem.key)}
             className={`relative flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-              tab === t.key
+              tab === tabItem.key
                 ? 'bg-[color:var(--accent-primary)] text-white shadow-sm'
                 : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-secondary)] hover:text-[color:var(--text-primary)]'
             }`}
           >
-            {t.label}
-            {t.key === 'pending' && pendingCount > 0 && tab !== 'pending' && (
+            {tabItem.label}
+            {tabItem.key === 'pending' && pendingCount > 0 && tab !== 'pending' && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
                 {pendingCount}
               </span>
             )}
-            {t.key !== 'pending' && t.count !== undefined && (
-              <span className={`text-xs ${tab === t.key ? 'text-white/70' : 'text-[color:var(--text-muted)]'}`}>
-                {t.count}
+            {tabItem.key !== 'pending' && tabItem.count !== undefined && (
+              <span className={`text-xs ${tab === tabItem.key ? 'text-white/70' : 'text-[color:var(--text-muted)]'}`}>
+                {tabItem.count}
               </span>
             )}
-            {t.key === 'pending' && (tab === 'pending' || pendingCount === 0) && (
-              <span className={`text-xs ${tab === t.key ? 'text-white/70' : 'text-[color:var(--text-muted)]'}`}>
+            {tabItem.key === 'pending' && (tab === 'pending' || pendingCount === 0) && (
+              <span className={`text-xs ${tab === tabItem.key ? 'text-white/70' : 'text-[color:var(--text-muted)]'}`}>
                 {pendingCount}
               </span>
             )}
@@ -386,7 +379,7 @@ export default function UserManagement() {
         <div className="flex flex-col items-center justify-center py-20 text-[color:var(--text-muted)]">
           <Users className="mb-3 h-10 w-10 opacity-40" />
           <p className="text-sm">
-            {search ? '검색 결과가 없습니다.' : tab !== 'all' ? '해당 상태의 사용자가 없습니다.' : '등록된 사용자가 없습니다.'}
+            {search ? t('userManagement.noSearchResults') : tab !== 'all' ? t('userManagement.noUsersInStatus') : t('userManagement.noUsers')}
           </p>
         </div>
       ) : (
@@ -394,17 +387,17 @@ export default function UserManagement() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)]">
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">이름</th>
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">이메일</th>
-                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">가입일</th>
-                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">상태</th>
-                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">역할</th>
-                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">계정 관리</th>
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.name')}</th>
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.email')}</th>
+                <th className="px-4 py-3 text-left font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.joinDate')}</th>
+                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.status')}</th>
+                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.role')}</th>
+                <th className="px-4 py-3 text-center font-semibold text-[color:var(--text-secondary)]">{t('userManagement.table.accountActions')}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((profile) => {
-                const badge = STATUS_BADGE[profile.accountStatus];
+                const badgeClass = STATUS_BADGE_CLASS[profile.accountStatus];
                 const isSelf = profile.id === user?.id;
                 const isUpdatingThis = updating === profile.id;
 
@@ -417,7 +410,7 @@ export default function UserManagement() {
                     <td className="px-4 py-3 font-medium">
                       {profile.name}
                       {isSelf && (
-                        <span className="ml-2 text-xs text-[color:var(--text-secondary)]">(나)</span>
+                        <span className="ml-2 text-xs text-[color:var(--text-secondary)]">({t('userManagement.self')})</span>
                       )}
                     </td>
 
@@ -426,17 +419,17 @@ export default function UserManagement() {
 
                     {/* Created at */}
                     <td className="px-4 py-3 text-[color:var(--text-secondary)]">
-                      {new Date(profile.createdAt).toLocaleDateString('ko-KR')}
+                      {new Date(profile.createdAt).toLocaleDateString(i18n.language)}
                     </td>
 
                     {/* Account status badge */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
-                        <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ${badge.className}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
                           {profile.accountStatus === 'pending' && <Clock className="h-3 w-3" />}
                           {profile.accountStatus === 'active' && <UserCheck className="h-3 w-3" />}
                           {profile.accountStatus === 'suspended' && <UserX className="h-3 w-3" />}
-                          {badge.label}
+                          {t('userManagement.status.' + profile.accountStatus)}
                         </span>
                       </div>
                     </td>
@@ -447,7 +440,7 @@ export default function UserManagement() {
                         {isSelf ? (
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
                             <ShieldCheck className="h-3.5 w-3.5" />
-                            관리자
+                            {t('userManagement.roleAdmin')}
                           </span>
                         ) : (
                           <button
@@ -471,7 +464,7 @@ export default function UserManagement() {
                             ) : (
                               <Shield className="h-3.5 w-3.5" />
                             )}
-                            {profile.systemRole === 'admin' ? '관리자' : '일반 사용자'}
+                            {profile.systemRole === 'admin' ? t('userManagement.roleAdmin') : t('userManagement.roleUser')}
                           </button>
                         )}
                       </div>
@@ -494,7 +487,7 @@ export default function UserManagement() {
                               ) : (
                                 <UserCheck className="h-3 w-3" />
                               )}
-                              승인
+                              {t('userManagement.approve')}
                             </button>
                             <button
                               onClick={() => void handleStatusChange(profile.id, 'suspended')}
@@ -506,7 +499,7 @@ export default function UserManagement() {
                               ) : (
                                 <UserX className="h-3 w-3" />
                               )}
-                              거부
+                              {t('userManagement.reject')}
                             </button>
                           </>
                         ) : profile.accountStatus === 'active' ? (
@@ -520,7 +513,7 @@ export default function UserManagement() {
                             ) : (
                               <UserX className="h-3 w-3" />
                             )}
-                            정지
+                            {t('userManagement.suspend')}
                           </button>
                         ) : (
                           <button
@@ -533,7 +526,7 @@ export default function UserManagement() {
                             ) : (
                               <RefreshCw className="h-3 w-3" />
                             )}
-                            복구
+                            {t('userManagement.restore')}
                           </button>
                         )}
                       </div>
@@ -553,14 +546,14 @@ export default function UserManagement() {
             <Settings className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">프로젝트 생성 권한</h2>
-            <p className="text-sm text-[color:var(--text-secondary)]">누가 새 프로젝트를 만들 수 있는지 제어합니다.</p>
+            <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">{t('userManagement.projectCreationPolicy')}</h2>
+            <p className="text-sm text-[color:var(--text-secondary)]">{t('userManagement.projectCreationPolicyDesc')}</p>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {([
-            { key: 'all' as const, title: '모든 사용자', desc: '로그인한 모든 활성 사용자가 프로젝트를 생성할 수 있습니다.' },
-            { key: 'admin_only' as const, title: '관리자만', desc: '시스템 관리자만 프로젝트를 생성할 수 있습니다.' },
+            { key: 'all' as const, title: t('userManagement.policyOptionAll'), desc: t('userManagement.policyOptionAllDesc') },
+            { key: 'admin_only' as const, title: t('userManagement.policyOptionAdminOnly'), desc: t('userManagement.policyOptionAdminOnlyDesc') },
           ]).map((option) => {
             const isSelected = systemSettings.projectCreationPolicy === option.key;
             return (
@@ -577,7 +570,7 @@ export default function UserManagement() {
                 <p className="font-medium text-[color:var(--text-primary)]">
                   {option.title}
                   {isSelected && (
-                    <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 정책</span>
+                    <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('userManagement.currentPolicy')}</span>
                   )}
                 </p>
                 <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{option.desc}</p>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus,
@@ -45,6 +46,7 @@ import type { Project, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 
 export default function ProjectList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { projects, addProject, deleteProject } = useProjectStore();
@@ -95,15 +97,15 @@ export default function ProjectList() {
   const validateProjectName = (name: string): string | null => {
     const trimmed = name.trim();
     if (!trimmed) return null; // 빈 값은 disabled로 처리
-    if (trimmed.length < 2) return '프로젝트명은 2자 이상이어야 합니다.';
-    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return '프로젝트명에는 한글, 영문 또는 숫자가 포함되어야 합니다.';
-    if (/<[^>]*>/.test(trimmed)) return 'HTML 태그는 사용할 수 없습니다.';
+    if (trimmed.length < 2) return t('validation.projectNameMinLength');
+    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return t('validation.projectNamePattern');
+    if (/<[^>]*>/.test(trimmed)) return t('validation.htmlNotAllowed');
     return null;
   };
 
   const validateDates = (startDate: string, endDate: string): string | null => {
     if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-      return '종료일은 시작일보다 이후여야 합니다.';
+      return t('validation.endDateAfterStart');
     }
     return null;
   };
@@ -119,11 +121,11 @@ export default function ProjectList() {
 
   const getCreateButtonText = (): string => {
     if (isCreating) return ''; // handled separately with spinner
-    if (!newProject.name.trim()) return '프로젝트명을 입력해주세요';
-    if (nameError) return '프로젝트명을 확인해주세요';
-    if (dateError) return '날짜를 확인해주세요';
-    if (newProject.creationMode === 'clone' && !newProject.sourceProjectId) return '복제 원본을 선택해주세요';
-    return '생성';
+    if (!newProject.name.trim()) return t('projectList.enterProjectName');
+    if (nameError) return t('projectList.checkProjectName');
+    if (dateError) return t('projectList.checkDate');
+    if (newProject.creationMode === 'clone' && !newProject.sourceProjectId) return t('projectList.selectCloneSource');
+    return t('projectList.create');
   };
 
   const filteredProjects = projects.filter(
@@ -147,7 +149,7 @@ export default function ProjectList() {
     setCreateError(null);
     const timeoutId = setTimeout(() => {
       setIsCreating(false);
-      setCreateError('프로젝트 생성에 시간이 너무 오래 걸립니다. 다시 시도해주세요.');
+      setCreateError(t('projectList.createTimeout'));
     }, 15000);
 
     let createdProjectId: string | null = null;
@@ -258,15 +260,15 @@ export default function ProjectList() {
       deleteProject(pendingDeleteProject.id);
       showFeedback({
         tone: 'success',
-        title: '프로젝트 삭제 완료',
-        message: `"${pendingDeleteProject.name}" 프로젝트를 삭제했습니다.`,
+        title: t('projectList.deleteSuccess'),
+        message: t('projectList.deleteSuccessMsg', { name: pendingDeleteProject.name }),
       });
     } catch (error) {
       console.error('Failed to delete project:', error);
       showFeedback({
         tone: 'error',
-        title: '프로젝트 삭제 실패',
-        message: '프로젝트를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        title: t('projectList.deleteFail'),
+        message: t('projectList.deleteFailMsg'),
       });
     } finally {
       setIsDeleting(false);
@@ -281,15 +283,15 @@ export default function ProjectList() {
       await changeStatus(project, newStatus);
       showFeedback({
         tone: 'success',
-        title: '상태 고정 완료',
-        message: `"${project.name}" 프로젝트 상태를 "${PROJECT_STATUS_LABELS[newStatus]}"로 변경했습니다.`,
+        title: t('projectList.statusChangeSuccess'),
+        message: t('projectList.statusChangeSuccessMsg', { name: project.name, status: PROJECT_STATUS_LABELS[newStatus] }),
       });
     } catch (error) {
       console.error('Failed to change project status:', error);
       showFeedback({
         tone: 'error',
-        title: '상태 변경 실패',
-        message: '프로젝트 상태를 변경하지 못했습니다.',
+        title: t('projectList.statusChangeFail'),
+        message: t('projectList.statusChangeFailMsg'),
       });
     }
     setMenuOpenId(null);
@@ -396,24 +398,23 @@ export default function ProjectList() {
               Project Library
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.8rem)] font-semibold tracking-[-0.06em] text-white">
-              프로젝트를 한곳에서
+              {t('projectList.heroTitle1')}
               <br />
-              선명하게 관리합니다
+              {t('projectList.heroTitle2')}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
-              검색, 상태, 최근성까지 한 번에 읽히는 카드 뷰로 재구성했습니다. 프로젝트 생성 모달도
-              같은 시각 언어로 맞춰 워크플로우가 끊기지 않도록 정리했습니다.
+              {t('projectList.heroDesc')}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               {canCreateProject && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="w-4 h-4" />
-                  새 프로젝트
+                  {t('projectList.newProject')}
                 </Button>
               )}
               <Link to="/">
                 <Button variant="outline" className="border-white/12 bg-white/[0.14] text-white hover:bg-white/[0.2]">
-                  홈으로
+                  {t('projectList.goHome')}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -439,21 +440,21 @@ export default function ProjectList() {
                 <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
                   {preparingProjects}
                 </p>
-                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">준비중 프로젝트</p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('projectList.preparingProjects')}</p>
               </div>
               <div className="metric-card p-6">
                 <p className="eyebrow-stat">Active</p>
                 <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
                   {activeProjects}
                 </p>
-                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">진행중 프로젝트</p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('projectList.activeProjects')}</p>
               </div>
               <div className="metric-card p-6">
                 <p className="eyebrow-stat">Completed</p>
                 <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
                   {completedProjects}
                 </p>
-                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">완료된 프로젝트</p>
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('projectList.completedProjects')}</p>
               </div>
             </>
           )}
@@ -465,23 +466,23 @@ export default function ProjectList() {
           <div>
             <p className="page-kicker">Search & Filter</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              프로젝트 탐색
+              {t('projectList.explore')}
             </h2>
           </div>
           {canCreateProject && (
             <Button variant="outline" onClick={() => setShowCreateModal(true)} data-testid="projects-open-create-button">
               <Plus className="w-4 h-4" />
-              새 프로젝트
+              {t('projectList.newProject')}
             </Button>
           )}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {([
-            { key: 'all' as const, label: '전체', count: projects.filter((p) => p.status !== 'deleted').length },
-            { key: 'preparing' as const, label: '준비', count: preparingProjects, icon: <Clock3 className="h-3.5 w-3.5" /> },
-            { key: 'active' as const, label: '진행', count: activeProjects, icon: <Play className="h-3.5 w-3.5" /> },
-            { key: 'completed' as const, label: '완료', count: completedProjects, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+            { key: 'all' as const, label: t('projectList.all'), count: projects.filter((p) => p.status !== 'deleted').length },
+            { key: 'preparing' as const, label: t('projectList.preparing'), count: preparingProjects, icon: <Clock3 className="h-3.5 w-3.5" /> },
+            { key: 'active' as const, label: t('projectList.inProgress'), count: activeProjects, icon: <Play className="h-3.5 w-3.5" /> },
+            { key: 'completed' as const, label: t('projectList.completed'), count: completedProjects, icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -509,7 +510,7 @@ export default function ProjectList() {
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--text-muted)]" />
           <input
             type="text"
-            placeholder="프로젝트 이름으로 검색"
+            placeholder={t('projectList.searchPlaceholder')}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             className="field-input !pl-12"
@@ -586,7 +587,7 @@ export default function ProjectList() {
                               className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                             >
                               <Clock3 className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.preparing }} />
-                              준비로 변경
+                              {t('projectList.changeToPreparing')}
                             </button>
                           )}
                           {isAdmin && project.status !== 'active' && (
@@ -595,7 +596,7 @@ export default function ProjectList() {
                               className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                             >
                               <Play className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.active }} />
-                              진행으로 변경
+                              {t('projectList.changeToActive')}
                             </button>
                           )}
                           {isAdmin && project.status !== 'completed' && (
@@ -604,7 +605,7 @@ export default function ProjectList() {
                               className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                             >
                               <CheckCircle2 className="w-4 h-4" style={{ color: PROJECT_STATUS_COLORS.completed }} />
-                              완료 처리
+                              {t('projectList.markCompleted')}
                             </button>
                           )}
                           {isAdmin && (
@@ -615,13 +616,13 @@ export default function ProjectList() {
                                 className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-[color:var(--accent-danger)] transition-colors hover:bg-[rgba(203,75,95,0.08)]"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                삭제
+                                {t('projectList.delete')}
                               </button>
                             </>
                           )}
                           {!isAdmin && (
                             <p className="px-3 py-2 text-xs text-[color:var(--text-muted)]">
-                              조회/수정만 가능합니다
+                              {t('projectList.viewEditOnly')}
                             </p>
                           )}
                         </div>
@@ -652,7 +653,7 @@ export default function ProjectList() {
                       </div>
                       {project.completedAt ? (
                         <p className="mt-3 text-xs text-[color:var(--text-secondary)]">
-                          완료일: {new Date(project.completedAt).toLocaleDateString('ko-KR')}
+                          {t('projectList.completedDate')}: {new Date(project.completedAt).toLocaleDateString('ko-KR')}
                         </p>
                       ) : (
                         <p className="mt-3 text-xs" style={{ color: tone.accent }}>
@@ -660,7 +661,7 @@ export default function ProjectList() {
                         </p>
                       )}
                       <div className="mt-3 flex items-center justify-between">
-                        <p className="text-sm font-medium text-[color:var(--text-primary)]">프로젝트 열기</p>
+                        <p className="text-sm font-medium text-[color:var(--text-primary)]">{t('projectList.openWorkspace')}</p>
                         <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)] transition-transform duration-200 group-hover:translate-x-1" />
                       </div>
                     </div>
@@ -675,17 +676,17 @@ export default function ProjectList() {
           <div className="empty-state px-6 py-16">
             <FolderOpen className="h-12 w-12 text-[color:var(--text-muted)]" />
             <h3 className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              {searchQuery ? '검색 결과가 없습니다' : '프로젝트가 없습니다'}
+              {searchQuery ? t('projectList.noSearchResults') : t('projectList.noProjects')}
             </h3>
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
               {searchQuery
-                ? '다른 키워드로 검색하거나 새 프로젝트를 생성해보세요.'
-                : '첫 프로젝트를 만들면 여기에서 카드 기반으로 관리할 수 있습니다.'}
+                ? t('projectList.noSearchResultsDesc')
+                : t('projectList.noProjectsDesc')}
             </p>
             {!searchQuery && canCreateProject && (
               <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className="w-4 h-4" />
-                새 프로젝트 만들기
+                {t('projectList.createNewProject')}
               </Button>
             )}
           </div>
@@ -695,52 +696,52 @@ export default function ProjectList() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="새 프로젝트"
+        title={t('projectList.createTitle')}
         size="md"
       >
         <div className="space-y-5 p-6">
           <div>
-            <label className="field-label">프로젝트명 *</label>
+            <label className="field-label">{t('projectList.projectName')}</label>
             <input
               type="text"
               value={newProject.name}
               onChange={(event) => setNewProject({ ...newProject, name: event.target.value })}
               data-testid="projects-create-name"
               className="field-input"
-              placeholder="예: 통합 운영 대시보드 고도화"
+              placeholder={t('projectList.projectNamePlaceholder')}
               maxLength={100}
               autoFocus
             />
             <div className="mt-1.5 flex items-center justify-between">
               <div>
                 {newProject.name.length > 0 && !newProject.name.trim() && (
-                  <p className="text-xs text-[color:var(--accent-danger)]">프로젝트명을 입력해주세요.</p>
+                  <p className="text-xs text-[color:var(--accent-danger)]">{t('projectList.enterProjectName')}</p>
                 )}
                 {nameError && (
                   <p className="text-xs text-[color:var(--accent-danger)]">{nameError}</p>
                 )}
               </div>
               {newProject.name.length >= 80 && (
-                <p className="text-xs text-[color:var(--text-muted)]">{newProject.name.length}/100자</p>
+                <p className="text-xs text-[color:var(--text-muted)]">{newProject.name.length}/100{t('projectList.charSuffix')}</p>
               )}
             </div>
           </div>
 
           <div>
-            <label className="field-label">설명</label>
+            <label className="field-label">{t('projectList.description')}</label>
             <textarea
               value={newProject.description}
               onChange={(event) => setNewProject({ ...newProject, description: event.target.value })}
               data-testid="projects-create-description"
               className="field-textarea"
               rows={4}
-              placeholder="프로젝트 목적, 범위, 전달 포인트를 간단히 적어주세요"
+              placeholder={t('projectList.descriptionPlaceholder')}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="field-label">시작 방식</label>
+              <label className="field-label">{t('projectList.creationMode')}</label>
               <select
                 value={newProject.creationMode}
                 onChange={(event) =>
@@ -752,20 +753,20 @@ export default function ProjectList() {
                 }
                 className="field-select"
               >
-                <option value="blank">빈 프로젝트</option>
-                <option value="clone">기존 프로젝트 복제</option>
+                <option value="blank">{t('projectList.blankProject')}</option>
+                <option value="clone">{t('projectList.cloneProject')}</option>
               </select>
             </div>
 
             <div>
-              <label className="field-label">복제 원본</label>
+              <label className="field-label">{t('projectList.sourceProject')}</label>
               <select
                 value={newProject.sourceProjectId}
                 onChange={(event) => setNewProject({ ...newProject, sourceProjectId: event.target.value })}
                 className="field-select"
                 disabled={newProject.creationMode !== 'clone'}
               >
-                <option value="">원본 프로젝트 선택</option>
+                <option value="">{t('projectList.selectSource')}</option>
                 {reusableProjects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -778,7 +779,7 @@ export default function ProjectList() {
           <div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="field-label">시작일</label>
+                <label className="field-label">{t('projectList.startDate')}</label>
                 <input
                   type="date"
                   value={newProject.startDate}
@@ -787,7 +788,7 @@ export default function ProjectList() {
                 />
               </div>
               <div>
-                <label className="field-label">종료일</label>
+                <label className="field-label">{t('projectList.endDate')}</label>
                 <input
                   type="date"
                   value={newProject.endDate}
@@ -803,27 +804,27 @@ export default function ProjectList() {
 
           {newProject.creationMode === 'clone' && (
             <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              복제를 선택하면 기존 WBS와 멤버 구성을 새 프로젝트로 복사하고, 진행 상태와 실적은 초기화합니다.
+              {t('projectList.cloneDescription')}
             </p>
           )}
 
           {createError && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-              <p className="font-medium">프로젝트 생성 실패</p>
+              <p className="font-medium">{t('projectList.createFailed')}</p>
               <p className="mt-1 text-xs opacity-80">{createError}</p>
             </div>
           )}
 
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => { setShowCreateModal(false); setCreateError(null); }}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => void handleCreateProject()}
               disabled={isCreateDisabled}
               data-testid="projects-create-submit"
             >
-              {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> 생성 중...</> : getCreateButtonText()}
+              {isCreating ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('projectList.creating')}</> : getCreateButtonText()}
             </Button>
           </div>
         </div>
@@ -833,13 +834,13 @@ export default function ProjectList() {
         isOpen={Boolean(pendingDeleteProject)}
         onClose={() => setPendingDeleteProject(null)}
         onConfirm={() => void confirmDeleteProject()}
-        title="프로젝트 삭제"
+        title={t('projectList.deleteProject')}
         description={
           pendingDeleteProject
-            ? `"${pendingDeleteProject.name}" 프로젝트와 관련 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`
+            ? t('projectList.deleteConfirmDesc', { name: pendingDeleteProject.name })
             : ''
         }
-        confirmLabel="프로젝트 삭제"
+        confirmLabel={t('projectList.deleteProject')}
         confirmVariant="danger"
         isLoading={isDeleting}
       />

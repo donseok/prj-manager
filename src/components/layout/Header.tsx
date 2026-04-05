@@ -14,8 +14,10 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import DKFlowLogo from '../common/DKFlowLogo';
 import NotificationBell from './NotificationBell';
+import LanguageSelector from '../common/LanguageSelector';
 import { useAuthStore } from '../../store/authStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -24,6 +26,7 @@ import { isAIConfigured } from '../../lib/ai';
 import { loadPendingCount, signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
+  const { t, i18n } = useTranslation();
   const { user, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
@@ -35,7 +38,8 @@ export default function Header() {
   const aiConfigured = isAIConfigured();
 
   const settingsLink = currentProject ? `/projects/${currentProject.id}/settings` : '/projects';
-  const todayLabel = new Intl.DateTimeFormat('ko-KR', {
+  const dateLocale = i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+  const todayLabel = new Intl.DateTimeFormat(dateLocale, {
     month: 'long',
     day: 'numeric',
     weekday: 'short',
@@ -95,7 +99,7 @@ export default function Header() {
                 DK Flow
               </span>
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)] transition-colors duration-300 group-hover:text-[color:var(--text-secondary)]">
-                업무의 흐름을 설계하다
+                {t('header.slogan')}
               </p>
             </div>
           </Link>
@@ -119,7 +123,7 @@ export default function Header() {
 
           <div
             className="relative hidden items-center md:flex"
-            title={!aiConfigured ? 'Settings에서 AI API Key를 먼저 설정하세요' : `현재 모드: ${inputMode === 'ai' ? 'AI 자동입력' : '수동입력'}`}
+            title={!aiConfigured ? t('header.aiKeyRequired') : `${t('header.currentMode')}: ${inputMode === 'ai' ? t('header.aiAutoInput') : t('header.manualInput')}`}
           >
             <button
               type="button"
@@ -141,17 +145,19 @@ export default function Header() {
               ) : (
                 <>
                   <Hand className="h-4 w-4" />
-                  <span>수동</span>
+                  <span>{t('header.manual')}</span>
                 </>
               )}
             </button>
           </div>
 
+          <LanguageSelector />
+
           <button
             type="button"
             onClick={toggleTheme}
             className="group relative flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)]"
-            title={isDark ? '라이트 모드' : '다크 모드'}
+            title={isDark ? t('header.lightMode') : t('header.darkMode')}
           >
             {isDark ? (
               <Sun className="h-5 w-5 text-amber-300 transition-all duration-300 group-hover:rotate-45 group-hover:text-amber-200" />
@@ -183,7 +189,7 @@ export default function Header() {
                   {isAdmin ? 'Admin' : 'Operator'}
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">
-                  {user?.name || '사용자'}
+                  {user?.name || t('header.userMenu.defaultUser')}
                 </p>
               </div>
             </button>
@@ -193,7 +199,7 @@ export default function Header() {
                 <div className="rounded-[20px] border border-white/10 bg-[image:var(--gradient-primary)] p-4 text-white shadow-[0_24px_52px_-28px_rgba(15,118,110,0.82)]">
                   <div className="flex items-center gap-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/82">
-                      로그인 계정
+                      {t('header.userMenu.loginAccount')}
                     </p>
                     {isAdmin && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
@@ -203,7 +209,7 @@ export default function Header() {
                     )}
                   </div>
                   <p className="mt-2 text-base font-semibold tracking-[-0.03em]">
-                    {user?.name || '사용자'}
+                    {user?.name || t('header.userMenu.defaultUser')}
                   </p>
                   <p className="mt-1 truncate text-sm text-white/82" title={user?.email || 'user@example.com'}>
                     {user?.email || 'user@example.com'}
@@ -217,7 +223,7 @@ export default function Header() {
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Users className="h-4 w-4" />
-                    사용자 관리
+                    {t('header.userMenu.userManagement')}
                     {pendingCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1.5 text-[11px] font-bold text-white">
                         {pendingCount}
@@ -232,7 +238,7 @@ export default function Header() {
                   onClick={() => setShowUserMenu(false)}
                 >
                   <Settings className="h-4 w-4" />
-                  설정
+                  {t('header.userMenu.settings')}
                 </Link>
 
                 <div className="my-1 border-t border-[var(--border-color)]" />
@@ -243,7 +249,7 @@ export default function Header() {
                   onClick={() => setShowUserMenu(false)}
                 >
                   <User className="h-4 w-4" />
-                  계정 설정
+                  {t('header.userMenu.accountSettings')}
                 </Link>
               </div>
             )}
@@ -253,10 +259,10 @@ export default function Header() {
             type="button"
             onClick={handleLogout}
             className="group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(203,75,95,0.2)] bg-[rgba(203,75,95,0.08)] px-3 text-sm font-semibold text-[color:var(--accent-danger)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(203,75,95,0.14)]"
-            title="로그아웃"
+            title={t('header.logout')}
           >
             <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-            <span className="hidden sm:inline">로그아웃</span>
+            <span className="hidden sm:inline">{t('header.logout')}</span>
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2, Sparkles, Sun, Moon, Settings, Zap, GitBranch, Target, Lightbulb, BarChart3, Clock } from 'lucide-react';
 import DKFlowLogo from '../components/common/DKFlowLogo';
 import { useAuthStore } from '../store/authStore';
@@ -8,6 +9,7 @@ import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
 export default function Login() {
   const { isAuthenticated, setUser, isPending, isSuspended } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -49,7 +51,7 @@ export default function Login() {
         }
       } else {
         if (!name.trim()) {
-          setError('이름을 입력해주세요.');
+          setError(t('login.nameRequired'));
           return;
         }
         const result = await signUpWithEmail(email, password, name.trim());
@@ -59,7 +61,7 @@ export default function Login() {
         }
         if (result.user) {
           setUser(result.user);
-          setSuccessMessage('회원가입이 완료되었습니다. 관리자 승인 후 이용 가능합니다.');
+          setSuccessMessage(t('login.signupSuccess'));
           setMode('login');
           setEmail('');
           setPassword('');
@@ -200,19 +202,32 @@ export default function Login() {
               Project Management System
             </div>
             <h1 className="mt-6 text-[clamp(2.2rem,4vw,3.6rem)] font-semibold leading-[0.95] tracking-[-0.06em] text-white">
-              업무의 흐름을
-              <br />
-              설계하다
+              {t('login.brandTagline')}
             </h1>
             <p className="mx-auto mt-6 max-w-sm text-base leading-7 text-white/88">
-              WBS, 간트 차트, 팀 관리를 하나의 흐름으로.
+              {t('login.brandDescription1')}
               <br />
-              프로젝트의 시작부터 완료까지 선명하게.
+              {t('login.brandDescription2')}
             </p>
+
+            <div className="mx-auto mt-10 grid max-w-xs grid-cols-3 gap-4">
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
+                <p className="text-2xl font-semibold text-white">WBS</p>
+                <p className="mt-1 text-[11px] text-white/84">{t('login.wbsLabel')}</p>
+              </div>
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
+                <p className="text-2xl font-semibold text-white">Gantt</p>
+                <p className="mt-1 text-[11px] text-white/84">{t('login.scheduleLabel')}</p>
+              </div>
+              <div className="rounded-[20px] border border-white/12 bg-white/[0.12] p-4 text-center">
+                <p className="text-2xl font-semibold text-white">Team</p>
+                <p className="mt-1 text-[11px] text-white/84">{t('login.teamLabel')}</p>
+              </div>
+            </div>
           </div>
 
-          <p className="absolute bottom-6 z-10 text-xs text-white/84">
-            &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
+          <p className="absolute bottom-6 text-xs text-white/84">
+            {t('footer.copyright', { year: new Date().getFullYear() })}
           </p>
         </div>
       </div>
@@ -223,7 +238,7 @@ export default function Login() {
         <button
           onClick={toggleTheme}
           className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
-          title={isDark ? '라이트 모드' : '다크 모드'}
+          title={isDark ? t('header.lightMode') : t('header.darkMode')}
         >
           {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </button>
@@ -236,19 +251,19 @@ export default function Login() {
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-[-0.02em]">DK Flow</h1>
-              <p className="mt-1 text-sm text-[color:var(--text-muted)]">업무의 흐름을 설계하다</p>
+              <p className="mt-1 text-sm text-[color:var(--text-muted)]">{t('login.brandTagline')}</p>
             </div>
           </div>
 
           {/* 헤더 텍스트 */}
           <div className="mb-8 hidden lg:block">
             <h2 className="text-3xl font-semibold tracking-[-0.04em]">
-              {mode === 'login' ? '다시 오신 것을 환영합니다' : '새 계정을 만들어 보세요'}
+              {mode === 'login' ? t('login.welcomeBack') : t('login.createAccount')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
               {mode === 'login'
-                ? '이메일과 비밀번호로 로그인하세요.'
-                : '가입 후 바로 프로젝트 관리를 시작할 수 있습니다.'}
+                ? t('login.loginDescription')
+                : t('login.signupDescription')}
             </p>
           </div>
 
@@ -265,7 +280,7 @@ export default function Login() {
                 }`}
               >
                 <LogIn className="h-4 w-4" />
-                로그인
+                {t('login.loginTab')}
               </button>
               <button
                 onClick={() => { setMode('signup'); setError(null); setSuccessMessage(null); }}
@@ -276,14 +291,14 @@ export default function Login() {
                 }`}
               >
                 <UserPlus className="h-4 w-4" />
-                회원가입
+                {t('login.signupTab')}
               </button>
             </div>
 
             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
               {mode === 'signup' && (
                 <div>
-                  <label className="field-label">이름</label>
+                  <label className="field-label">{t('login.nameLabel')}</label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
                     <input
@@ -298,7 +313,7 @@ export default function Login() {
               )}
 
               <div>
-                <label className="field-label">이메일</label>
+                <label className="field-label">{t('login.emailLabel')}</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
                   <input
@@ -312,7 +327,7 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="field-label">비밀번호</label>
+                <label className="field-label">{t('login.passwordLabel')}</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
                   <input
@@ -356,12 +371,12 @@ export default function Login() {
                 ) : mode === 'login' ? (
                   <>
                     <LogIn className="h-4 w-4" />
-                    로그인
+                    {t('login.loginButton')}
                   </>
                 ) : (
                   <>
                     <UserPlus className="h-4 w-4" />
-                    회원가입
+                    {t('login.signupButton')}
                   </>
                 )}
               </button>
@@ -370,7 +385,7 @@ export default function Login() {
           </div>
 
           <p className="mt-6 text-center text-xs text-[color:var(--text-muted)] lg:hidden">
-            &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
+            {t('footer.copyright', { year: new Date().getFullYear() })}
           </p>
         </div>
       </div>

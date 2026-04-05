@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollText } from 'lucide-react';
 import { loadAuditLog } from '../../lib/auditLog';
 import type { AuditAction, AuditLogEntry } from '../../types/audit';
 
-const ACTION_LABELS: Record<AuditAction, string> = {
-  'project.delete': '프로젝트 삭제',
-  'project.settings_change': '프로젝트 설정 변경',
-  'member.role_change': '멤버 역할 변경',
-  'member.add': '멤버 추가',
-  'member.remove': '멤버 삭제',
-  'task.delete': '태스크 삭제',
-  'owner.transfer': '소유권 이전',
+const ACTION_LABEL_KEYS: Record<AuditAction, string> = {
+  'project.delete': 'auditLog.actions.projectDelete',
+  'project.settings_change': 'auditLog.actions.projectSettingsChange',
+  'member.role_change': 'auditLog.actions.memberRoleChange',
+  'member.add': 'auditLog.actions.memberAdd',
+  'member.remove': 'auditLog.actions.memberRemove',
+  'task.delete': 'auditLog.actions.taskDelete',
+  'owner.transfer': 'auditLog.actions.ownerTransfer',
 };
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function AuditLogPanel({ projectId }: Props) {
+  const { t, i18n } = useTranslation();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loadedId, setLoadedId] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export default function AuditLogPanel({ projectId }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-[color:var(--text-muted)]">
         <ScrollText className="mb-2 h-8 w-8 opacity-40" />
-        <p className="text-sm">감사 로그가 없습니다.</p>
+        <p className="text-sm">{t('auditLog.noEntries')}</p>
       </div>
     );
   }
@@ -56,17 +58,17 @@ export default function AuditLogPanel({ projectId }: Props) {
       <table className="w-full text-sm">
         <thead className="sticky top-0 bg-[color:var(--bg-elevated)]">
           <tr className="border-b border-[var(--border-color)]">
-            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">시간</th>
-            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">사용자</th>
-            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">작업</th>
-            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">상세</th>
+            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">{t('auditLog.time')}</th>
+            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">{t('auditLog.user')}</th>
+            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">{t('auditLog.action')}</th>
+            <th className="px-3 py-2 text-left font-semibold text-[color:var(--text-secondary)]">{t('auditLog.details')}</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry) => (
             <tr key={entry.id} className="border-b border-[var(--border-color)] last:border-b-0">
               <td className="whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]">
-                {new Date(entry.createdAt).toLocaleString('ko-KR', {
+                {new Date(entry.createdAt).toLocaleString(i18n.language, {
                   month: '2-digit',
                   day: '2-digit',
                   hour: '2-digit',
@@ -76,7 +78,7 @@ export default function AuditLogPanel({ projectId }: Props) {
               <td className="px-3 py-2 text-[color:var(--text-primary)]">{entry.userName}</td>
               <td className="px-3 py-2">
                 <span className="inline-block rounded-md bg-[color:var(--bg-tertiary)] px-2 py-0.5 text-xs font-medium text-[color:var(--text-secondary)]">
-                  {ACTION_LABELS[entry.action] ?? entry.action}
+                  {t(ACTION_LABEL_KEYS[entry.action]) ?? entry.action}
                 </span>
               </td>
               <td className="px-3 py-2 text-[color:var(--text-secondary)]">{entry.details}</td>

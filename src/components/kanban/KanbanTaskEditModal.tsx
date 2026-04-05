@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, CheckCircle2, Circle, Calendar, User, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
@@ -33,6 +34,7 @@ function KanbanTaskEditModal({
   onClose,
   onSave,
 }: KanbanTaskEditModalProps) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [actualProgress, setActualProgress] = useState<number>(task.actualProgress);
   const [actualStart, setActualStart] = useState<string>(task.actualStart || '');
@@ -78,11 +80,11 @@ function KanbanTaskEditModal({
     const newErrors: Record<string, string> = {};
 
     if (actualProgress < 0 || actualProgress > 100 || !Number.isInteger(actualProgress)) {
-      newErrors.actualProgress = '실적 진행률은 0~100 사이의 정수여야 합니다.';
+      newErrors.actualProgress = t('kanbanComponents.progressValidation');
     }
 
     if (actualStart && actualEnd && actualStart > actualEnd) {
-      newErrors.actualEnd = '실적 종료일은 실적 시작일 이후여야 합니다.';
+      newErrors.actualEnd = t('kanbanComponents.endDateValidation');
     }
 
     setErrors(newErrors);
@@ -168,7 +170,7 @@ function KanbanTaskEditModal({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-6 pt-6 pb-4">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-bold text-[color:var(--text-primary)]">
-              {task.name || '이름 없음'}
+              {task.name || t('kanbanComponents.noName')}
             </h2>
             <div className="mt-2">
               <span
@@ -195,7 +197,7 @@ function KanbanTaskEditModal({
             {/* Assignee */}
             <div className="flex items-center gap-3">
               <User className="h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)]" />
-              <span className="text-sm text-[color:var(--text-secondary)]">담당자</span>
+              <span className="text-sm text-[color:var(--text-secondary)]">{t('kanbanComponents.assignee')}</span>
               <span className="ml-auto text-sm font-medium text-[color:var(--text-primary)]">
                 {assignee ? (
                   <span className="inline-flex items-center gap-2">
@@ -213,7 +215,7 @@ function KanbanTaskEditModal({
                     {assignee.name}
                   </span>
                 ) : (
-                  <span className="text-[color:var(--text-muted)]">미지정</span>
+                  <span className="text-[color:var(--text-muted)]">{t('kanbanComponents.unassigned')}</span>
                 )}
               </span>
             </div>
@@ -221,7 +223,7 @@ function KanbanTaskEditModal({
             {/* Plan Period */}
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)]" />
-              <span className="text-sm text-[color:var(--text-secondary)]">계획 기간</span>
+              <span className="text-sm text-[color:var(--text-secondary)]">{t('kanbanComponents.planPeriod')}</span>
               <span className="ml-auto text-sm text-[color:var(--text-primary)]">
                 {task.planStart && task.planEnd
                   ? `${task.planStart} ~ ${task.planEnd}`
@@ -232,7 +234,7 @@ function KanbanTaskEditModal({
             {/* Plan Progress */}
             <div className="flex items-center gap-3">
               <TrendingUp className="h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)]" />
-              <span className="text-sm text-[color:var(--text-secondary)]">계획 진행률</span>
+              <span className="text-sm text-[color:var(--text-secondary)]">{t('kanbanComponents.planProgress')}</span>
               <span className="ml-auto text-sm font-medium text-[color:var(--text-primary)]">
                 {task.planProgress}%
               </span>
@@ -243,7 +245,7 @@ function KanbanTaskEditModal({
           {childTasks.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-[color:var(--text-primary)]">
-                하위 작업
+                {t('kanbanComponents.childTasks')}
               </h3>
               <div className="space-y-1.5 rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-3">
                 {childTasks.map((child) => (
@@ -261,7 +263,7 @@ function KanbanTaskEditModal({
                           : 'text-[color:var(--text-primary)]'
                       )}
                     >
-                      {child.name || '이름 없음'}
+                      {child.name || t('kanbanComponents.noName')}
                     </span>
                     <span className="ml-auto text-xs text-[color:var(--text-muted)]">
                       {child.actualProgress}%
@@ -279,7 +281,7 @@ function KanbanTaskEditModal({
           <div className="space-y-4">
             {/* Status */}
             <div>
-              <label className="field-label">상태</label>
+              <label className="field-label">{t('kanbanComponents.status')}</label>
               <select
                 value={status}
                 onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
@@ -295,7 +297,7 @@ function KanbanTaskEditModal({
 
             {/* Actual Progress */}
             <div>
-              <label className="field-label">실적 진행률</label>
+              <label className="field-label">{t('kanbanComponents.actualProgress')}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="range"
@@ -329,7 +331,7 @@ function KanbanTaskEditModal({
 
             {/* Actual Start */}
             <div>
-              <label className="field-label">실적 시작일</label>
+              <label className="field-label">{t('kanbanComponents.actualStart')}</label>
               <input
                 type="date"
                 value={actualStart}
@@ -340,7 +342,7 @@ function KanbanTaskEditModal({
 
             {/* Actual End */}
             <div>
-              <label className="field-label">실적 종료일</label>
+              <label className="field-label">{t('kanbanComponents.actualEnd')}</label>
               <input
                 type="date"
                 value={actualEnd}
@@ -362,7 +364,7 @@ function KanbanTaskEditModal({
             onClick={onClose}
             className="rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5 py-2.5 text-sm font-semibold text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-tertiary)]"
           >
-            취소
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -374,7 +376,7 @@ function KanbanTaskEditModal({
                 : 'cursor-not-allowed bg-[color:var(--bg-tertiary)] text-[color:var(--text-muted)] opacity-50'
             )}
           >
-            저장
+            {t('common.save')}
           </button>
         </div>
       </div>

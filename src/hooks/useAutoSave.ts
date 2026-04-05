@@ -157,7 +157,7 @@ export function useAutoSave<T>(
   // 컴포넌트 언마운트 시 (세션 만료 등) 보류 중인 변경사항 즉시 저장
   useEffect(() => {
     return () => {
-      if (hasPendingSave.current && currentProjectIdRef.current) {
+      if (hasPendingSave.current && currentProjectIdRef.current && !isSavingRef.current) {
         hasPendingSave.current = false;
         try {
           saveFnRef.current(latestDataRef.current);

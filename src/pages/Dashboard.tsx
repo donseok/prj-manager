@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, Link } from 'react-router-dom';
 import {
   Clock3,
@@ -63,6 +64,7 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const isDark = useThemeStore((state) => state.isDark);
   const { tasks, setTasks } = useTaskStore();
@@ -127,7 +129,7 @@ export default function Dashboard() {
 
   const recentlyCompleted = useMemo(() => getRecentlyCompleted(tasks), [tasks]);
 
-  // 근태 데이터 로딩
+  // Load attendance data
   const { attendances, setAttendances } = useAttendanceStore();
   useEffect(() => {
     if (!projectId) return;
@@ -155,7 +157,7 @@ export default function Dashboard() {
     return { total: weekRecords.length, todayCount: todayRecords.length, todayRecords, leaveCount, tripCount };
   }, [attendances, members, getWithDefaults]);
 
-  // 보고서 다운로드
+  // Report download
   const [isExporting, setIsExporting] = useState(false);
   const handleExport = async () => {
     if (!currentProject || isExporting) return;
@@ -164,15 +166,15 @@ export default function Dashboard() {
       await generateProjectReport({ project: currentProject, tasks, members });
       showFeedback({
         tone: 'success',
-        title: '보고서 생성 완료',
-        message: '현재 프로젝트 기준으로 현황 보고서 다운로드를 시작했습니다.',
+        title: t('dashboard.reportSuccess'),
+        message: t('dashboard.reportSuccessMsg'),
       });
     } catch (e) {
-      console.error('보고서 생성 실패:', e);
+      console.error('Report generation failed:', e);
       showFeedback({
         tone: 'error',
-        title: '보고서 생성 실패',
-        message: '보고서 생성에 실패했습니다.',
+        title: t('dashboard.reportFail'),
+        message: t('dashboard.reportFailMsg'),
       });
     } finally {
       setIsExporting(false);
@@ -184,8 +186,8 @@ export default function Dashboard() {
     setTasks(updated, undefined, { recordHistory: true });
     showFeedback({
       tone: 'success',
-      title: '가중치 자동배분 완료',
-      message: '작업 기간 기준으로 Phase 가중치를 자동 배분했습니다.',
+      title: t('dashboard.autoWeightSuccess'),
+      message: t('dashboard.autoWeightSuccessMsg'),
     });
   };
 
@@ -218,7 +220,7 @@ export default function Dashboard() {
               {projectTone?.label || 'Project Dashboard'}
             </div>
             <h1 className={`mt-6 text-[clamp(2rem,4vw,3.9rem)] font-semibold tracking-[-0.06em] ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>
-              {currentProject?.name || '프로젝트'} 운영 현황
+              {currentProject?.name || t('common.project')} {t('dashboard.operationStatus')}
             </h1>
             {projectTone && (
               <p
@@ -229,26 +231,26 @@ export default function Dashboard() {
               </p>
             )}
             <p className={`mt-4 max-w-2xl text-sm leading-7 md:text-base ${isDark ? 'text-white/90' : 'text-[color:var(--text-secondary)]'}`}>
-              {currentProject?.description || '프로젝트 진행 현황을 한눈에 확인하고, 이번 주와 다음 주의 흐름까지 빠르게 파악할 수 있도록 대시보드를 재구성했습니다.'}
+              {currentProject?.description || t('dashboard.defaultDesc')}
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to={`/projects/${projectId}/wbs`}>
                 <Button>
                   <ListTree className="w-4 h-4" />
-                  WBS 보기
+                  {t('dashboard.viewWbs')}
                 </Button>
               </Link>
               <Link to={`/projects/${projectId}/gantt`}>
                 <Button variant="outline" className={heroOutlineButtonClassName}>
                   <Calendar className="w-4 h-4" />
-                  간트 차트
+                  {t('dashboard.ganttChart')}
                 </Button>
               </Link>
               <Link to={`/projects/${projectId}/kanban`}>
                 <Button variant="outline" className={heroOutlineButtonClassName}>
                   <Columns3 className="w-4 h-4" />
-                  칸반 보드
+                  {t('dashboard.kanbanBoard')}
                 </Button>
               </Link>
               <Button
@@ -258,21 +260,21 @@ export default function Dashboard() {
                 disabled={isExporting}
               >
                 {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-                {isExporting ? '생성중...' : '현황 보고서'}
+                {isExporting ? t('dashboard.generating') : t('dashboard.statusReport')}
               </Button>
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className={heroMetricClassName}>
-                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>전체 작업</p>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>{t('dashboard.totalTasks')}</p>
                 <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{stats.totalTasks}</p>
               </div>
               <div className={heroMetricClassName}>
-                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>멤버</p>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>{t('dashboard.membersLabel')}</p>
                 <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{members.length}</p>
               </div>
               <div className={heroMetricClassName}>
-                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>지연</p>
+                <p className={`text-[11px] uppercase tracking-[0.28em] ${isDark ? 'text-white/84' : 'text-[color:var(--text-secondary)]'}`}>{t('dashboard.delayed')}</p>
                 <p className={`mt-2 text-3xl font-semibold ${isDark ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{stats.delayedTasks}</p>
               </div>
             </div>
@@ -299,20 +301,20 @@ export default function Dashboard() {
               />
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-[color:var(--text-secondary)]">계획 공정율</span>
+              <span className="text-[color:var(--text-secondary)]">{t('dashboard.planProgress')}</span>
               <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(stats.planProgress)}</span>
             </div>
             {allWeightsZero && stats.totalTasks > 0 && (
               <div className="mt-3 flex items-center justify-between gap-2">
                 <p className="text-xs leading-5 text-[color:var(--accent-warning)]">
                   <AlertTriangle className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
-                  Phase 가중치가 모두 0입니다. 가중치를 설정하면 더 정확한 공정율이 산출됩니다.
+                  {t('dashboard.weightWarning')}
                 </p>
                 <button
                   onClick={handleAutoWeights}
                   className="shrink-0 rounded-full border border-[color:var(--accent-warning)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-warning)] transition-colors hover:bg-[rgba(234,179,8,0.1)]"
                 >
-                  가중치 자동배분
+                  {t('dashboard.autoWeight')}
                 </button>
               </div>
             )}
@@ -323,7 +325,7 @@ export default function Dashboard() {
               <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_20px_40px_-26px_rgba(203,109,55,0.7)]' : progressSectionIconClassName}>
                 <Clock3 className="h-5 w-5" />
               </div>
-                <p className="mt-4 text-sm text-[color:var(--text-secondary)]">진행중 작업</p>
+                <p className="mt-4 text-sm text-[color:var(--text-secondary)]">{t('dashboard.inProgressTasks')}</p>
               <p data-testid="dashboard-in-progress-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.inProgressTasks}
               </p>
@@ -333,7 +335,7 @@ export default function Dashboard() {
               <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#1fa37a,#34c997)] text-white shadow-[0_20px_40px_-26px_rgba(31,163,122,0.62)]' : quietSectionIconClassName}>
                 <CheckCircle2 className="h-5 w-5" />
               </div>
-              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">완료 작업</p>
+              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">{t('dashboard.completedTasks')}</p>
               <p data-testid="dashboard-completed-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.completedTasks}
               </p>
@@ -343,7 +345,7 @@ export default function Dashboard() {
               <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#cb4b5f,#ff738a)] text-white shadow-[0_20px_40px_-26px_rgba(203,75,95,0.62)]' : quietSectionIconClassName}>
                 <AlertTriangle className="h-5 w-5" />
               </div>
-              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">리스크 작업</p>
+              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">{t('dashboard.riskTasks')}</p>
               <p data-testid="dashboard-delayed-count" className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
                 {stats.delayedTasks}
               </p>
@@ -358,7 +360,7 @@ export default function Dashboard() {
             <div>
               <p className="page-kicker">Status Mix</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                상태별 분포
+                {t('dashboard.statusDistribution')}
               </h2>
             </div>
             <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]' : quietSectionIconClassName}>
@@ -374,7 +376,7 @@ export default function Dashboard() {
                   {stats.totalTasks}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                  현재 집계된 리프 작업 수를 기준으로 상태 믹스를 구성했습니다.
+                  {t('dashboard.statusMixDesc')}
                 </p>
                 <div className="mt-6 h-3 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
                   <div
@@ -383,7 +385,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-[color:var(--text-secondary)]">전체 실적 공정율</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.overallActualProgress')}</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(stats.overallProgress)}</span>
                 </div>
               </div>
@@ -399,7 +401,7 @@ export default function Dashboard() {
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="font-medium text-[color:var(--text-primary)]">{item.name}</span>
                       </div>
-                      <span className="text-sm text-[color:var(--text-secondary)]">{item.value}개</span>
+                      <span className="text-sm text-[color:var(--text-secondary)]">{item.value}{t('dashboard.countUnit')}</span>
                     </div>
                     <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
                       <div
@@ -416,7 +418,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="empty-state">
-              <p>데이터 없음</p>
+              <p>{t('dashboard.noData')}</p>
             </div>
           )}
         </div>
@@ -426,7 +428,7 @@ export default function Dashboard() {
             <div>
               <p className="page-kicker">Team Load</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                담당자별 진행률
+                {t('dashboard.assigneeWorkload')}
               </h2>
             </div>
             <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#123d64,#23547b)] text-white shadow-[0_20px_40px_-24px_rgba(18,61,100,0.72)]' : quietSectionIconClassName}>
@@ -459,14 +461,14 @@ export default function Dashboard() {
                     iconSize={8}
                     wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)', paddingBottom: '8px' }}
                   />
-                  <Bar dataKey="completed" stackId="a" fill="#2BAAA0" radius={[0, 10, 10, 0]} name="완료" barSize={16} />
-                  <Bar dataKey="remaining" stackId="a" fill={isDark ? 'rgba(255,255,255,0.15)' : 'rgba(127,111,97,0.22)'} radius={[0, 10, 10, 0]} name="남음" barSize={16} />
+                  <Bar dataKey="completed" stackId="a" fill="#2BAAA0" radius={[0, 10, 10, 0]} name={t('dashboard.completed')} barSize={16} />
+                  <Bar dataKey="remaining" stackId="a" fill={isDark ? 'rgba(255,255,255,0.15)' : 'rgba(127,111,97,0.22)'} radius={[0, 10, 10, 0]} name={t('dashboard.remainingLabel')} barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
             <div className="empty-state">
-              <p>데이터 없음</p>
+              <p>{t('dashboard.noData')}</p>
             </div>
           )}
         </div>
@@ -474,8 +476,8 @@ export default function Dashboard() {
 
       <section className="grid gap-6 xl:grid-cols-3">
         <QueueCard
-          title="지연 작업"
-          subtitle={`${delayedTasks.length}개 지연됨`}
+          title={t('dashboard.delayedTasks')}
+          subtitle={`${delayedTasks.length}${t('dashboard.countDelayed')}`}
           icon={<AlertTriangle className="h-4 w-4" />}
           tone="danger"
         >
@@ -489,9 +491,9 @@ export default function Dashboard() {
                   <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full bg-[rgba(203,75,95,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-danger)]">
-                      {getDelayDays(task)}일 지연
+                      {t('dashboard.delayDays', { days: getDelayDays(task) })}
                     </span>
-                    <span className="text-[color:var(--text-secondary)]">종료: {formatDate(task.planEnd)}</span>
+                    <span className="text-[color:var(--text-secondary)]">{t('dashboard.endDate')}: {formatDate(task.planEnd)}</span>
                   </div>
                 </li>
               ))}
@@ -499,14 +501,14 @@ export default function Dashboard() {
           ) : (
             <div className="empty-state min-h-[14rem]">
               <CheckCircle2 className="h-10 w-10 text-[color:var(--accent-success)]" />
-              <p>지연된 작업이 없습니다</p>
+              <p>{t('dashboard.noDelayedTasks')}</p>
             </div>
           )}
         </QueueCard>
 
         <QueueCard
-          title="금주 작업"
-          subtitle={`${thisWeekTasks.length}개 예정`}
+          title={t('dashboard.thisWeekTasks')}
+          subtitle={`${thisWeekTasks.length}${t('dashboard.countScheduled')}`}
           icon={<Clock3 className="h-4 w-4" />}
           tone="primary"
         >
@@ -524,14 +526,14 @@ export default function Dashboard() {
             </ul>
           ) : (
             <div className="empty-state min-h-[14rem]">
-              <p>금주 예정 작업이 없습니다</p>
+              <p>{t('dashboard.noThisWeekTasks')}</p>
             </div>
           )}
         </QueueCard>
 
         <QueueCard
-          title="차주 작업"
-          subtitle={`${nextWeekTasks.length}개 예정`}
+          title={t('dashboard.nextWeekTasks')}
+          subtitle={`${nextWeekTasks.length}${t('dashboard.countScheduled')}`}
           icon={<ArrowRight className="h-4 w-4" />}
           tone="accent"
         >
@@ -549,20 +551,20 @@ export default function Dashboard() {
             </ul>
           ) : (
             <div className="empty-state min-h-[14rem]">
-              <p>차주 예정 작업이 없습니다</p>
+              <p>{t('dashboard.noNextWeekTasks')}</p>
             </div>
           )}
         </QueueCard>
       </section>
 
-      {/* Phase별 진행률 + 프로젝트 일정 요약 */}
+      {/* Phase progress + Project timeline summary */}
       <section className="grid gap-6 xl:grid-cols-2">
         <div className="app-panel p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="page-kicker">Phase Progress</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                Phase별 진행률
+                {t('dashboard.phaseProgress')}
               </h2>
             </div>
             <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#0f766e,#2fa67c)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]' : quietSectionIconClassName}>
@@ -596,14 +598,14 @@ export default function Dashboard() {
                     iconSize={8}
                     wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)', paddingBottom: '8px' }}
                   />
-                  <Bar dataKey="계획" fill={isDark ? 'rgba(255,255,255,0.2)' : '#B0BEC5'} radius={[8, 8, 0, 0]} barSize={20} />
-                  <Bar dataKey="실적" fill="#2BAAA0" radius={[8, 8, 0, 0]} barSize={20} />
+                  <Bar dataKey="계획" fill={isDark ? 'rgba(255,255,255,0.2)' : '#B0BEC5'} radius={[8, 8, 0, 0]} barSize={20} name={t('dashboard.plan')} />
+                  <Bar dataKey="실적" fill="#2BAAA0" radius={[8, 8, 0, 0]} barSize={20} name={t('dashboard.actual')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
             <div className="empty-state">
-              <p>데이터 없음</p>
+              <p>{t('dashboard.noData')}</p>
             </div>
           )}
         </div>
@@ -613,7 +615,7 @@ export default function Dashboard() {
             <div>
               <p className="page-kicker">Timeline</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                프로젝트 일정 요약
+                {t('dashboard.projectTimeline')}
               </h2>
             </div>
             <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#6d28d9,#a78bfa)] text-white shadow-[0_20px_40px_-24px_rgba(109,40,217,0.72)]' : quietSectionIconClassName}>
@@ -625,18 +627,18 @@ export default function Dashboard() {
             <div className="mt-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">시작일</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">{t('dashboard.startDate')}</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.startDate)}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">종료일</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-secondary)]">{t('dashboard.endDateLabel')}</p>
                   <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{formatDate(currentProject?.endDate)}</p>
                 </div>
               </div>
 
               <div className="rounded-[24px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[color:var(--text-secondary)]">일정 경과율</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.scheduleProgress')}</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(timeline.elapsedPercent)}</span>
                 </div>
                 <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(91,141,239,0.12)]">
@@ -646,23 +648,23 @@ export default function Dashboard() {
                   />
                 </div>
                 <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.actualProgress')}</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(stats.overallProgress)}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">총 일수</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">{t('dashboard.totalDays')}</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{timeline.totalDays}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">경과일</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">{t('dashboard.elapsed')}</p>
                   <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{Math.max(0, timeline.elapsedDays)}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">
-                    {timeline.remainingDays >= 0 ? '잔여일' : '초과일'}
+                    {timeline.remainingDays >= 0 ? t('dashboard.remaining') : t('dashboard.overdue')}
                   </p>
                   <p className={`mt-2 text-2xl font-semibold ${timeline.remainingDays < 0 ? 'text-[color:var(--accent-danger)]' : 'text-[color:var(--text-primary)]'}`}>
                     {timeline.remainingDays >= 0 ? timeline.remainingDays : `+${Math.abs(timeline.remainingDays)}`}
@@ -672,20 +674,20 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="empty-state min-h-[14rem]">
-              <p>프로젝트 일정이 설정되지 않았습니다</p>
+              <p>{t('dashboard.noTimeline')}</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* 가중치 분포 + 최근 완료 작업 */}
+      {/* Weight distribution + Recently completed tasks */}
       <section className="grid gap-6 xl:grid-cols-2">
         <div className="app-panel p-6">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="page-kicker">Weight Distribution</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                Phase 가중치 분포
+                {t('dashboard.weightDistribution')}
               </h2>
             </div>
             <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#d88b44,#cb6d37)] text-white shadow-[0_20px_40px_-24px_rgba(203,109,55,0.72)]' : quietSectionIconClassName}>
@@ -748,14 +750,14 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="empty-state">
-              <p>데이터 없음</p>
+              <p>{t('dashboard.noData')}</p>
             </div>
           )}
         </div>
 
         <QueueCard
-          title="최근 완료 작업"
-          subtitle={`${recentlyCompleted.length}개 완료`}
+          title={t('dashboard.recentlyCompleted')}
+          subtitle={`${recentlyCompleted.length}${t('dashboard.countCompleted')}`}
           icon={<CheckCircle2 className="h-4 w-4" />}
           tone="primary"
         >
@@ -766,24 +768,24 @@ export default function Dashboard() {
                   <p className="truncate font-medium text-[color:var(--text-primary)]" title={task.name}>{task.name}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <span className="rounded-full bg-[rgba(31,163,122,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-success)]">
-                      완료
+                      {t('dashboard.completed')}
                     </span>
-                    <span className="text-[color:var(--text-secondary)]">완료일: {formatDate(task.actualEnd)}</span>
+                    <span className="text-[color:var(--text-secondary)]">{t('dashboard.completedDate')}: {formatDate(task.actualEnd)}</span>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
             <div className="empty-state min-h-[14rem]">
-              <p>완료된 작업이 없습니다</p>
+              <p>{t('dashboard.noCompletedTasks')}</p>
             </div>
           )}
         </QueueCard>
 
-        {/* 금주 근태현황 */}
+        {/* Weekly attendance */}
         <QueueCard
-          title="금주 근태현황"
-          subtitle={`${weekAttendanceSummary.total}건 등록`}
+          title={t('dashboard.weekAttendance')}
+          subtitle={`${weekAttendanceSummary.total}${t('dashboard.countRegistered')}`}
           icon={<CalendarCheck className="h-4 w-4" />}
           tone="accent"
         >
@@ -791,21 +793,21 @@ export default function Dashboard() {
             <div className="space-y-3">
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[color:var(--text-secondary)]">오늘 등록:</span>
-                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.todayCount}건</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.todayRegistered')}:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.todayCount}{t('dashboard.countUnit')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[color:var(--text-secondary)]">금주 휴가:</span>
-                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.leaveCount}건</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.weekLeave')}:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.leaveCount}{t('dashboard.countUnit')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[color:var(--text-secondary)]">출장:</span>
-                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.tripCount}건</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('dashboard.businessTrip')}:</span>
+                  <span className="font-semibold text-[color:var(--text-primary)]">{weekAttendanceSummary.tripCount}{t('dashboard.countUnit')}</span>
                 </div>
               </div>
               <ul className="space-y-2">
                 {weekAttendanceSummary.todayRecords.slice(0, 5).map((a) => {
-                  const memberName = members.find((m) => m.id === a.memberId)?.name || '알 수 없음';
+                  const memberName = members.find((m) => m.id === a.memberId)?.name || t('dashboard.unknown');
                   return (
                     <li key={a.id} className="flex items-center gap-3 rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: (ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type] }} />
@@ -824,18 +826,18 @@ export default function Dashboard() {
                 to={`/projects/${projectId}/attendance`}
                 className="flex items-center gap-1 text-sm font-medium text-[color:var(--accent-primary)] hover:underline"
               >
-                전체 근태현황 보기 <ArrowRight className="h-3.5 w-3.5" />
+                {t('dashboard.viewAllAttendance')} <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           ) : (
             <div className="empty-state min-h-[14rem]">
               <CalendarCheck className="h-10 w-10 text-[color:var(--text-muted)]" />
-              <p className="text-sm text-[color:var(--text-secondary)]">오늘 등록된 근태가 없습니다</p>
+              <p className="text-sm text-[color:var(--text-secondary)]">{t('dashboard.noTodayAttendance')}</p>
               <Link
                 to={`/projects/${projectId}/attendance`}
                 className="mt-2 text-sm font-medium text-[color:var(--accent-primary)] hover:underline"
               >
-                근태 등록하기
+                {t('dashboard.registerAttendance')}
               </Link>
             </div>
           )}

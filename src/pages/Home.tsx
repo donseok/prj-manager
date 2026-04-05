@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Plus,
   FolderOpen,
@@ -76,6 +77,7 @@ function FloatingStatBubble({
 }
 
 export default function Home() {
+  const { t } = useTranslation();
   const { projects } = useProjectStore();
   const { isDark } = useThemeStore();
 
@@ -200,20 +202,20 @@ export default function Home() {
             </div>
 
             <h1 className="mt-7 text-[clamp(2.6rem,5.8vw,4.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
-              한눈에 보이는{' '}
+              {t('home.heroTitle1')}{' '}
               <br className="hidden sm:block" />
-              프로젝트 운영
+              {t('home.heroTitle2')}
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-7 text-white/88 md:text-lg">
-              WBS · 일정 · 멤버를 하나의 흐름으로. 계획부터 완료까지 투명하게 관리하세요.
+              {t('home.heroDescription')}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/projects/new">
                 <Button className="min-w-[10rem]">
                   <Plus className="w-4 h-4" />
-                  새 프로젝트 시작
+                  {t('home.newProjectStart')}
                 </Button>
               </Link>
               <Link to="/projects">
@@ -221,7 +223,7 @@ export default function Home() {
                   variant="outline"
                   className="border-white/12 bg-white/[0.12] text-white hover:bg-white/[0.18]"
                 >
-                  전체 프로젝트
+                  {t('home.allProjects')}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -231,19 +233,19 @@ export default function Home() {
           {/* ---- 3 stat cards (inside hero, bottom area) ---- */}
           <div className="relative z-10 mt-10 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/[0.08] backdrop-blur-sm p-4 transition-transform duration-300 hover:scale-[1.02]">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">전체 프로젝트</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">{t('home.totalProjects')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{projects.length}</p>
-                <p className="mt-1 text-sm text-white/70">준비·진행·완료 프로젝트 전체 수</p>
+                <p className="mt-1 text-sm text-white/70">{t('home.totalProjectsDesc')}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.08] backdrop-blur-sm p-4 transition-transform duration-300 hover:scale-[1.02]">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">진행중</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">{t('home.inProgress')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeProjects}</p>
-                <p className="mt-1 text-sm text-white/70">현재 작업이 이어지고 있는 프로젝트</p>
+                <p className="mt-1 text-sm text-white/70">{t('home.inProgressDesc')}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.08] backdrop-blur-sm p-4 transition-transform duration-300 hover:scale-[1.02]">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">최근 기록</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/80">{t('home.recentRecords')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{recentProjects.length}</p>
-                <p className="mt-1 text-sm text-white/70">빠르게 다시 볼 수 있는 최근 워크스페이스</p>
+                <p className="mt-1 text-sm text-white/70">{t('home.recentRecordsDesc')}</p>
               </div>
           </div>
         </div>
@@ -266,7 +268,7 @@ export default function Home() {
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-            진행 상태의 프로젝트 비중을 바로 확인할 수 있도록 카드에서도 운영 감각을 실었습니다.
+            {t('home.activeRatioDesc')}
           </p>
         </div>
 
@@ -283,7 +285,7 @@ export default function Home() {
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-            완료된 프로젝트의 축적을 현재 흐름과 함께 다시 조회할 수 있습니다.
+            {t('home.completedDesc')}
           </p>
         </div>
 
@@ -299,14 +301,14 @@ export default function Home() {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-[color:var(--text-primary)]" title={project.name}>{project.name}</p>
-                    <p className="mt-1 text-xs text-[color:var(--text-muted)]">{project.startDate || '시작일 미정'}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-muted)]">{project.startDate || t('home.startDatePending')}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-[color:var(--text-muted)]" />
                 </Link>
               ))
             ) : (
               <div className="rounded-[22px] border border-dashed border-[var(--border-color)] px-4 py-6 text-center text-sm text-[color:var(--text-secondary)]">
-                최근 프로젝트가 없습니다
+                {t('home.noRecentProjects')}
               </div>
             )}
           </div>
@@ -321,9 +323,9 @@ export default function Home() {
           <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[image:var(--gradient-primary)] text-white shadow-[0_24px_48px_-28px_rgba(15,118,110,0.78)]">
             <Plus className="h-6 w-6" />
           </div>
-          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">새 프로젝트</h3>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{t('home.newProject')}</h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-            새 프로젝트의 기본 정보를 설정하고 바로 대시보드로 진입합니다.
+            {t('home.newProjectDesc')}
           </p>
         </Link>
 
@@ -331,9 +333,9 @@ export default function Home() {
           <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#f2be83,#cb6d37)] text-[color:var(--bg-inverse)] shadow-[0_24px_48px_-28px_rgba(203,109,55,0.72)]">
             <FolderOpen className="h-6 w-6" />
           </div>
-          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">프로젝트 라이브러리</h3>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{t('home.projectLibrary')}</h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-            모든 프로젝트를 카드 뷰로 확인하고 상태별로 빠르게 이동할 수 있습니다.
+            {t('home.projectLibraryDesc')}
           </p>
         </Link>
 
@@ -341,9 +343,9 @@ export default function Home() {
           <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,#123d64,#23547b)] text-white shadow-[0_24px_48px_-28px_rgba(18,61,100,0.72)]">
             <BarChart3 className="h-6 w-6" />
           </div>
-          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">운영 중심 대시보드</h3>
+          <h3 className="mt-6 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{t('home.operationDashboard')}</h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-            단순 카드 배열을 넘어 운영 지표와 작업 흐름이 묻어나도록 레이아웃을 구성했습니다.
+            {t('home.operationDashboardDesc')}
           </p>
         </div>
       </section>
@@ -357,17 +359,17 @@ export default function Home() {
           <div>
             <p className="page-kicker">Recent Workspace</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              최근 프로젝트
+              {t('home.recentProjects')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              방금 작업하던 흐름으로 다시 돌아갈 수 있도록 최근 프로젝트 접근성을 높였습니다.
+              {t('home.recentProjectsDesc')}
             </p>
           </div>
           <Link
             to="/projects"
             className="inline-flex items-center gap-2 text-sm font-medium text-[color:var(--accent-primary)] transition-transform hover:translate-x-0.5"
           >
-            전체 보기
+            {t('common.viewAll')}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -397,7 +399,7 @@ export default function Home() {
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="surface-badge border-[var(--border-strong)] bg-white/78 dark:bg-white/10">
                           <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-                          최근 작업
+                          {t('home.recentWork')}
                         </div>
                         <div
                           className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase"
@@ -472,7 +474,7 @@ export default function Home() {
                       >
                         <FolderOpen className="h-4 w-4" />
                       </div>
-                      <span className="text-sm font-medium text-[color:var(--text-secondary)]">워크스페이스 열기</span>
+                      <span className="text-sm font-medium text-[color:var(--text-secondary)]">{t('home.openWorkspace')}</span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-[color:var(--text-secondary)] transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[color:var(--text-primary)]" />
                   </div>
@@ -484,15 +486,15 @@ export default function Home() {
           <div className="empty-state px-6 py-12">
             <FolderOpen className="h-12 w-12 text-[color:var(--text-muted)]" />
             <h3 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              아직 프로젝트가 없습니다
+              {t('home.noProjectsYet')}
             </h3>
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
-              첫 프로젝트를 생성하면 이 화면에 최근 워크스페이스 영역이 바로 생성됩니다.
+              {t('home.noProjectsDesc')}
             </p>
             <Link to="/projects/new">
               <Button>
                 <Plus className="w-4 h-4" />
-                첫 프로젝트 만들기
+                {t('home.createFirst')}
               </Button>
             </Link>
           </div>

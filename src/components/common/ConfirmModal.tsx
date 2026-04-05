@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 import Button from './Button';
 import Modal from './Modal';
@@ -21,11 +22,13 @@ export default function ConfirmModal({
   onConfirm,
   title,
   description,
-  confirmLabel = '확인',
+  confirmLabel,
   confirmVariant = 'danger',
   icon,
   isLoading = false,
 }: ConfirmModalProps) {
+  const { t } = useTranslation();
+  const resolvedConfirmLabel = confirmLabel || t('common.confirm');
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-5 p-6" data-testid="confirm-modal">
@@ -37,7 +40,7 @@ export default function ConfirmModal({
         </div>
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose} disabled={isLoading} data-testid="confirm-modal-cancel-button">
-            취소
+            {t('common.cancel')}
           </Button>
           <Button
             variant={confirmVariant}
@@ -45,7 +48,7 @@ export default function ConfirmModal({
             isLoading={isLoading}
             data-testid="confirm-modal-confirm-button"
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </Button>
         </div>
       </div>

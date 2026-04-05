@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import {
   Plus,
@@ -72,6 +73,7 @@ import { loadCustomTemplates, applyCustomTemplate } from '../lib/customTemplates
 import { useRecurringTasks } from '../hooks/useRecurringTasks';
 
 export default function WBS() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { members, currentProject, updateProject, addMember } = useProjectStore();
   const attendancesForReport = useAttendanceStore((s) => s.attendances);
@@ -257,7 +259,7 @@ export default function WBS() {
         const { project } = await syncProjectWorkspace(currentProject, data, { skipNormalize: true });
         updateProject(project.id, project);
       } catch (error) {
-        console.error('WBS 자동 저장 실패:', error);
+        console.error('WBS auto-save failed:', error);
         throw error;
       }
     },
@@ -525,7 +527,7 @@ export default function WBS() {
 
   const handleCopyTask = (task: Task) => {
     setCopiedTask(task);
-    showFeedback({ tone: 'info', title: '복사됨', message: `"${task.name || '작업'}"이 복사되었습니다.` });
+    showFeedback({ tone: 'info', title: t('wbs.copied'), message: t('wbs.copiedMsg', { name: task.name || t('wbs.taskFallback') }) });
   };
 
   const handlePasteTask = (targetTask: Task) => {
@@ -676,8 +678,8 @@ export default function WBS() {
     setDraftPrompt('');
     showFeedback({
       tone: 'success',
-      title: 'WBS 초안 생성 완료',
-      message: `"${selectedTemplate.name}" 템플릿으로 ${generatedTasks.length}개 작업을 생성했습니다.`,
+      title: t('wbs.draftGenSuccess'),
+      message: t('wbs.draftGenSuccessMsg', { name: selectedTemplate.name, count: generatedTasks.length }),
     });
   };
 
@@ -702,7 +704,7 @@ export default function WBS() {
     setAiPreviewTasks(null);
     try {
       const result = await generateWbsWithAI({
-        projectName: currentProject?.name || '프로젝트',
+        projectName: currentProject?.name || t('wbs.project'),
         description: aiDescription.trim(),
         startDate: currentProject?.startDate,
         members,
@@ -713,8 +715,8 @@ export default function WBS() {
       console.error('AI WBS generation failed:', error);
       showFeedback({
         tone: 'error',
-        title: 'AI WBS 생성 실패',
-        message: error instanceof Error ? error.message : 'AI를 사용한 WBS 생성에 실패했습니다.',
+        title: t('wbs.aiGenFail'),
+        message: error instanceof Error ? error.message : t('wbs.aiGenFailMsg'),
       });
     } finally {
       setAiGenerating(false);
@@ -729,8 +731,8 @@ export default function WBS() {
     setAiDescription('');
     showFeedback({
       tone: 'success',
-      title: 'AI WBS 적용 완료',
-      message: `AI가 생성한 ${selectedTasks.length}개 작업을 적용했습니다.`,
+      title: t('wbs.aiApplySuccess'),
+      message: t('wbs.aiApplySuccessMsg', { count: selectedTasks.length }),
     });
   };
 
@@ -748,16 +750,16 @@ export default function WBS() {
       if (suggestions.length === 0) {
         showFeedback({
           tone: 'info',
-          title: 'AI 분석 완료',
-          message: '현재 변경이 필요한 작업이 없습니다.',
+          title: t('wbs.aiAnalysisDone'),
+          message: t('wbs.aiAnalysisDoneMsg'),
         });
       }
     } catch (error) {
       console.error('AI progress suggestion failed:', error);
       showFeedback({
         tone: 'error',
-        title: 'AI 실적 제안 실패',
-        message: error instanceof Error ? error.message : 'AI 실적 제안을 생성하지 못했습니다.',
+        title: t('wbs.aiSuggestFail'),
+        message: error instanceof Error ? error.message : t('wbs.aiSuggestFailMsg'),
       });
     } finally {
       setAiSuggestionsLoading(false);
@@ -784,8 +786,8 @@ export default function WBS() {
     setAiSuggestions([]);
     showFeedback({
       tone: 'success',
-      title: 'AI 제안 전체 적용',
-      message: `${suggestions.length}개 작업의 실적을 업데이트했습니다.`,
+      title: t('wbs.aiSuggestApply'),
+      message: t('wbs.aiSuggestApplyMsg', { count: suggestions.length }),
     });
   };
 
@@ -797,8 +799,8 @@ export default function WBS() {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '계산할 작업 없음',
-        message: '자동 일정 계산을 하려면 먼저 작업을 추가하거나 템플릿을 적용하세요.',
+        title: t('wbs.noTasksSchedule'),
+        message: t('wbs.noTasksScheduleMsg'),
       });
       return;
     }
@@ -807,8 +809,8 @@ export default function WBS() {
     setTasks(scheduledTasks, undefined, { recordHistory: true });
     showFeedback({
       tone: 'success',
-      title: '일정 자동 계산 완료',
-      message: '작업 순서와 기존 기간을 기준으로 계획 일정을 다시 계산했습니다.',
+      title: t('wbs.scheduleSuccess'),
+      message: t('wbs.scheduleSuccessMsg'),
     });
   };
 
@@ -816,8 +818,8 @@ export default function WBS() {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '연결할 작업 없음',
-        message: '선후행 연결을 만들려면 먼저 작업을 준비하세요.',
+        title: t('wbs.noTasksLink'),
+        message: t('wbs.noTasksLinkMsg'),
       });
       return;
     }
@@ -826,8 +828,8 @@ export default function WBS() {
     setTasks(dependencyTasks, undefined, { recordHistory: true });
     showFeedback({
       tone: 'success',
-      title: '선후행 연결 생성 완료',
-      message: '같은 계층의 leaf task 기준으로 기본 선후행 관계를 생성했습니다.',
+      title: t('wbs.linkSuccess'),
+      message: t('wbs.linkSuccessMsg'),
     });
   };
 
@@ -835,8 +837,8 @@ export default function WBS() {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '자동채움 대상 없음',
-        message: '작업을 추가한 뒤 자동채움을 사용해 주세요.',
+        title: t('wbs.noTasksAutoFill'),
+        message: t('wbs.noTasksAutoFillMsg'),
       });
       return;
     }
@@ -845,14 +847,14 @@ export default function WBS() {
     setTasks(result.tasks, undefined, { recordHistory: true });
 
     const details: string[] = [];
-    if (result.outputsFilled > 0) details.push(`산출물 ${result.outputsFilled}건`);
-    if (result.assigneesFilled > 0) details.push(`담당자 ${result.assigneesFilled}건`);
-    if (result.weightsCalculated) details.push('가중치 재계산');
+    if (result.outputsFilled > 0) details.push(t('wbs.autoFillOutputs', { count: result.outputsFilled }));
+    if (result.assigneesFilled > 0) details.push(t('wbs.autoFillAssignees', { count: result.assigneesFilled }));
+    if (result.weightsCalculated) details.push(t('wbs.autoFillWeights'));
 
     showFeedback({
       tone: 'success',
-      title: '자동채움 완료',
-      message: details.length > 0 ? details.join(', ') : '변경 사항이 없습니다.',
+      title: t('wbs.autoFillSuccess'),
+      message: details.length > 0 ? details.join(', ') : t('wbs.autoFillNoChange'),
     });
   };
 
@@ -860,8 +862,8 @@ export default function WBS() {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '내보낼 작업 없음',
-        message: 'WBS에 작업을 추가한 뒤 엑셀 다운로드를 진행해주세요.',
+        title: t('wbs.noTasksExport'),
+        message: t('wbs.noTasksExportMsg'),
       });
       return;
     }
@@ -876,8 +878,8 @@ export default function WBS() {
       console.error('WBS export failed:', error);
       showFeedback({
         tone: 'error',
-        title: 'WBS 내보내기 실패',
-        message: error instanceof Error ? error.message : '엑셀 파일 생성 중 오류가 발생했습니다.',
+        title: t('wbs.exportFail'),
+        message: error instanceof Error ? error.message : t('wbs.exportFailMsg'),
       });
     }
   };
@@ -917,7 +919,7 @@ export default function WBS() {
         const commitName = () => {
           if (!task.name.trim()) {
             // 빈 작업명이면 이전 값으로 복원
-            const fallback = editingNameBackup || '새 작업';
+            const fallback = editingNameBackup || t('wbs.newTask');
             handleCellChange(task.id, 'name', fallback);
           }
           setEditingNameBackup(null);
@@ -953,9 +955,9 @@ export default function WBS() {
             style={{ paddingLeft: `${(task.depth || 0) * 20}px` }}
             title={task.name || undefined}
           >
-            {task.name || <span className="text-[color:var(--accent-danger)] opacity-70">⚠ 작업명 입력</span>}
+            {task.name || <span className="text-[color:var(--accent-danger)] opacity-70">{t('wbs.enterTaskName')}</span>}
             {task.taskSource === 'ai_generated' && (
-              <span title="AI 생성"><Sparkles className="ml-1 inline h-3 w-3 shrink-0 text-violet-400" /></span>
+              <span title={t('wbs.aiGenerated')}><Sparkles className="ml-1 inline h-3 w-3 shrink-0 text-violet-400" /></span>
             )}
           </span>
         );
@@ -1011,8 +1013,8 @@ export default function WBS() {
           if (task.weight === 0) {
             showFeedback({
               tone: 'warning',
-              title: '가중치 0',
-              message: '가중치가 0이면 공정률에 반영되지 않습니다.',
+              title: t('wbs.weightZero'),
+              message: t('wbs.weightZeroMsg'),
             });
           }
           handleCellCommit();
@@ -1084,7 +1086,7 @@ export default function WBS() {
                 hasWarning && 'text-[color:var(--accent-danger)] ring-1 ring-[rgba(203,75,95,0.3)]',
                 isDelayedDate && !hasWarning && 'text-[color:var(--accent-warning)]'
               )}
-              title={hasWarning ? '시작일이 종료일보다 늦습니다' : isDelayedDate ? '계획 대비 지연' : undefined}
+              title={hasWarning ? t('wbs.dateStartAfterEnd') : isDelayedDate ? t('wbs.dateDelayed') : undefined}
             />
           </div>
         );
@@ -1194,7 +1196,7 @@ export default function WBS() {
               <button
                 onClick={() => handleAddTask(task.id, task.level + 1)}
                 className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
-                title={`${childLabel} 추가`}
+                title={t('wbs.addChild', { label: childLabel })}
               >
                 <Plus className="w-3.5 h-3.5" />
                 {childLabel}
@@ -1204,7 +1206,7 @@ export default function WBS() {
               <button
                 onClick={() => handleAddTask(task.parentId || undefined, task.level)}
                 className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
-                title={`같은 레벨 ${siblingLabel} 추가`}
+                title={t('wbs.addSameLevel', { label: siblingLabel })}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -1225,7 +1227,7 @@ export default function WBS() {
               <button
                 onClick={() => handleDeleteTask(task.id)}
                 className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
-                title="삭제"
+                title={t('wbs.deleteLabel')}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -1253,84 +1255,84 @@ export default function WBS() {
       { key: 'handle', label: '', width: 72, sticky: true, className: 'text-center' },
       {
         key: 'level',
-        label: '구분',
+        label: t('wbs.colLevel'),
         width: getResponsiveWidth(workspaceWidth * 0.06, 100, fullscreen ? 132 : 112),
         sticky: true,
         className: 'text-center',
       },
       {
         key: 'name',
-        label: '작업명',
+        label: t('wbs.colName'),
         width: getResponsiveWidth(workspaceWidth * 0.22, 260, fullscreen ? 520 : 420),
         sticky: true,
         className: 'text-center',
       },
       {
         key: 'output',
-        label: '산출물',
+        label: t('wbs.colOutput'),
         width: getResponsiveWidth(workspaceWidth * 0.12, 140, fullscreen ? 260 : 210),
         sticky: true,
         className: 'text-center',
       },
       {
         key: 'assignee',
-        label: '담당자',
+        label: t('wbs.colAssignee'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 120, fullscreen ? 190 : 160),
         sticky: true,
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'weight',
-        label: '가중치',
+        label: t('wbs.colWeight'),
         width: getResponsiveWidth(workspaceWidth * 0.055, 88, fullscreen ? 120 : 104),
         sticky: true,
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'planStart',
-        label: '계획시작',
+        label: t('wbs.colPlanStart'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'planEnd',
-        label: '계획종료',
+        label: t('wbs.colPlanEnd'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'planProgress',
-        label: '계획공정율',
+        label: t('wbs.colPlanProgress'),
         width: getResponsiveWidth(workspaceWidth * 0.078, 108, fullscreen ? 150 : 132),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actualStart',
-        label: '실적시작',
+        label: t('wbs.colActualStart'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actualEnd',
-        label: '실적종료',
+        label: t('wbs.colActualEnd'),
         width: getResponsiveWidth(workspaceWidth * 0.095, 150, 200),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actualProgress',
-        label: '실적공정율',
+        label: t('wbs.colActualProgress'),
         width: getResponsiveWidth(workspaceWidth * 0.078, 108, fullscreen ? 150 : 132),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'status',
-        label: '상태',
+        label: t('wbs.colStatus'),
         width: getResponsiveWidth(workspaceWidth * 0.07, 104, fullscreen ? 150 : 128),
         className: 'text-center whitespace-nowrap',
       },
       {
         key: 'actions',
-        label: '액션',
+        label: t('wbs.colActions'),
         width: getResponsiveWidth(workspaceWidth * 0.09, 120, fullscreen ? 180 : 152),
         className: 'text-center',
       },
@@ -1345,7 +1347,7 @@ export default function WBS() {
     const tableWidth = columns.reduce((total, column) => total + column.width, 0);
 
     return { columns, stickyLefts, tableWidth };
-  }, [getResponsiveWidth, viewportWidth]);
+  }, [getResponsiveWidth, viewportWidth, t]);
 
   const baseWbsLayout = useMemo(() => getWbsLayout(isInPopup), [getWbsLayout, isInPopup]);
 
@@ -1453,7 +1455,7 @@ export default function WBS() {
                       style={{ paddingLeft: `${addLevel * 24 + 12}px` }}
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      {addLabel} 추가
+                      {t('wbs.addInline', { label: addLabel })}
                     </button>
                   </td>
                 </tr>
@@ -1482,8 +1484,8 @@ export default function WBS() {
         {/* Row 1: Title + Save/Status */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]" title={`${currentProject?.name || '프로젝트'} WBS`}>
-              {currentProject?.name || '프로젝트'} WBS
+            <h1 className="truncate text-xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]" title={`${currentProject?.name || t('wbs.project')} WBS`}>
+              {currentProject?.name || t('wbs.project')} WBS
             </h1>
             {projectTone && (
               <div className="hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] sm:inline-flex" style={{ borderColor: `${projectTone.accent}22`, backgroundColor: `${projectTone.accent}10`, color: projectTone.accent }}>
@@ -1492,7 +1494,7 @@ export default function WBS() {
               </div>
             )}
             <div className="surface-badge shrink-0 !py-1 !px-2.5 !text-[11px]">
-              {tasks.length}개 작업
+              {t('wbs.taskCount', { count: tasks.length })}
             </div>
           </div>
 
@@ -1516,26 +1518,26 @@ export default function WBS() {
               'surface-badge shrink-0 !py-1 !px-2.5 !text-[11px]',
               saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
             )}>
-              {saveStatus === 'pending' && '저장 대기'}
+              {saveStatus === 'pending' && t('wbs.savePending')}
               {saveStatus === 'saving' && (
                 <>
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  저장중
+                  {t('wbs.saving')}
                 </>
               )}
               {saveStatus === 'saved' && (
                 <>
                   <CheckCircle2 className="h-3 w-3 text-[color:var(--accent-success)]" />
-                  {formatSaveStatus(lastSavedAt)}
+                  {formatSaveStatus(lastSavedAt, t)}
                 </>
               )}
               {saveStatus === 'error' && (
                 <>
                   <AlertCircle className="h-3 w-3" />
-                  실패
+                  {t('wbs.error')}
                 </>
               )}
-              {saveStatus === 'idle' && '준비'}
+              {saveStatus === 'idle' && t('wbs.ready')}
               </div>
             </div>
           </div>
@@ -1567,17 +1569,17 @@ export default function WBS() {
           {/* Generation & scheduling */}
           <Button variant="outline" size="sm" onClick={() => { setTemplateTab(inputMode === 'ai' && aiConfigured ? 'ai' : 'template'); setIsTemplateModalOpen(true); }}>
             <Sparkles className="w-3.5 h-3.5" />
-            초안 생성
+            {t('wbs.draftGen')}
           </Button>
           <Button variant="outline" size="sm" onClick={handleAutoSchedule} disabled={tasks.length === 0}>
-            일정계산
+            {t('wbs.scheduleCalc')}
           </Button>
           <Button variant="outline" size="sm" onClick={handleBuildDependencies} disabled={tasks.length === 0}>
-            선후행
+            {t('wbs.dependencies')}
           </Button>
           <Button variant="outline" size="sm" onClick={handleAutoFill} disabled={tasks.length === 0}>
             <Wand2 className="w-3.5 h-3.5" />
-            자동채움
+            {t('wbs.autoFill')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setIsRecurringModalOpen(true)}>
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1593,17 +1595,17 @@ export default function WBS() {
           {/* Progress & reports */}
           <Button variant="outline" size="sm" onClick={() => setIsQuickProgressOpen(true)} disabled={tasks.length === 0}>
             <ClipboardList className="w-3.5 h-3.5" />
-            실적 입력
+            {t('wbs.progressInput')}
           </Button>
           {inputMode === 'ai' && aiConfigured && (
             <Button variant="outline" size="sm" onClick={() => void handleAISuggestProgress()} disabled={tasks.length === 0 || aiSuggestionsLoading}>
               {aiSuggestionsLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
-              AI 실적 제안
+              {t('wbs.aiSuggest')}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setIsWeeklyReportOpen(true)} disabled={tasks.length === 0}>
             <FileText className="w-3.5 h-3.5" />
-            주간보고
+            {t('wbs.weeklyReport')}
           </Button>
 
           <div className="mx-1 h-5 w-px bg-[var(--border-color)]" />
@@ -1617,7 +1619,7 @@ export default function WBS() {
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={tasks.length === 0}>
             <Download className="w-3.5 h-3.5" />
-            엑셀
+            {t('wbs.excel')}
           </Button>
         </div>
       </section>
@@ -1639,7 +1641,7 @@ export default function WBS() {
           <button
             onClick={() => openPopup({ projectId, page: 'wbs' })}
             className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-            title="새 창에서 열기"
+            title={t('wbs.openNewWindow')}
           >
             <ExternalLink className="h-4 w-4" />
           </button>
@@ -1649,10 +1651,10 @@ export default function WBS() {
 
           {flatTasks.length === 0 && (
             <div className="empty-state px-6 py-12">
-              <p>작업이 없습니다</p>
+              <p>{t('wbs.noTasks')}</p>
               <Button onClick={() => handleAddTask(undefined, 1)}>
                 <Plus className="w-4 h-4" />
-                첫 번째 Phase 추가
+                {t('wbs.addFirstPhase')}
               </Button>
             </div>
           )}
@@ -1662,7 +1664,7 @@ export default function WBS() {
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => { setIsTemplateModalOpen(false); setAiPreviewTasks(null); }}
-        title="WBS 초안 생성"
+        title={t('wbs.draftGenTitle')}
         size="xl"
       >
         <div className="p-6 space-y-5">
@@ -1679,7 +1681,7 @@ export default function WBS() {
               )}
             >
               <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
-              템플릿 기반
+              {t('wbs.templateBased')}
             </button>
             <button
               type="button"
@@ -1692,10 +1694,10 @@ export default function WBS() {
                   : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]',
                 !aiConfigured && 'cursor-not-allowed opacity-40'
               )}
-              title={!aiConfigured ? 'Settings에서 AI API Key를 먼저 설정하세요' : undefined}
+              title={!aiConfigured ? t('wbs.aiKeyRequired') : undefined}
             >
               <Bot className="mr-1.5 inline h-3.5 w-3.5" />
-              AI 생성
+              {t('wbs.aiGen')}
             </button>
           </div>
 
@@ -1708,11 +1710,11 @@ export default function WBS() {
                   value={draftPrompt}
                   onChange={(event) => setDraftPrompt(event.target.value)}
                   onKeyDown={(event) => { if (event.key === 'Enter') handleSmartMatch(); }}
-                  placeholder="프로젝트 설명을 입력하면 최적 템플릿을 자동 선택합니다 (예: 냉연 설비 계량대 재구축)"
+                  placeholder={t('wbs.smartMatchPlaceholder')}
                   className="flex-1 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-4 py-2.5 text-sm text-[color:var(--text-primary)] outline-none transition-colors placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
                 />
                 <Button size="sm" onClick={handleSmartMatch} disabled={!draftPrompt.trim()}>
-                  자동 선택
+                  {t('wbs.smartMatchBtn')}
                 </Button>
               </div>
 
@@ -1738,7 +1740,7 @@ export default function WBS() {
                         </p>
                         {isSelected && (
                           <span className="shrink-0 rounded-full bg-[rgba(15,118,110,0.14)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--accent-primary)]">
-                            선택됨
+                            {t('wbs.selected')}
                           </span>
                         )}
                       </div>
@@ -1747,8 +1749,8 @@ export default function WBS() {
                       </p>
                       <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
                         <span className="surface-badge">{template.audience}</span>
-                        <span className="surface-badge">{template.phases}개 Phase</span>
-                        <span className="surface-badge">{template.taskCount}건</span>
+                        <span className="surface-badge">{t('wbs.phaseCount', { count: template.phases })}</span>
+                        <span className="surface-badge">{t('wbs.taskCountBadge', { count: template.taskCount })}</span>
                       </div>
                     </button>
                   );
@@ -1807,20 +1809,20 @@ export default function WBS() {
                           : selectedTemplate?.name}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
-                        <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
-                        <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
+                        <span>{t('wbs.target')}: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || t('wbs.currentProject')}</span></span>
+                        <span>{t('wbs.startDate')}: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || t('wbs.notSet')}</span></span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
-                        현재 WBS를 초안으로 교체합니다. 적용 후 편집기에서 바로 수정 가능합니다.
+                        {t('wbs.replaceWarning')}
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
-                        취소
+                        {t('wbs.cancel')}
                       </Button>
                       <Button onClick={handleApplyTemplate}>
                         <Sparkles className="w-4 h-4" />
-                        초안 생성
+                        {t('wbs.generate')}
                       </Button>
                     </div>
                   </div>
@@ -1833,11 +1835,11 @@ export default function WBS() {
               {!aiPreviewTasks ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="field-label">프로젝트 설명</label>
+                    <label className="field-label">{t('wbs.projectDesc')}</label>
                     <textarea
                       value={aiDescription}
                       onChange={(e) => setAiDescription(e.target.value)}
-                      placeholder="프로젝트의 목표, 범위, 주요 기능 등을 자세히 설명해주세요. AI가 이 설명을 기반으로 WBS를 자동 생성합니다."
+                      placeholder={t('wbs.projectDescPlaceholder')}
                       className="field-textarea mt-2"
                       rows={5}
                     />
@@ -1847,25 +1849,25 @@ export default function WBS() {
                         onClick={() => setAiDescription(currentProject.description || '')}
                         className="mt-2 text-xs text-[color:var(--accent-primary)] hover:underline"
                       >
-                        프로젝트 설명 불러오기
+                        {t('wbs.loadProjectDesc')}
                       </button>
                     )}
                   </div>
 
                   <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
-                      <span>대상: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || '현재 프로젝트'}</span></span>
-                      <span>시작일: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || '미설정'}</span></span>
-                      <span>인원: <span className="font-medium text-[color:var(--text-primary)]">{members.length}명</span></span>
+                      <span>{t('wbs.target')}: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.name || t('wbs.currentProject')}</span></span>
+                      <span>{t('wbs.startDate')}: <span className="font-medium text-[color:var(--text-primary)]">{currentProject?.startDate || t('wbs.notSet')}</span></span>
+                      <span>{t('wbs.memberCount')}: <span className="font-medium text-[color:var(--text-primary)]">{t('wbs.membersUnit', { count: members.length })}</span></span>
                     </div>
                     <p className="mt-2 text-xs leading-5 text-[color:var(--accent-warning)]">
-                      AI가 생성한 WBS를 미리보기한 후 선택적으로 적용할 수 있습니다.
+                      {t('wbs.aiPreviewNote')}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>
-                      취소
+                      {t('wbs.cancel')}
                     </Button>
                     <Button
                       onClick={() => void handleAIGenerate()}
@@ -1874,12 +1876,12 @@ export default function WBS() {
                       {aiGenerating ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          AI 생성 중...
+                          {t('wbs.aiGenInProgress')}
                         </>
                       ) : (
                         <>
                           <Bot className="h-4 w-4" />
-                          AI로 WBS 생성
+                          {t('wbs.aiGenWbs')}
                         </>
                       )}
                     </Button>
@@ -1909,23 +1911,23 @@ export default function WBS() {
               userId: authUser.id,
               userName: authUser.name,
               action: 'task.delete',
-              details: `태스크 "${pendingDeleteTask.name || '이름 없음'}" 삭제`,
+              details: t('wbs.auditDeleteTask', { name: pendingDeleteTask.name || t('wbs.noName') }),
             });
           }
           showFeedback({
             tone: 'warning',
-            title: '작업 삭제 완료',
-            message: `"${pendingDeleteTask.name || '이름 없는 작업'}"과 하위 작업을 제거했습니다.`,
+            title: t('wbs.deleteTaskDone'),
+            message: t('wbs.deleteTaskDoneMsg', { name: pendingDeleteTask.name || t('wbs.unnamedTask') }),
           });
           setPendingDeleteTask(null);
         }}
-        title="작업 삭제"
+        title={t('wbs.deleteTaskTitle')}
         description={
           pendingDeleteTask
-            ? `"${pendingDeleteTask.name || '이름 없는 작업'}"과 연결된 하위 작업도 함께 삭제됩니다. 변경 내용은 저장 시 일정과 지표에 반영됩니다.`
+            ? t('wbs.deleteTaskDesc', { name: pendingDeleteTask.name || t('wbs.unnamedTask') })
             : ''
         }
-        confirmLabel="작업 삭제"
+        confirmLabel={t('wbs.deleteTaskConfirm')}
         confirmVariant="danger"
       />
 
@@ -1934,7 +1936,7 @@ export default function WBS() {
           isOpen={isWeeklyReportOpen}
           onClose={() => setIsWeeklyReportOpen(false)}
           projectId={projectId}
-          projectName={currentProject?.name || '프로젝트'}
+          projectName={currentProject?.name || t('wbs.project')}
           tasks={tasks}
           members={members}
           attendances={attendancesForReport}
@@ -2032,10 +2034,12 @@ export default function WBS() {
   );
 }
 
-function formatSaveStatus(lastSavedAt: string | null) {
-  if (!lastSavedAt) return '저장됨';
-  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })} 저장됨`;
+function formatSaveStatus(lastSavedAt: string | null, t: (key: string, opts?: Record<string, unknown>) => string) {
+  if (!lastSavedAt) return t('wbs.saved');
+  return t('wbs.savedAt', {
+    time: new Date(lastSavedAt).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  });
 }

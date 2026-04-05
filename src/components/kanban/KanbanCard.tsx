@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
 import { cn, formatDate } from '../../lib/utils';
 import { TASK_STATUS_LABELS } from '../../types';
@@ -55,6 +56,7 @@ const STATUS_BADGE_STYLES: Record<TaskStatus, string> = {
 const MAX_CHECKLIST = 5;
 
 export default function KanbanCard({ task, childTasks, members, canEdit, onEditClick }: KanbanCardProps) {
+  const { t } = useTranslation();
   const assignee = useMemo(() => {
     if (!task.assigneeId) return null;
     return members.find((m) => m.id === task.assigneeId) ?? null;
@@ -119,7 +121,7 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
           ))}
           {remainingCount > 0 && (
             <li className="text-xs text-[var(--text-muted)] pl-5">
-              +{remainingCount}개 더보기
+              {t('kanbanComponents.moreItems', { count: remainingCount })}
             </li>
           )}
         </ul>

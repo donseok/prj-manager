@@ -9,7 +9,8 @@ import {
   parseISO,
   min as minDate,
 } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { ko, enUS, vi } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, CalendarDays, ScanSearch } from 'lucide-react';
 import type { Task } from '../../types';
 import { cn } from '../../lib/utils';
@@ -69,9 +70,11 @@ function GanttChartInner({
   isLeafTask,
   dragLabel,
 }: GanttChartProps) {
+  const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const isDark = useThemeStore((s) => s.isDark);
+  const dateFnsLocale = i18n.language === 'vi' ? vi : i18n.language === 'en' ? enUS : ko;
   const isExternalScroll = useRef(false);
   const prevSelectedIdRef = useRef<string | null>(null);
   const skipAutoFocusRef = useRef(false);
@@ -292,11 +295,11 @@ function GanttChartInner({
           </Button>
           <Button variant="ghost" size="sm" onClick={handleGoToToday}>
             <CalendarDays className="w-4 h-4" />
-            오늘
+            {t('app.wbsComponents.ganttChart.today')}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleFitToTasks}>
             <ScanSearch className="w-4 h-4" />
-            일정에 맞춤
+            {t('app.wbsComponents.ganttChart.fitToSchedule')}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleNextWeek}>
             <ChevronRight className="w-4 h-4" />
@@ -306,12 +309,12 @@ function GanttChartInner({
         <div className="flex flex-wrap items-center gap-2">
           {selectedTask && (
             <div className="surface-badge">
-              선택됨: {selectedTask.name || '이름 없는 작업'}
+              {t('app.wbsComponents.ganttChart.selected')}: {selectedTask.name || t('app.wbsComponents.ganttChart.unnamedTask')}
             </div>
           )}
           <div className="surface-badge">
-            {format(displayStartDate, 'yyyy년 M월 d일', { locale: ko })} ~{' '}
-            {format(viewEndDate, 'yyyy년 M월 d일', { locale: ko })}
+            {format(displayStartDate, t('app.wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })} ~{' '}
+            {format(viewEndDate, t('app.wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })}
           </div>
         </div>
       </div>
@@ -341,7 +344,7 @@ function GanttChartInner({
                     color: isDark ? '#ffffff' : 'var(--text-secondary)',
                   }}
                 >
-                  {format(parseISO(`${month.month}-01`), 'yyyy년 M월', { locale: ko })}
+                  {format(parseISO(`${month.month}-01`), t('app.wbsComponents.ganttChart.dateFormatMonth'), { locale: dateFnsLocale })}
                 </div>
               ))}
             </div>
@@ -400,7 +403,7 @@ function GanttChartInner({
                       {format(date, 'd')}
                     </span>
                     <span className="text-[10px]" style={{ color: dayColor }}>
-                      {format(date, 'E', { locale: ko })}
+                      {format(date, 'E', { locale: dateFnsLocale })}
                     </span>
                   </div>
                 );
@@ -437,7 +440,7 @@ function GanttChartInner({
                   className="pointer-events-none absolute top-3 z-20 -translate-x-1/2 rounded-full bg-[color:var(--accent-danger)] px-2 py-1 text-[10px] font-semibold text-white shadow-[0_16px_36px_-20px_rgba(203,75,95,0.9)]"
                   style={{ left: todayX + dayWidth / 2 }}
                 >
-                  오늘
+                  {t('app.wbsComponents.ganttChart.today')}
                 </div>
               </>
             )}
@@ -534,7 +537,7 @@ function GanttChartInner({
                         height: barHeight,
                         ...(isCritical ? { borderColor: '#CB4B5F' } : {}),
                       }}
-                      title={isDragging ? undefined : `계획: ${task.planStart} ~ ${task.planEnd}${isCritical ? ' (크리티컬)' : ''}`}
+                      title={isDragging ? undefined : `${t('wbsComponents.ganttChart.plan')}: ${task.planStart} ~ ${task.planEnd}${isCritical ? ' (critical)' : ''}`}
                       onMouseDown={canDrag ? (e) => {
                         // Determine if clicking near edges for resize
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -608,14 +611,14 @@ function GanttChartInner({
                           width: Math.max(actualBar.width * (task.actualProgress / 100), task.actualProgress > 0 ? 8 : 0),
                           height: barHeight,
                         }}
-                        title={`실적: ${task.actualStart} ~ ${task.actualEnd || '진행중'} (${task.actualProgress}%)`}
+                        title={`${t('app.wbsComponents.ganttChart.actual')}: ${task.actualStart} ~ ${task.actualEnd || t('app.wbsComponents.ganttChart.inProgress')} (${task.actualProgress}%)`}
                       />
                     </>
                   )}
 
                   {!planBar && !actualBar && (
                     <div className="absolute left-2 top-0 flex h-full items-center text-xs text-[color:var(--text-muted)]">
-                      일정 없음
+                      {t('app.wbsComponents.ganttChart.noSchedule')}
                     </div>
                   )}
 

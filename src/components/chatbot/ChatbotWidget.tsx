@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, SendHorizonal, X, RotateCcw } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useTaskStore } from '../../store/taskStore';
@@ -19,6 +20,7 @@ interface UIMessage {
 }
 
 export default function ChatbotWidget() {
+  const { t } = useTranslation();
   const { projects, currentProject, members } = useProjectStore();
   const { tasks } = useTaskStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -137,7 +139,7 @@ export default function ChatbotWidget() {
                 <div className="min-w-0">
                   <h2 className="text-sm font-semibold tracking-[-0.02em]">DK Bot</h2>
                   <p className="text-xs text-white/70">
-                    {currentProject ? currentProject.name : `${projects.length}개 프로젝트`}
+                    {currentProject ? currentProject.name : t('chatbot.projectCount', { count: projects.length })}
                   </p>
                 </div>
               </div>
@@ -160,8 +162,8 @@ export default function ChatbotWidget() {
                     setDynamicSuggestions([]);
                   }}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/12 text-white/80 transition hover:bg-white/18 hover:text-white"
-                  aria-label="대화 초기화"
-                  title="대화 초기화"
+                  aria-label={t('chatbot.resetChat')}
+                  title={t('chatbot.resetChat')}
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
@@ -169,8 +171,8 @@ export default function ChatbotWidget() {
                   type="button"
                   onClick={() => setIsOpen(false)}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/12 text-white/80 transition hover:bg-white/18 hover:text-white"
-                  aria-label="챗봇 닫기"
-                  title="닫기"
+                  aria-label={t('chatbot.closeChatbot')}
+                  title={t('chatbot.close')}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -223,7 +225,7 @@ export default function ChatbotWidget() {
                         <span className="h-2 w-2 animate-bounce rounded-full bg-[#C8102E] [animation-delay:-0.09s]" />
                         <span className="h-2 w-2 animate-bounce rounded-full bg-[#C8102E]" />
                       </span>
-                      데이터를 정리하는 중입니다.
+                      {t('chatbot.thinking')}
                     </div>
                   </div>
                 </div>
@@ -249,7 +251,7 @@ export default function ChatbotWidget() {
                       submitQuestion(draft);
                     }
                   }}
-                  placeholder="질문을 입력하세요 (Enter로 전송)"
+                  placeholder={t('chatbot.inputPlaceholder')}
                   rows={2}
                   className="field-input min-h-[56px] flex-1 resize-none rounded-[16px] text-sm"
                 />
@@ -257,7 +259,7 @@ export default function ChatbotWidget() {
                   type="submit"
                   disabled={!draft.trim() || isThinking}
                   className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(135deg,#C8102E,#E8384F)] text-white shadow-[0_22px_44px_-26px_rgba(200,16,46,0.72)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none"
-                  aria-label="질문 보내기"
+                  aria-label={t('chatbot.send')}
                 >
                   <SendHorizonal className="h-4 w-4" />
                 </button>
@@ -270,14 +272,14 @@ export default function ChatbotWidget() {
       <div className="pointer-events-auto flex items-center gap-3">
         {!isOpen && (
           <div className="hidden rounded-full border border-white/15 bg-[rgba(21,37,96,0.94)] px-4 py-2 text-sm font-medium text-white shadow-[0_28px_68px_-34px_rgba(21,37,96,0.82)] backdrop-blur-xl sm:block">
-            물어보면 바로 정리해 드릴게요
+            {t('chatbot.greeting')}
           </div>
         )}
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
           className="group relative flex h-[66px] w-[66px] items-center justify-center rounded-full border border-white/16 bg-[linear-gradient(165deg,#0E1B45_0%,#152560_50%,#1E3A7B_100%)] shadow-[0_28px_72px_-34px_rgba(21,37,96,0.72)] transition duration-300 hover:-translate-y-1 hover:scale-[1.02]"
-          aria-label={isOpen ? '챗봇 닫기' : '챗봇 열기'}
+          aria-label={isOpen ? t('chatbot.closeChatbot') : t('chatbot.openChatbot')}
         >
           <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.28),transparent_48%)]" />
           <DKBotAvatar

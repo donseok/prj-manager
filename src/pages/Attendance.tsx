@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarCheck, Plus, Trash2, Edit2, ChevronLeft, ChevronRight,
   Calendar as CalendarIcon, List, Users,
@@ -8,7 +9,7 @@ import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths,
   addDays, format, isSameMonth, isToday,
 } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { ko, enUS, vi } from 'date-fns/locale';
 import { useProjectStore } from '../store/projectStore';
 import { useAttendanceStore } from '../store/attendanceStore';
 import { useProjectPermission } from '../hooks/useProjectPermission';
@@ -23,16 +24,29 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import AttendanceModal from '../components/attendance/AttendanceModal';
 import type { Attendance, AttendanceType } from '../types';
-import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import { ATTENDANCE_TYPE_COLORS } from '../types';
 
 type ViewMode = 'calendar' | 'list';
 
 export default function Attendance() {
+  const { t, i18n } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { members, currentProject } = useProjectStore();
   const { attendances, setAttendances, addAttendance, updateAttendance, removeAttendance } = useAttendanceStore();
   const { canEditAllAttendance, canEditOwnAttendance, canViewAttendance } = useProjectPermission();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+
+  const getDateLocale = () => {
+    if (i18n.language === 'ko') return 'ko-KR';
+    if (i18n.language === 'vi') return 'vi-VN';
+    return 'en-US';
+  };
+
+  const getDateFnsLocale = () => {
+    if (i18n.language === 'ko') return ko;
+    if (i18n.language === 'vi') return vi;
+    return enUS;
+  };
 
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
@@ -68,10 +82,10 @@ export default function Attendance() {
       } else {
         addAttendance(attendance);
       }
-      showFeedback({ tone: 'success', title: '저장 완료', message: '근태가 저장되었습니다.' });
+      showFeedback({ tone: 'success', title: t('attendance.saveSuccess'), message: t('attendance.saveSuccessMsg') });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '근태 저장에 실패했습니다.';
-      showFeedback({ tone: 'error', title: '저장 실패', message: msg });
+      const msg = err instanceof Error ? err.message : t('attendance.saveFailMsg');
+      showFeedback({ tone: 'error', title: t('attendance.saveFail'), message: msg });
     }
   }, [addAttendance, updateAttendance, showFeedback]);
 
@@ -82,9 +96,9 @@ export default function Attendance() {
     try {
       await deleteAttendanceById(projectId, pendingDelete.id);
       removeAttendance(pendingDelete.id);
-      showFeedback({ tone: 'success', title: '삭제 완료', message: '근태 기록이 삭제되었습니다.' });
+      showFeedback({ tone: 'success', title: t('attendance.deleteSuccess'), message: t('attendance.deleteSuccessMsg') });
     } catch {
-      showFeedback({ tone: 'error', title: '삭제 실패', message: '삭제에 실패했습니다.' });
+      showFeedback({ tone: 'error', title: t('attendance.deleteFail'), message: t('attendance.deleteFailMsg') });
     }
     setPendingDelete(null);
   }, [pendingDelete, projectId, removeAttendance, showFeedback]);
@@ -131,7 +145,7 @@ export default function Attendance() {
   }, [allAttendancesForMonth, filterMemberId]);
 
   const getMemberName = (memberId: string) =>
-    members.find((m) => m.id === memberId)?.name || '알 수 없음';
+    members.find((m) => m.id === memberId)?.name || t('attendance.unknown');
 
   // 월간 요약 통계
   const monthlySummary = useMemo(() => {
@@ -150,7 +164,7 @@ export default function Attendance() {
     return (
       <div className="empty-state px-6 py-14">
         <CalendarCheck className="h-14 w-14 text-[color:var(--text-muted)]" />
-        <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">접근 권한이 없습니다</h3>
+        <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">{t('attendance.noPermission')}</h3>
       </div>
     );
   }
@@ -174,7 +188,7 @@ export default function Attendance() {
               Attendance
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
-              근태현황
+              {t('attendance.title')}
             </h1>
             {projectTone && (
               <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
@@ -182,13 +196,13 @@ export default function Attendance() {
               </p>
             )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
-              프로젝트 멤버의 출결 상태를 캘린더와 리스트로 한눈에 확인할 수 있습니다.
+              {t('attendance.heroDesc')}
             </p>
             <div className="mt-8 flex items-center gap-3">
               {canEdit && (
                 <Button onClick={handleAddClick}>
                   <Plus className="w-4 h-4" />
-                  근태 등록
+                  {t('attendance.register')}
                 </Button>
               )}
             </div>
@@ -200,21 +214,21 @@ export default function Attendance() {
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Total Records</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">{filteredAttendances.length}</p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{format(currentMonth, 'yyyy년 M월', { locale: ko })} 등록 건수</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('attendance.recordCount', { month: format(currentMonth, t('attendance.monthFormat'), { locale: getDateFnsLocale() }) })}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Leave Days</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {filteredAttendances.filter((a) => ['annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave'].includes(a.type)).length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">연차/반차/병가</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('attendance.leaveDaysDesc')}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Business Trip</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {filteredAttendances.filter((a) => a.type === 'business_trip').length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">출장</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('attendance.businessTripDesc')}</p>
           </div>
         </div>
       </section>
@@ -227,13 +241,13 @@ export default function Attendance() {
               <ChevronLeft className="h-4 w-4" />
             </button>
             <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              {format(currentMonth, 'yyyy년 M월', { locale: ko })}
+              {format(currentMonth, t('attendance.monthFormat'), { locale: getDateFnsLocale() })}
             </h3>
             <button onClick={() => setCurrentMonth((m) => addMonths(m, 1))} className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]">
               <ChevronRight className="h-4 w-4" />
             </button>
             <button onClick={() => setCurrentMonth(new Date())} className="rounded-full border border-[var(--border-color)] px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]">
-              오늘
+              {t('attendance.today')}
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -242,7 +256,7 @@ export default function Attendance() {
               onChange={(e) => setFilterMemberId(e.target.value)}
               className="field-select w-auto min-w-[8rem] py-2"
             >
-              <option value="all">전체 멤버</option>
+              <option value="all">{t('attendance.allMembers')}</option>
               {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
             <div className="flex rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-tertiary)] p-0.5">
@@ -254,7 +268,7 @@ export default function Attendance() {
                 )}
               >
                 <CalendarIcon className="h-3.5 w-3.5" />
-                캘린더
+                {t('attendance.calendarView')}
               </button>
               <button
                 onClick={() => setViewMode('list')}
@@ -264,7 +278,7 @@ export default function Attendance() {
                 )}
               >
                 <List className="h-3.5 w-3.5" />
-                리스트
+                {t('attendance.listView')}
               </button>
             </div>
           </div>
@@ -279,6 +293,7 @@ export default function Attendance() {
             onCellClick={handleCellClick}
             onEditClick={handleEditClick}
             canEdit={canEdit}
+            t={t}
           />
         ) : (
           <ListView
@@ -287,6 +302,8 @@ export default function Attendance() {
             onEditClick={handleEditClick}
             onDeleteClick={setPendingDelete}
             canEdit={canEdit}
+            t={t}
+            locale={getDateLocale()}
           />
         )}
       </section>
@@ -297,7 +314,7 @@ export default function Attendance() {
           <div className="border-b border-[var(--border-color)] px-6 py-5">
             <p className="page-kicker">Monthly Summary</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              멤버별 월간 요약
+              {t('attendance.monthlySummary')}
             </h2>
           </div>
           <div className="overflow-x-auto">
@@ -305,13 +322,13 @@ export default function Attendance() {
               <thead>
                 <tr className="border-b border-[var(--border-color)] bg-[color:var(--bg-tertiary)]">
                   <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">
-                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />멤버</div>
+                    <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{t('attendance.member')}</div>
                   </th>
-                  {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((t) => (
-                    <th key={t} className="px-3 py-3 text-center font-medium text-[color:var(--text-secondary)]">
+                  {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((at) => (
+                    <th key={at} className="px-3 py-3 text-center font-medium text-[color:var(--text-secondary)]">
                       <div className="flex items-center justify-center gap-1">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[t] }} />
-                        {ATTENDANCE_TYPE_LABELS[t]}
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[at] }} />
+                        {t(`labels.attendanceType.${at}`)}
                       </div>
                     </th>
                   ))}
@@ -321,9 +338,9 @@ export default function Attendance() {
                 {members.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)] transition-colors">
                     <td className="px-4 py-3 font-medium text-[color:var(--text-primary)]">{m.name}</td>
-                    {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((t) => (
-                      <td key={t} className="px-3 py-3 text-center text-[color:var(--text-secondary)]">
-                        {monthlySummary[m.id]?.[t] || '-'}
+                    {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((at) => (
+                      <td key={at} className="px-3 py-3 text-center text-[color:var(--text-secondary)]">
+                        {monthlySummary[m.id]?.[at] || '-'}
                       </td>
                     ))}
                   </tr>
@@ -353,9 +370,9 @@ export default function Attendance() {
         isOpen={Boolean(pendingDelete)}
         onClose={() => setPendingDelete(null)}
         onConfirm={confirmDelete}
-        title="근태 삭제"
-        description={pendingDelete ? `${getMemberName(pendingDelete.memberId)}의 ${pendingDelete.date} ${ATTENDANCE_TYPE_LABELS[pendingDelete.type]} 기록을 삭제합니다.` : ''}
-        confirmLabel="삭제"
+        title={t('attendance.deleteTitle')}
+        description={pendingDelete ? t('attendance.deleteConfirmDesc', { name: getMemberName(pendingDelete.memberId), date: pendingDelete.date, type: t(`labels.attendanceType.${pendingDelete.type}`) }) : ''}
+        confirmLabel={t('common.delete')}
         confirmVariant="danger"
       />
     </div>
@@ -372,9 +389,10 @@ interface CalendarViewProps {
   onCellClick: (date: Date) => void;
   onEditClick: (record: Attendance) => void;
   canEdit: boolean;
+  t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
-function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, onEditClick, canEdit }: CalendarViewProps) {
+function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, onEditClick, canEdit, t }: CalendarViewProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
@@ -413,7 +431,10 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
     return map;
   }, [attendances]);
 
-  const dayHeaders = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayHeaders = [
+    t('attendance.daySun'), t('attendance.dayMon'), t('attendance.dayTue'),
+    t('attendance.dayWed'), t('attendance.dayThu'), t('attendance.dayFri'), t('attendance.daySat'),
+  ];
 
   return (
     <div className="p-4">
@@ -465,23 +486,21 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
                 )}>
                   {format(d, 'd')}
                 </div>
-                {/* 공휴일 표시 */}
+                {/* Holiday display */}
                 {isHoliday && inMonth && (
                   <div className="mb-0.5 truncate px-0.5 text-[9px] font-medium text-red-500" title={holiday}>
                     {holiday}
                   </div>
                 )}
-                {/* 근태 표시: 근무일만 */}
+                {/* Attendance: workdays only */}
                 {!isNonWorkday && (
                   <div className="space-y-0.5">
-                    {/* 기본 출근 요약 */}
                     {defaultPresentCount > 0 && (
                       <div className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight text-[color:var(--text-muted)]">
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS.present }} />
-                        <span>출근 {defaultPresentCount}명</span>
+                        <span>{t('labels.attendanceType.present')} {defaultPresentCount}{t('attendance.personsUnit')}</span>
                       </div>
                     )}
-                    {/* 사용자 등록 근태 (변경된 근태만 개별 표시) */}
                     {userRecords.slice(0, 3).map((a) => (
                       <button
                         key={a.id}
@@ -489,13 +508,13 @@ function CalendarView({ currentMonth, attendances, getMemberName, onCellClick, o
                         className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight hover:bg-black/5 dark:hover:bg-white/5 truncate"
                       >
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
-                        <span className="truncate text-[color:var(--text-secondary)]" title={`${getMemberName(a.memberId)} ${ATTENDANCE_TYPE_LABELS[a.type]}`}>
-                          {getMemberName(a.memberId)} {ATTENDANCE_TYPE_LABELS[a.type]}
+                        <span className="truncate text-[color:var(--text-secondary)]" title={`${getMemberName(a.memberId)} ${t(`labels.attendanceType.${a.type}`)}`}>
+                          {getMemberName(a.memberId)} {t(`labels.attendanceType.${a.type}`)}
                         </span>
                       </button>
                     ))}
                     {userRecords.length > 3 && (
-                      <span className="block px-1 text-[10px] text-[color:var(--text-muted)]">+{userRecords.length - 3}건</span>
+                      <span className="block px-1 text-[10px] text-[color:var(--text-muted)]">{t('attendance.moreItems', { count: userRecords.length - 3 })}</span>
                     )}
                   </div>
                 )}
@@ -516,9 +535,11 @@ interface ListViewProps {
   onEditClick: (record: Attendance) => void;
   onDeleteClick: (record: Attendance) => void;
   canEdit: boolean;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  locale: string;
 }
 
-function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canEdit }: ListViewProps) {
+function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canEdit, t }: ListViewProps) {
   const sorted = useMemo(() =>
     [...attendances].sort((a, b) => b.date.localeCompare(a.date) || getMemberName(a.memberId).localeCompare(getMemberName(b.memberId))),
     [attendances, getMemberName]
@@ -528,8 +549,8 @@ function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canE
     return (
       <div className="empty-state px-6 py-14">
         <CalendarCheck className="h-14 w-14 text-[color:var(--text-muted)]" />
-        <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">등록된 근태가 없습니다</h3>
-        <p className="text-sm text-[color:var(--text-secondary)]">근태 등록 버튼을 눌러 첫 기록을 추가하세요.</p>
+        <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">{t('attendance.noRecords')}</h3>
+        <p className="text-sm text-[color:var(--text-secondary)]">{t('attendance.noRecordsDesc')}</p>
       </div>
     );
   }
@@ -539,11 +560,11 @@ function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canE
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border-color)] bg-[color:var(--bg-tertiary)]">
-            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">날짜</th>
-            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">담당자</th>
-            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">유형</th>
-            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">사유</th>
-            {canEdit && <th className="px-4 py-3 text-center font-medium text-[color:var(--text-secondary)]">관리</th>}
+            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">{t('attendance.date')}</th>
+            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">{t('attendance.assignee')}</th>
+            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">{t('attendance.type')}</th>
+            <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">{t('attendance.reason')}</th>
+            {canEdit && <th className="px-4 py-3 text-center font-medium text-[color:var(--text-secondary)]">{t('attendance.actions')}</th>}
           </tr>
         </thead>
         <tbody>
@@ -559,11 +580,11 @@ function ListView({ attendances, getMemberName, onEditClick, onDeleteClick, canE
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ATTENDANCE_TYPE_COLORS[a.type]}18`, color: ATTENDANCE_TYPE_COLORS[a.type] }}>
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[a.type] }} />
-                    {ATTENDANCE_TYPE_LABELS[a.type]}
-                    {isDefault && ' (자동)'}
+                    {t(`labels.attendanceType.${a.type}`)}
+                    {isDefault && ` (${t('attendance.auto')})`}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-[color:var(--text-secondary)]">{a.note || (isDefault ? '기본 출근' : '-')}</td>
+                <td className="px-4 py-3 text-[color:var(--text-secondary)]">{a.note || (isDefault ? t('attendance.defaultPresent') : '-')}</td>
                 {canEdit && (
                   <td className="px-4 py-3">
                     {!isDefault ? (

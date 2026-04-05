@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock, LogOut, Sun, Moon, RefreshCw } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { signOutSupabase, ensureSupabaseSession } from '../lib/supabase';
@@ -9,6 +10,7 @@ import DKFlowLogo from '../components/common/DKFlowLogo';
 export default function PendingApproval() {
   const { user, isAuthenticated, isPending, isSuspended, logout, setUser } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
 
   // 10초마다 승인 상태 자동 확인
@@ -61,7 +63,7 @@ export default function PendingApproval() {
       <button
         onClick={toggleTheme}
         className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
-        title={isDark ? '라이트 모드' : '다크 모드'}
+        title={isDark ? t('header.lightMode') : t('header.darkMode')}
       >
         {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
       </button>
@@ -80,14 +82,14 @@ export default function PendingApproval() {
 
         {/* 제목 */}
         <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-          {isSuspended ? '계정이 정지되었습니다' : '계정 승인 대기 중'}
+          {isSuspended ? t('pending.accountSuspended') : t('pending.accountPending')}
         </h1>
 
         {/* 메시지 */}
         <p className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
           {isSuspended
-            ? '계정이 관리자에 의해 정지되었습니다. 관리자에게 문의해주세요.'
-            : '관리자의 승인을 기다리고 있습니다. 승인이 완료되면 자동으로 이동합니다.'}
+            ? t('pending.suspendedMessage')
+            : t('pending.pendingMessage')}
         </p>
 
         {/* 사용자 정보 배지 */}
@@ -106,7 +108,7 @@ export default function PendingApproval() {
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[image:var(--gradient-primary)] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,118,110,0.8)] transition-all hover:-translate-y-0.5 disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
-              {checking ? '확인 중...' : '승인 상태 확인'}
+              {checking ? t('pending.checking') : t('pending.checkStatus')}
             </button>
           )}
           <button
@@ -114,18 +116,18 @@ export default function PendingApproval() {
             className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-6 py-2.5 text-sm font-medium text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
           >
             <LogOut className="h-4 w-4" />
-            로그아웃
+            {t('header.logout')}
           </button>
         </div>
 
         {!isSuspended && (
           <p className="mt-5 text-xs text-[color:var(--text-muted)]">
-            10초마다 자동으로 승인 여부를 확인합니다
+            {t('pending.autoCheckMessage')}
           </p>
         )}
 
         <p className="mt-6 text-xs text-[color:var(--text-muted)]">
-          &copy; {new Date().getFullYear()} 동국시스템즈. All rights reserved.
+          {t('footer.copyright', { year: new Date().getFullYear() })}
         </p>
       </div>
     </div>

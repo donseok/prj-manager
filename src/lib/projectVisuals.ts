@@ -1,4 +1,5 @@
 import { Factory, Layers3, Radio, Workflow, type LucideIcon } from 'lucide-react';
+import i18n from '../i18n';
 import type { Project } from '../types';
 
 export interface ProjectVisualTone {
@@ -10,14 +11,16 @@ export interface ProjectVisualTone {
   darkGradient: string;
 }
 
-const DEFAULT_PROJECT_TONE: ProjectVisualTone = {
-  accent: '#0f766e',
-  label: 'Workspace Flow',
-  note: '운영 흐름 점검',
-  icon: Layers3,
-  lightGradient: 'linear-gradient(135deg, rgba(15,118,110,0.12), rgba(244,252,250,0.94) 44%, rgba(255,255,255,0.9))',
-  darkGradient: 'linear-gradient(135deg, rgba(15,118,110,0.2), rgba(21,32,31,0.96) 40%, rgba(24,29,36,0.94))',
-};
+function getDefaultProjectTone(): ProjectVisualTone {
+  return {
+    accent: '#0f766e',
+    label: 'Workspace Flow',
+    note: i18n.t('projectVisuals.operationCheck'),
+    icon: Layers3,
+    lightGradient: 'linear-gradient(135deg, rgba(15,118,110,0.12), rgba(244,252,250,0.94) 44%, rgba(255,255,255,0.9))',
+    darkGradient: 'linear-gradient(135deg, rgba(15,118,110,0.2), rgba(21,32,31,0.96) 40%, rgba(24,29,36,0.94))',
+  };
+}
 
 export function getProjectVisualTone(project: Project): ProjectVisualTone {
   const name = project.name.toLowerCase();
@@ -26,7 +29,7 @@ export function getProjectVisualTone(project: Project): ProjectVisualTone {
     return {
       accent: '#0f766e',
       label: 'Smart Utility',
-      note: '현장 데이터 연계',
+      note: i18n.t('projectVisuals.fieldData'),
       icon: Radio,
       lightGradient: 'linear-gradient(135deg, rgba(15,118,110,0.14), rgba(238,251,248,0.96) 42%, rgba(255,255,255,0.92))',
       darkGradient: 'linear-gradient(135deg, rgba(15,118,110,0.22), rgba(21,35,32,0.96) 40%, rgba(24,29,36,0.94))',
@@ -37,7 +40,7 @@ export function getProjectVisualTone(project: Project): ProjectVisualTone {
     return {
       accent: '#d88b44',
       label: 'Process Innovation',
-      note: '프로세스 재설계',
+      note: i18n.t('projectVisuals.processRedesign'),
       icon: Workflow,
       lightGradient: 'linear-gradient(135deg, rgba(216,139,68,0.14), rgba(255,247,238,0.96) 42%, rgba(255,255,255,0.92))',
       darkGradient: 'linear-gradient(135deg, rgba(216,139,68,0.22), rgba(38,31,24,0.96) 40%, rgba(24,29,36,0.94))',
@@ -48,7 +51,7 @@ export function getProjectVisualTone(project: Project): ProjectVisualTone {
     return {
       accent: '#2d7bd6',
       label: 'Core Integration',
-      note: '대형 전환 프로그램',
+      note: i18n.t('projectVisuals.coreIntegration'),
       icon: Layers3,
       lightGradient: 'linear-gradient(135deg, rgba(45,123,214,0.14), rgba(240,247,255,0.96) 42%, rgba(255,255,255,0.92))',
       darkGradient: 'linear-gradient(135deg, rgba(45,123,214,0.2), rgba(22,29,40,0.96) 40%, rgba(24,29,36,0.94))',
@@ -59,14 +62,14 @@ export function getProjectVisualTone(project: Project): ProjectVisualTone {
     return {
       accent: '#23547b',
       label: 'Manufacturing Ops',
-      note: '생산 시스템 재정비',
+      note: i18n.t('projectVisuals.manufacturingOps'),
       icon: Factory,
       lightGradient: 'linear-gradient(135deg, rgba(35,84,123,0.14), rgba(241,246,251,0.96) 42%, rgba(255,255,255,0.92))',
       darkGradient: 'linear-gradient(135deg, rgba(35,84,123,0.22), rgba(22,28,36,0.96) 40%, rgba(24,29,36,0.94))',
     };
   }
 
-  return DEFAULT_PROJECT_TONE;
+  return getDefaultProjectTone();
 }
 
 export function getProjectCardBackground(project: Project, isDark: boolean) {
@@ -76,13 +79,13 @@ export function getProjectCardBackground(project: Project, isDark: boolean) {
 
 export function getProjectTimeline(project: Project) {
   if (project.startDate && project.endDate) return `${project.startDate} ~ ${project.endDate}`;
-  if (project.startDate) return `${project.startDate} 시작`;
-  if (project.endDate) return `${project.endDate} 목표`;
-  return '일정 수립 대기';
+  if (project.startDate) return `${project.startDate} ${i18n.t('projectVisuals.start')}`;
+  if (project.endDate) return `${project.endDate} ${i18n.t('projectVisuals.target')}`;
+  return i18n.t('projectVisuals.schedulePending');
 }
 
 export function getProjectSummary(project: Project) {
-  if (!project.description) return '프로젝트 핵심 범위와 운영 포인트를 확인하세요.';
+  if (!project.description) return i18n.t('projectVisuals.defaultSummary');
 
   const segments = project.description
     .split('/')

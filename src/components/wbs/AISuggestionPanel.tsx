@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bot,
   Check,
@@ -33,6 +34,7 @@ export default function AISuggestionPanel({
   onRefresh,
   onClose,
 }: AISuggestionPanelProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
 
   if (suggestions.length === 0 && !isLoading) {
@@ -49,11 +51,11 @@ export default function AISuggestionPanel({
         >
           <Bot className="h-4 w-4 text-violet-500" />
           <span className="text-sm font-semibold text-[color:var(--text-primary)]">
-            AI 실적 제안
+            {t('app.wbsComponents.aiSuggestion.title')}
           </span>
           {suggestions.length > 0 && (
             <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-semibold text-violet-500">
-              {suggestions.length}건
+              {t('app.wbsComponents.aiSuggestion.count', { count: suggestions.length })}
             </span>
           )}
           {expanded ? (
@@ -71,7 +73,7 @@ export default function AISuggestionPanel({
               disabled={isLoading}
             >
               <Check className="h-3.5 w-3.5" />
-              전체 적용
+              {t('app.wbsComponents.aiSuggestion.applyAll')}
             </Button>
           )}
           <Button
@@ -93,7 +95,7 @@ export default function AISuggestionPanel({
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 py-6 text-sm text-[color:var(--text-secondary)]">
               <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
-              AI가 작업 진행 상황을 분석하고 있습니다...
+              {t('app.wbsComponents.aiSuggestion.analyzing')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -129,7 +131,7 @@ export default function AISuggestionPanel({
                       type="button"
                       onClick={() => onAccept(s)}
                       className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--accent-success)] transition-colors hover:bg-[rgba(31,163,122,0.1)]"
-                      title="수락"
+                      title={t('app.wbsComponents.aiSuggestion.accept')}
                     >
                       <Check className="h-4 w-4" />
                     </button>
@@ -137,7 +139,7 @@ export default function AISuggestionPanel({
                       type="button"
                       onClick={() => onDismiss(s.taskId)}
                       className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(203,75,95,0.08)] hover:text-[color:var(--accent-danger)]"
-                      title="거절"
+                      title={t('app.wbsComponents.aiSuggestion.reject')}
                     >
                       <X className="h-4 w-4" />
                     </button>

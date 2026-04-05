@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 
 import {
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Search,
   CalendarRange,
   Clock3,
@@ -18,6 +19,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart, { HEADER_HEIGHT } from '../components/wbs/GanttChart';
@@ -45,13 +47,6 @@ import TaskCommentPanel from '../components/common/TaskCommentPanel';
 type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
 type DensityMode = 'compact' | 'comfortable';
 
-const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
-  { value: 'all', label: '전체' },
-  { value: 'active', label: '진행중/대기' },
-  { value: 'delayed', label: '지연' },
-  { value: 'completed', label: '완료' },
-];
-
 const VIEW_OPTIONS = [4, 8, 12] as const;
 const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
   { value: 'compact', label: 'Compact' },
@@ -59,8 +54,16 @@ const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
 ];
 
 export default function Gantt() {
+  const { t } = useTranslation();
   const { tasks, flatTasks, loadedProjectId, toggleExpand, updateTask } = useTaskStore();
   const { currentProject, members, updateProject } = useProjectStore();
+
+  const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
+    { value: 'all', label: t('gantt.filterAll') },
+    { value: 'active', label: t('gantt.filterActive') },
+    { value: 'delayed', label: t('gantt.filterDelayed') },
+    { value: 'completed', label: t('gantt.filterCompleted') },
+  ];
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
   const ToneIcon = projectTone?.icon;
 
@@ -75,6 +78,9 @@ export default function Gantt() {
   );
   const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
+  const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
+    try { return localStorage.getItem('gantt_summary_collapsed') === 'true'; } catch { return false; }
+  });
   const isInPopup = window.location.pathname.startsWith('/popup/');
   const loadGanttComments = useCommentStore((s) => s.loadComments);
   const ganttComments = useCommentStore((s) => s.comments);
@@ -91,6 +97,14 @@ export default function Gantt() {
     },
     [updateTask]
   );
+  const toggleSummary = useCallback(() => {
+    setSummaryCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('gantt_summary_collapsed', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();
   const currentMemberId = useCurrentMemberId();
@@ -230,9 +244,9 @@ export default function Gantt() {
   const selectedAssignee = useMemo(
     () =>
       selectedTask?.assigneeId
-        ? members.find((member) => member.id === selectedTask.assigneeId)?.name || '미지정'
-        : '미지정',
-    [members, selectedTask]
+        ? members.find((member) => member.id === selectedTask.assigneeId)?.name || t('gantt.unspecified')
+        : t('gantt.unspecified'),
+    [members, selectedTask, t]
   );
 
   const selectedDelay = selectedTask ? getDelayDays(selectedTask) : 0;
@@ -250,41 +264,41 @@ export default function Gantt() {
   const upcomingDeadlines = useMemo(() => {
     const today = new Date();
     return leafTasks
-      .filter((t) => t.status !== 'completed' && t.planEnd)
+      .filter((tk) => tk.status !== 'completed' && tk.planEnd)
       .sort((a, b) => {
         const da = parseISO(a.planEnd!);
         const db = parseISO(b.planEnd!);
         return da.getTime() - db.getTime();
       })
       .slice(0, 5)
-      .map((t) => {
-        const endDate = parseISO(t.planEnd!);
+      .map((tk) => {
+        const endDate = parseISO(tk.planEnd!);
         const daysLeft = differenceInCalendarDays(endDate, today);
-        return { ...t, daysLeft };
+        return { ...tk, daysLeft };
       });
   }, [leafTasks]);
 
   // 담당자별 워크로드
   const assigneeWorkload = useMemo(() => {
-    const activeTasks = leafTasks.filter((t) => t.status !== 'completed');
+    const activeTasks = leafTasks.filter((tk) => tk.status !== 'completed');
     const countMap = new Map<string, { name: string; total: number; delayed: number }>();
 
-    for (const t of activeTasks) {
-      const key = t.assigneeId || '__unassigned__';
+    for (const tk of activeTasks) {
+      const key = tk.assigneeId || '__unassigned__';
       const entry = countMap.get(key) || {
-        name: t.assigneeId
-          ? members.find((m) => m.id === t.assigneeId)?.name || '미지정'
-          : '미배정',
+        name: tk.assigneeId
+          ? members.find((m) => m.id === tk.assigneeId)?.name || t('gantt.unspecified')
+          : t('gantt.unassigned'),
         total: 0,
         delayed: 0,
       };
       entry.total += 1;
-      if (getDelayDays(t) > 0) entry.delayed += 1;
+      if (getDelayDays(tk) > 0) entry.delayed += 1;
       countMap.set(key, entry);
     }
 
     return [...countMap.values()].sort((a, b) => b.total - a.total).slice(0, 6);
-  }, [leafTasks, members]);
+  }, [leafTasks, members, t]);
 
   const maxWorkload = useMemo(
     () => Math.max(...assigneeWorkload.map((a) => a.total), 1),
@@ -331,8 +345,8 @@ export default function Gantt() {
     if (filteredFlatTasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '내보낼 작업 없음',
-        message: '현재 검색어와 필터 조건에 맞는 작업이 없습니다. 조건을 조정한 뒤 다시 시도해주세요.',
+        title: t('gantt.noTasksToExport'),
+        message: t('gantt.noTasksToExportMessage'),
       });
       return;
     }
@@ -342,7 +356,7 @@ export default function Gantt() {
         projectName: currentProject?.name,
         tasks: filteredFlatTasks,
         members,
-        filterLabel: FILTER_OPTIONS.find((option) => option.value === filterMode)?.label || '전체',
+        filterLabel: FILTER_OPTIONS.find((option) => option.value === filterMode)?.label || t('gantt.filterAll'),
         searchQuery,
         weeksToShow,
       });
@@ -389,7 +403,7 @@ export default function Gantt() {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="검색"
+              placeholder={t('common.search')}
               className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
           </div>
@@ -419,7 +433,7 @@ export default function Gantt() {
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
               )}
             >
-              {weeks}주
+              {t('gantt.weeksUnit', { count: weeks })}
             </button>
           ))}
           <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
@@ -446,7 +460,7 @@ export default function Gantt() {
                 : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
             )}
           >
-            주말
+            {t('gantt.weekends')}
           </button>
           <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
           <button
@@ -478,8 +492,8 @@ export default function Gantt() {
               className="flex flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] px-4"
               style={{ height: ganttToolbarHeight }}
             >
-              <span className="text-sm font-semibold text-[color:var(--text-primary)]">작업 목록</span>
-              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개</span>
+              <span className="text-sm font-semibold text-[color:var(--text-primary)]">{t('gantt.taskList')}</span>
+              <span className="text-xs text-[color:var(--text-secondary)]">{filteredFlatTasks.length}{t('gantt.countUnit')}</span>
             </div>
             <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
               <div
@@ -524,7 +538,7 @@ export default function Gantt() {
                     )}
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]" title={task.name || undefined}>
-                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
+                        {task.name || <span className="text-[color:var(--text-secondary)]">{t('gantt.unnamed')}</span>}
                       </p>
                     </div>
                     <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
@@ -540,7 +554,7 @@ export default function Gantt() {
               })}
               {filteredFlatTasks.length === 0 && (
                 <div className="empty-state min-h-[16rem] px-5">
-                  <p>필터에 맞는 작업이 없습니다</p>
+                  <p>{t('gantt.noFilteredTasks')}</p>
                 </div>
               )}
             </div>
@@ -583,7 +597,38 @@ export default function Gantt() {
         />
       )}
 
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      {summaryCollapsed ? (
+        <div className="app-panel flex items-center justify-between gap-4 px-5 py-3">
+          <div className="flex items-center gap-4">
+            {ToneIcon && <ToneIcon className="h-5 w-5" style={{ color: projectTone?.accent }} />}
+            <h2 className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+              {currentProject?.name || t('common.project')} {t('gantt.scheduleFlow')}
+            </h2>
+            <div className="flex items-center gap-3 text-sm text-[color:var(--text-secondary)]">
+              <span>{t('gantt.displayedTasks')}: <strong className="text-[color:var(--text-primary)]">{filteredFlatTasks.length}</strong></span>
+              <span className="h-3.5 w-px bg-[var(--border-color)]" />
+              <span>{t('gantt.openTasks')}: <strong className="text-[color:var(--text-primary)]">{activeCount}</strong></span>
+              <span className="h-3.5 w-px bg-[var(--border-color)]" />
+              <span>{t('gantt.delayedTasks')}: <strong className="text-[color:var(--accent-danger)]">{delayedCount}</strong></span>
+            </div>
+          </div>
+          <button
+            onClick={toggleSummary}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--border-color)] px-3 py-1.5 text-xs font-semibold text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            {t('gantt.expandSummary', { defaultValue: '요약 펼치기' })}
+          </button>
+        </div>
+      ) : (
+      <section className="relative grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <button
+          onClick={toggleSummary}
+          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+          {t('gantt.collapseSummary', { defaultValue: '요약 접기' })}
+        </button>
         <div
           className="app-panel-dark relative overflow-hidden p-6 md:p-8"
           style={{
@@ -597,7 +642,7 @@ export default function Gantt() {
               {projectTone?.label || 'Timeline Control'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
-              {currentProject?.name || '프로젝트'} 일정 흐름
+              {currentProject?.name || t('common.project')} {t('gantt.scheduleFlow')}
             </h1>
             {projectTone && (
               <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
@@ -605,24 +650,24 @@ export default function Gantt() {
               </p>
             )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
-              검색, 상태 필터, 시야 범위, 선택된 작업 정보까지 한 화면에서 처리할 수 있게 간트 페이지 전체를 다시 구성했습니다.
+              {t('gantt.heroDescription')}
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">표시 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('gantt.displayedTasks')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{filteredFlatTasks.length}</p>
-                <p className="mt-1 text-sm text-white/88">현재 필터 기준 표시 개수</p>
+                <p className="mt-1 text-sm text-white/88">{t('gantt.displayedTasksDesc')}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">오픈 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('gantt.openTasks')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{activeCount}</p>
-                <p className="mt-1 text-sm text-white/88">완료되지 않은 실작업</p>
+                <p className="mt-1 text-sm text-white/88">{t('gantt.openTasksDesc')}</p>
               </div>
               <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">지연 작업</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('gantt.delayedTasks')}</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{delayedCount}</p>
-                <p className="mt-1 text-sm text-white/88">즉시 확인이 필요한 일정</p>
+                <p className="mt-1 text-sm text-white/88">{t('gantt.delayedTasksDesc')}</p>
               </div>
             </div>
 
@@ -632,35 +677,35 @@ export default function Gantt() {
               <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
                 <div className="flex items-center gap-2">
                   <CalendarClock className="h-4 w-4 text-white/70" />
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">마감 임박</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('gantt.upcomingDeadlines')}</p>
                 </div>
                 {upcomingDeadlines.length > 0 ? (
                   <ul className="mt-4 space-y-2.5">
-                    {upcomingDeadlines.map((t) => (
+                    {upcomingDeadlines.map((dl) => (
                       <li
-                        key={t.id}
+                        key={dl.id}
                         className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-white/[0.06]"
-                        onClick={() => setSelectedTaskId(t.id)}
+                        onClick={() => setSelectedTaskId(dl.id)}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-white/95" title={t.name}>{t.name}</p>
-                          <p className="mt-0.5 text-xs text-white/55">{formatDate(t.planEnd, 'M/d (EEE)')}</p>
+                          <p className="truncate text-sm font-medium text-white/95" title={dl.name}>{dl.name}</p>
+                          <p className="mt-0.5 text-xs text-white/55">{formatDate(dl.planEnd, 'M/d (EEE)')}</p>
                         </div>
                         <span className={cn(
                           'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                          t.daysLeft < 0
+                          dl.daysLeft < 0
                             ? 'bg-red-500/20 text-red-300'
-                            : t.daysLeft <= 3
+                            : dl.daysLeft <= 3
                               ? 'bg-amber-500/20 text-amber-300'
                               : 'bg-white/10 text-white/70'
                         )}>
-                          {t.daysLeft < 0 ? `${Math.abs(t.daysLeft)}일 초과` : t.daysLeft === 0 ? '오늘' : `D-${t.daysLeft}`}
+                          {dl.daysLeft < 0 ? t('gantt.daysOverdue', { days: Math.abs(dl.daysLeft) }) : dl.daysLeft === 0 ? t('gantt.today') : `D-${dl.daysLeft}`}
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 text-sm text-white/50">예정된 마감 작업이 없습니다.</p>
+                  <p className="mt-4 text-sm text-white/50">{t('gantt.noUpcomingDeadlines')}</p>
                 )}
               </div>
 
@@ -668,7 +713,7 @@ export default function Gantt() {
               <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-white/70" />
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">담당자별 워크로드</p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('gantt.assigneeWorkload')}</p>
                 </div>
                 {assigneeWorkload.length > 0 ? (
                   <ul className="mt-4 space-y-3">
@@ -677,7 +722,7 @@ export default function Gantt() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="truncate text-white/90" title={a.name}>{a.name}</span>
                           <span className="ml-2 shrink-0 text-xs text-white/60">
-                            {a.total}건{a.delayed > 0 && <span className="ml-1 text-red-400">({a.delayed} 지연)</span>}
+                            {t('gantt.itemCount', { count: a.total })}{a.delayed > 0 && <span className="ml-1 text-red-400">({t('gantt.delayedCount', { count: a.delayed })})</span>}
                           </span>
                         </div>
                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -695,7 +740,7 @@ export default function Gantt() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 text-sm text-white/50">배정된 작업이 없습니다.</p>
+                  <p className="mt-4 text-sm text-white/50">{t('gantt.noAssignedTasks')}</p>
                 )}
               </div>
             </div>
@@ -707,7 +752,7 @@ export default function Gantt() {
             <div>
               <p className="page-kicker">Selected Task</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                작업 포커스 카드
+                {t('gantt.taskFocusCard')}
               </h2>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_20px_42px_-24px_rgba(15,118,110,0.75)]">
@@ -725,10 +770,10 @@ export default function Gantt() {
                     {LEVEL_LABELS[selectedTask.level] || `L${selectedTask.level}`}
                   </div>
                   <h3 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                    {selectedTask.name || '이름 없는 작업'}
+                    {selectedTask.name || t('gantt.unnamedTask')}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                    담당자: {selectedAssignee}
+                    {t('gantt.assigneeLabel')}: {selectedAssignee}
                   </p>
                 </div>
                 <span className={cn(
@@ -744,27 +789,27 @@ export default function Gantt() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailMetric
-                  label="계획 기간"
+                  label={t('gantt.planPeriod')}
                   value={`${formatDate(selectedTask.planStart) || '-'} ~ ${formatDate(selectedTask.planEnd) || '-'}`}
                 />
                 <DetailMetric
-                  label="실적 기간"
+                  label={t('gantt.actualPeriod')}
                   value={`${formatDate(selectedTask.actualStart) || '-'} ~ ${formatDate(selectedTask.actualEnd) || '-'}`}
                 />
                 <DetailMetric
-                  label="예상 기간"
-                  value={getDurationLabel(selectedTask.planStart, selectedTask.planEnd)}
+                  label={t('gantt.estimatedDuration')}
+                  value={getDurationLabel(selectedTask.planStart, selectedTask.planEnd, t)}
                 />
                 <DetailMetric
-                  label="지연"
-                  value={selectedDelay > 0 ? `${selectedDelay}일` : '없음'}
+                  label={t('gantt.delay')}
+                  value={selectedDelay > 0 ? t('gantt.daysUnit', { days: selectedDelay }) : t('gantt.none')}
                   tone={selectedDelay > 0 ? 'danger' : 'neutral'}
                 />
               </div>
 
               <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
+                  <span className="text-[color:var(--text-secondary)]">{t('gantt.actualProgress')}</span>
                   <span className="font-semibold text-[color:var(--text-primary)]">{selectedTask.actualProgress}%</span>
                 </div>
                 <div className="mt-3 h-3 overflow-hidden rounded-full bg-[rgba(249,115,22,0.08)]">
@@ -778,7 +823,7 @@ export default function Gantt() {
               {selectedTask.output && (
                 <div className="rounded-[22px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-sm leading-6 text-[color:var(--text-secondary)]">
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-                    산출물
+                    {t('gantt.deliverable')}
                   </p>
                   {selectedTask.output}
                 </div>
@@ -802,16 +847,16 @@ export default function Gantt() {
                 <div className="flex flex-col gap-3 border-b border-[var(--border-color)] pb-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-                      빠른 편집
+                      {t('gantt.quickEdit')}
                     </p>
                     <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                      간트 화면에서 핵심 일정과 상태를 바로 수정할 수 있습니다.
+                      {t('gantt.quickEditDesc')}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {taskReadOnly && (
                       <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
-                        읽기 전용
+                        {t('common.readOnly')}
                       </span>
                     )}
                     <Button
@@ -822,39 +867,39 @@ export default function Gantt() {
                       data-testid="gantt-save-button"
                     >
                       {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      저장
+                      {t('common.save')}
                     </Button>
                     <div className={cn(
                       'surface-badge',
                       saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
                     )}>
-                      {saveStatus === 'pending' && '변경사항 저장 대기'}
+                      {saveStatus === 'pending' && t('gantt.savePending')}
                       {saveStatus === 'saving' && (
                         <>
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          저장중...
+                          {t('common.saving')}
                         </>
                       )}
                       {saveStatus === 'saved' && (
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
-                          {formatSaveStatus(lastSavedAt)}
+                          {formatSaveStatus(lastSavedAt, t)}
                         </>
                       )}
                       {saveStatus === 'error' && (
                         <>
                           <AlertCircle className="h-3.5 w-3.5" />
-                          저장 실패
+                          {t('gantt.saveFail')}
                         </>
                       )}
-                      {saveStatus === 'idle' && '자동 저장 준비'}
+                      {saveStatus === 'idle' && t('gantt.autoSaveReady')}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <label className="field-label">작업명</label>
+                    <label className="field-label">{t('gantt.taskName')}</label>
                     <input
                       type="text"
                       value={selectedTask.name}
@@ -866,7 +911,7 @@ export default function Gantt() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="field-label">산출물</label>
+                    <label className="field-label">{t('gantt.deliverable')}</label>
                     <input
                       type="text"
                       value={selectedTask.output || ''}
@@ -889,7 +934,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">담당자</label>
+                    <label className="field-label">{t('gantt.assigneeLabel')}</label>
                     <select
                       value={selectedTask.assigneeId || ''}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'assigneeId', event.target.value || null)}
@@ -897,7 +942,7 @@ export default function Gantt() {
                       data-testid="gantt-edit-assignee"
                       className={cn('field-select', taskReadOnly && 'cursor-not-allowed opacity-60')}
                     >
-                      <option value="">미지정</option>
+                      <option value="">{t('gantt.unspecified')}</option>
                       {members.map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.name}
@@ -907,7 +952,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">상태</label>
+                    <label className="field-label">{t('gantt.status')}</label>
                     <select
                       value={selectedTask.status}
                       onChange={(event) => handleTaskFieldChange(selectedTask.id, 'status', event.target.value as Task['status'])}
@@ -924,7 +969,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">계획 시작</label>
+                    <label className="field-label">{t('gantt.planStart')}</label>
                     <input
                       type="date"
                       value={selectedTask.planStart || ''}
@@ -936,7 +981,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">계획 종료</label>
+                    <label className="field-label">{t('gantt.planEnd')}</label>
                     <input
                       type="date"
                       value={selectedTask.planEnd || ''}
@@ -948,7 +993,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">실적 시작</label>
+                    <label className="field-label">{t('gantt.actualStart')}</label>
                     <input
                       type="date"
                       value={selectedTask.actualStart || ''}
@@ -960,7 +1005,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">실적 종료</label>
+                    <label className="field-label">{t('gantt.actualEnd')}</label>
                     <input
                       type="date"
                       value={selectedTask.actualEnd || ''}
@@ -972,7 +1017,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">실적 공정율</label>
+                    <label className="field-label">{t('gantt.actualProgressLabel')}</label>
                     <input
                       type="number"
                       min="0"
@@ -992,7 +1037,7 @@ export default function Gantt() {
                   </div>
 
                   <div>
-                    <label className="field-label">계획 공정율</label>
+                    <label className="field-label">{t('gantt.planProgressLabel')}</label>
                     <input
                       type="number"
                       min="0"
@@ -1017,11 +1062,12 @@ export default function Gantt() {
           );
           })() : (
             <div className="empty-state min-h-[18rem]">
-              <p>선택된 작업이 없습니다</p>
+              <p>{t('gantt.noSelectedTask')}</p>
             </div>
           )}
         </div>
       </section>
+      )}
 
       <section className="app-panel p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1031,7 +1077,7 @@ export default function Gantt() {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="작업명, 산출물, 담당자로 검색"
+              placeholder={t('gantt.searchPlaceholder')}
               className="field-input"
               style={{ paddingLeft: '3rem' }}
             />
@@ -1054,7 +1100,7 @@ export default function Gantt() {
             ))}
             <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={filteredFlatTasks.length === 0}>
               <Download className="w-4 h-4" />
-              엑셀 다운로드
+              {t('gantt.excelDownload')}
             </Button>
             <Button
               variant="outline"
@@ -1063,14 +1109,14 @@ export default function Gantt() {
               disabled={!currentProject || saveStatus === 'saving' || isReadOnly}
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              저장
+              {t('common.save')}
             </Button>
           </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="surface-badge">보기 범위</div>
+            <div className="surface-badge">{t('gantt.viewRange')}</div>
             {VIEW_OPTIONS.map((weeks) => (
               <button
                 key={weeks}
@@ -1082,13 +1128,13 @@ export default function Gantt() {
                     : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
                 )}
               >
-                {weeks}주
+                {t('gantt.weeksUnit', { count: weeks })}
               </button>
             ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="surface-badge">행 밀도</div>
+            <div className="surface-badge">{t('gantt.rowDensity')}</div>
             {DENSITY_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -1112,7 +1158,7 @@ export default function Gantt() {
                   : 'border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]'
               )}
             >
-              주말 강조
+              {t('gantt.highlightWeekends')}
             </button>
             <button
               onClick={() => setShowCriticalPath((prev) => !prev)}
@@ -1140,7 +1186,7 @@ export default function Gantt() {
           <button
             onClick={() => openPopup({ projectId: currentProject.id, page: 'gantt' })}
             className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-            title="새 창에서 열기"
+            title={t('gantt.openInNewWindow')}
           >
             <ExternalLink className="h-4 w-4" />
           </button>
@@ -1156,9 +1202,9 @@ export default function Gantt() {
               style={{ height: ganttToolbarHeight }}
             >
               <span className="text-base font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
-                작업 목록
+                {t('gantt.taskList')}
               </span>
-              <span className="text-sm text-[color:var(--text-secondary)]">{filteredFlatTasks.length}개 표시</span>
+              <span className="text-sm text-[color:var(--text-secondary)]">{t('gantt.showingCount', { count: filteredFlatTasks.length })}</span>
             </div>
             <div ref={tableRef} className="flex-1 overflow-auto scrollbar-visible" onScroll={handleLeftScroll}>
               {/* Sticky header inside scroll — matches GanttChart HEADER_HEIGHT (month/day rows) */}
@@ -1208,7 +1254,7 @@ export default function Gantt() {
 
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <p className="truncate text-sm leading-tight text-[color:var(--text-primary)]" title={task.name || undefined}>
-                        {task.name || <span className="text-[color:var(--text-secondary)]">이름 없음</span>}
+                        {task.name || <span className="text-[color:var(--text-secondary)]">{t('gantt.unnamed')}</span>}
                       </p>
                     </div>
 
@@ -1226,7 +1272,7 @@ export default function Gantt() {
 
               {filteredFlatTasks.length === 0 && (
                 <div className="empty-state min-h-[16rem] px-5">
-                  <p>필터에 맞는 작업이 없습니다</p>
+                  <p>{t('gantt.noFilteredTasks')}</p>
                 </div>
               )}
             </div>
@@ -1259,15 +1305,15 @@ export default function Gantt() {
       <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--text-secondary)]">
         <div className="surface-badge">
           <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#3b82f6,#60a5fa)]" />
-          <span>계획</span>
+          <span>{t('gantt.legendPlan')}</span>
         </div>
         <div className="surface-badge">
           <div className="h-3 w-6 rounded-full bg-[linear-gradient(135deg,#f97316,#fb923c)]" />
-          <span>실적</span>
+          <span>{t('gantt.legendActual')}</span>
         </div>
         <div className="surface-badge">
           <div className="h-4 w-0.5 bg-[color:var(--accent-danger)]" />
-          <span>오늘</span>
+          <span>{t('gantt.legendToday')}</span>
         </div>
         <div className="surface-badge">
           <svg width="24" height="12" className="shrink-0"><path d="M2 6 L22 6" stroke="currentColor" strokeWidth="1.5" className="text-[color:var(--text-muted)]" /><polygon points="22,6 16,3 16,9" fill="currentColor" className="text-[color:var(--text-muted)]" /></svg>
@@ -1279,7 +1325,7 @@ export default function Gantt() {
         </div>
         <div className="surface-badge">
           <Clock3 className="h-3.5 w-3.5 text-[color:var(--accent-warning)]" />
-          선택한 작업으로 차트가 자동 포커스됩니다
+          {t('gantt.autoFocusHint')}
         </div>
       </div>
 
@@ -1321,20 +1367,21 @@ function DetailMetric({
   );
 }
 
-function getDurationLabel(start: string | null | undefined, end: string | null | undefined) {
+function getDurationLabel(start: string | null | undefined, end: string | null | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   const startDate = parseDate(start);
   const endDate = parseDate(end);
 
   if (!startDate || !endDate) return '-';
-  return `${differenceInCalendarDays(endDate, startDate) + 1}일`;
+  return t('gantt.daysUnit', { days: differenceInCalendarDays(endDate, startDate) + 1 });
 }
 
-function formatSaveStatus(lastSavedAt: string | null) {
-  if (!lastSavedAt) return '저장됨';
-  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
+function formatSaveStatus(lastSavedAt: string | null, t: (key: string, options?: Record<string, unknown>) => string) {
+  if (!lastSavedAt) return t('gantt.saved');
+  const time = new Date(lastSavedAt).toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
-  })} 저장됨`;
+  });
+  return t('gantt.savedAt', { time });
 }
 
 /** 선행 작업 멀티 셀렉트 드롭다운 */

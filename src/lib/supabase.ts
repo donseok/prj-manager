@@ -21,7 +21,22 @@ export async function ensureMigrations(): Promise<void> {
   _migrationChecked = true;
 
   try {
-    // account_status 컬럼 존재 여부 확인 (한 행만 조회)
+    // 모든 마이그레이션 체크를 병렬로 실행
+    await Promise.allSettled([
+      ensureAccountStatusColumn(),
+      ensureAttendanceTable(),
+      ensureAuditLogTable(),
+      ensureSystemSettingsTable(),
+      ensureMemberWeeklyNotesTable(),
+    ]);
+  } catch (err) {
+    console.warn('[migration] 마이그레이션 확인 중 오류:', err);
+  }
+}
+
+/** account_status 컬럼이 없으면 추가 */
+async function ensureAccountStatusColumn(): Promise<void> {
+  try {
     const { error } = await supabase
       .from('profiles')
       .select('account_status')
@@ -29,11 +44,9 @@ export async function ensureMigrations(): Promise<void> {
 
     if (error && error.message.includes('account_status')) {
       console.log('[migration] account_status 컬럼 없음 — 마이그레이션 실행');
-      // rpc로 마이그레이션 함수 호출 시도
       const { error: rpcError } = await supabase.rpc('run_account_status_migration');
       if (rpcError) {
         console.warn('[migration] RPC 실패 — SQL 직접 실행 시도:', rpcError.message);
-        // RPC 함수가 없으면 직접 SQL 실행 (service_role 필요할 수 있음)
         const { error: sqlError } = await supabase.rpc('exec_sql', {
           query: `
             ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_status text NOT NULL DEFAULT 'active'
@@ -41,198 +54,205 @@ export async function ensureMigrations(): Promise<void> {
           `,
         });
         if (sqlError) {
-          console.error('[migration] 자동 마이그레이션 실패. Supabase SQL Editor에서 수동 실행 필요:', sqlError.message);
+          console.warn(
+            '[migration] ⚠ account_status 컬럼 자동 생성 실패 (기능 사용 시 에러 발생 가능). Supabase SQL Editor에서 수동 실행 필요:',
+            sqlError.message
+          );
         }
       }
     } else {
       console.log('[migration] account_status 컬럼 확인 완료');
     }
-
-    // attendance 테이블 존재 여부 확인 및 자동 생성
-    await ensureAttendanceTable();
-
-    // audit_log 테이블 확인 및 자동 생성
-    await ensureAuditLogTable();
-
-    // system_settings 테이블 확인 및 자동 생성
-    await ensureSystemSettingsTable();
-
-    // member_weekly_notes 테이블 확인 및 자동 생성
-    await ensureMemberWeeklyNotesTable();
   } catch (err) {
-    console.error('[migration] 마이그레이션 확인 중 오류:', err);
+    console.warn('[migration] account_status 마이그레이션 중 예외 발생 (무시):', err);
   }
 }
 
 /** attendance 테이블이 없으면 생성 */
 async function ensureAttendanceTable(): Promise<void> {
-  const { error } = await supabase.from('attendance').select('id').limit(1);
-  if (!error) {
-    console.log('[migration] attendance 테이블 확인 완료');
-    return;
-  }
+  try {
+    const { error } = await supabase.from('attendance').select('id').limit(1);
+    if (!error) {
+      console.log('[migration] attendance 테이블 확인 완료');
+      return;
+    }
 
-  console.log('[migration] attendance 테이블 없음 — 생성 시도');
+    console.log('[migration] attendance 테이블 없음 — 생성 시도');
 
-  const createSQL = `
-    create table if not exists public.attendance (
-      id text primary key,
-      project_id text not null references public.projects (id) on delete cascade,
-      member_id text not null references public.project_members (id) on delete cascade,
-      date date not null,
-      type varchar(30) not null,
-      note text,
-      created_at timestamptz not null default timezone('utc', now()),
-      updated_at timestamptz not null default timezone('utc', now())
+    const createSQL = `
+      create table if not exists public.attendance (
+        id text primary key,
+        project_id text not null references public.projects (id) on delete cascade,
+        member_id text not null references public.project_members (id) on delete cascade,
+        date date not null,
+        type varchar(30) not null,
+        note text,
+        created_at timestamptz not null default timezone('utc', now()),
+        updated_at timestamptz not null default timezone('utc', now())
+      );
+      create index if not exists idx_attendance_project_id on public.attendance (project_id);
+      create index if not exists idx_attendance_member_id on public.attendance (member_id);
+      create index if not exists idx_attendance_date on public.attendance (date);
+      create index if not exists idx_attendance_project_date on public.attendance (project_id, date);
+      alter table public.attendance enable row level security;
+      create policy "attendance_select" on public.attendance for select to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid()) or is_admin());
+      create policy "attendance_insert" on public.attendance for insert to authenticated
+        with check (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.id = attendance.member_id) or is_admin());
+      create policy "attendance_update" on public.attendance for update to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.id = attendance.member_id) or is_admin());
+      create policy "attendance_delete" on public.attendance for delete to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or is_admin());
+    `;
+
+    // 1차: exec_sql rpc 시도
+    const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+    if (!rpcError) {
+      console.log('[migration] attendance 테이블 생성 완료 (exec_sql)');
+      return;
+    }
+    console.warn('[migration] exec_sql 실패:', rpcError.message);
+
+    // 2차: run_create_attendance_table rpc 시도
+    const { error: rpc2Error } = await supabase.rpc('run_create_attendance_table');
+    if (!rpc2Error) {
+      console.log('[migration] attendance 테이블 생성 완료 (rpc)');
+      return;
+    }
+
+    console.warn(
+      '[migration] ⚠ attendance 테이블 자동 생성 실패 (기능 사용 시 에러 발생 가능). Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+      createSQL
     );
-    create index if not exists idx_attendance_project_id on public.attendance (project_id);
-    create index if not exists idx_attendance_member_id on public.attendance (member_id);
-    create index if not exists idx_attendance_date on public.attendance (date);
-    create index if not exists idx_attendance_project_date on public.attendance (project_id, date);
-    alter table public.attendance enable row level security;
-    create policy "attendance_select" on public.attendance for select to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid()) or is_admin());
-    create policy "attendance_insert" on public.attendance for insert to authenticated
-      with check (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.id = attendance.member_id) or is_admin());
-    create policy "attendance_update" on public.attendance for update to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.id = attendance.member_id) or is_admin());
-    create policy "attendance_delete" on public.attendance for delete to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = attendance.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or is_admin());
-  `;
-
-  // 1차: exec_sql rpc 시도
-  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
-  if (!rpcError) {
-    console.log('[migration] attendance 테이블 생성 완료 (exec_sql)');
-    return;
+  } catch (err) {
+    console.warn('[migration] attendance 마이그레이션 중 예외 발생 (무시):', err);
   }
-  console.warn('[migration] exec_sql 실패:', rpcError.message);
-
-  // 2차: run_create_attendance_table rpc 시도
-  const { error: rpc2Error } = await supabase.rpc('run_create_attendance_table');
-  if (!rpc2Error) {
-    console.log('[migration] attendance 테이블 생성 완료 (rpc)');
-    return;
-  }
-
-  console.error(
-    '[migration] attendance 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
-    createSQL
-  );
 }
 
 /** audit_log 테이블이 없으면 생성 */
 async function ensureAuditLogTable(): Promise<void> {
-  const { error } = await supabase.from('audit_log').select('id').limit(1);
-  if (!error) {
-    console.log('[migration] audit_log 테이블 확인 완료');
-    return;
-  }
+  try {
+    const { error } = await supabase.from('audit_log').select('id').limit(1);
+    if (!error) {
+      console.log('[migration] audit_log 테이블 확인 완료');
+      return;
+    }
 
-  console.log('[migration] audit_log 테이블 없음 — 생성 시도');
+    console.log('[migration] audit_log 테이블 없음 — 생성 시도');
 
-  const createSQL = `
-    create table if not exists public.audit_log (
-      id text primary key,
-      project_id text not null,
-      user_id text not null,
-      user_name text not null,
-      action text not null,
-      details text not null default '',
-      created_at timestamptz not null default timezone('utc', now())
+    const createSQL = `
+      create table if not exists public.audit_log (
+        id text primary key,
+        project_id text not null,
+        user_id text not null,
+        user_name text not null,
+        action text not null,
+        details text not null default '',
+        created_at timestamptz not null default timezone('utc', now())
+      );
+      create index if not exists idx_audit_log_project_id on public.audit_log (project_id);
+      create index if not exists idx_audit_log_created_at on public.audit_log (created_at);
+    `;
+
+    const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+    if (!rpcError) {
+      console.log('[migration] audit_log 테이블 생성 완료');
+      return;
+    }
+
+    console.warn(
+      '[migration] ⚠ audit_log 테이블 자동 생성 실패 (기능 사용 시 에러 발생 가능). Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+      createSQL
     );
-    create index if not exists idx_audit_log_project_id on public.audit_log (project_id);
-    create index if not exists idx_audit_log_created_at on public.audit_log (created_at);
-  `;
-
-  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
-  if (!rpcError) {
-    console.log('[migration] audit_log 테이블 생성 완료');
-    return;
+  } catch (err) {
+    console.warn('[migration] audit_log 마이그레이션 중 예외 발생 (무시):', err);
   }
-
-  console.error(
-    '[migration] audit_log 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
-    createSQL
-  );
 }
 
 /** system_settings 테이블이 없으면 생성 */
 async function ensureSystemSettingsTable(): Promise<void> {
-  const { error } = await supabase.from('system_settings').select('key').limit(1);
-  if (!error) {
-    console.log('[migration] system_settings 테이블 확인 완료');
-    return;
-  }
+  try {
+    const { error } = await supabase.from('system_settings').select('key').limit(1);
+    if (!error) {
+      console.log('[migration] system_settings 테이블 확인 완료');
+      return;
+    }
 
-  console.log('[migration] system_settings 테이블 없음 — 생성 시도');
+    console.log('[migration] system_settings 테이블 없음 — 생성 시도');
 
-  const createSQL = `
-    create table if not exists public.system_settings (
-      key text primary key,
-      value jsonb not null default '{}'::jsonb,
-      updated_at timestamptz not null default timezone('utc', now())
+    const createSQL = `
+      create table if not exists public.system_settings (
+        key text primary key,
+        value jsonb not null default '{}'::jsonb,
+        updated_at timestamptz not null default timezone('utc', now())
+      );
+    `;
+
+    const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+    if (!rpcError) {
+      console.log('[migration] system_settings 테이블 생성 완료');
+      return;
+    }
+
+    console.warn(
+      '[migration] ⚠ system_settings 테이블 자동 생성 실패 (기능 사용 시 에러 발생 가능). Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+      createSQL
     );
-  `;
-
-  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
-  if (!rpcError) {
-    console.log('[migration] system_settings 테이블 생성 완료');
-    return;
+  } catch (err) {
+    console.warn('[migration] system_settings 마이그레이션 중 예외 발생 (무시):', err);
   }
-
-  console.error(
-    '[migration] system_settings 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
-    createSQL
-  );
 }
 
 /** member_weekly_notes 테이블이 없으면 생성 */
 async function ensureMemberWeeklyNotesTable(): Promise<void> {
-  const { error } = await supabase.from('member_weekly_notes').select('id').limit(1);
-  if (!error) {
-    console.log('[migration] member_weekly_notes 테이블 확인 완료');
-    return;
-  }
+  try {
+    const { error } = await supabase.from('member_weekly_notes').select('id').limit(1);
+    if (!error) {
+      console.log('[migration] member_weekly_notes 테이블 확인 완료');
+      return;
+    }
 
-  console.log('[migration] member_weekly_notes 테이블 없음 — 생성 시도');
+    console.log('[migration] member_weekly_notes 테이블 없음 — 생성 시도');
 
-  const createSQL = `
-    create table if not exists public.member_weekly_notes (
-      id text primary key,
-      project_id text not null references public.projects (id) on delete cascade,
-      member_id text not null,
-      member_name text not null,
-      week_start date not null,
-      this_week_achievements text not null default '',
-      next_week_plans text not null default '',
-      updated_at timestamptz not null default timezone('utc', now())
+    const createSQL = `
+      create table if not exists public.member_weekly_notes (
+        id text primary key,
+        project_id text not null references public.projects (id) on delete cascade,
+        member_id text not null,
+        member_name text not null,
+        week_start date not null,
+        this_week_achievements text not null default '',
+        next_week_plans text not null default '',
+        updated_at timestamptz not null default timezone('utc', now())
+      );
+      create index if not exists idx_member_weekly_notes_project_week
+        on public.member_weekly_notes (project_id, week_start);
+      create unique index if not exists idx_member_weekly_notes_unique
+        on public.member_weekly_notes (project_id, member_id, week_start);
+      alter table public.member_weekly_notes enable row level security;
+      create policy "member_weekly_notes_select" on public.member_weekly_notes for select to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
+      create policy "member_weekly_notes_insert" on public.member_weekly_notes for insert to authenticated
+        with check (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
+      create policy "member_weekly_notes_update" on public.member_weekly_notes for update to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
+      create policy "member_weekly_notes_delete" on public.member_weekly_notes for delete to authenticated
+        using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or is_admin());
+    `;
+
+    const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
+    if (!rpcError) {
+      console.log('[migration] member_weekly_notes 테이블 생성 완료');
+      return;
+    }
+
+    console.warn(
+      '[migration] ⚠ member_weekly_notes 테이블 자동 생성 실패 (기능 사용 시 에러 발생 가능). Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
+      createSQL
     );
-    create index if not exists idx_member_weekly_notes_project_week
-      on public.member_weekly_notes (project_id, week_start);
-    create unique index if not exists idx_member_weekly_notes_unique
-      on public.member_weekly_notes (project_id, member_id, week_start);
-    alter table public.member_weekly_notes enable row level security;
-    create policy "member_weekly_notes_select" on public.member_weekly_notes for select to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
-    create policy "member_weekly_notes_insert" on public.member_weekly_notes for insert to authenticated
-      with check (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
-    create policy "member_weekly_notes_update" on public.member_weekly_notes for update to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid()) or is_admin());
-    create policy "member_weekly_notes_delete" on public.member_weekly_notes for delete to authenticated
-      using (exists (select 1 from public.project_members pm where pm.project_id = member_weekly_notes.project_id and pm.user_id = auth.uid() and pm.role in ('owner','admin')) or is_admin());
-  `;
-
-  const { error: rpcError } = await supabase.rpc('exec_sql', { query: createSQL });
-  if (!rpcError) {
-    console.log('[migration] member_weekly_notes 테이블 생성 완료');
-    return;
+  } catch (err) {
+    console.warn('[migration] member_weekly_notes 마이그레이션 중 예외 발생 (무시):', err);
   }
-
-  console.error(
-    '[migration] member_weekly_notes 테이블 자동 생성 실패. Supabase SQL Editor에서 아래 SQL을 실행하세요:\n',
-    createSQL
-  );
 }
 
 // ─── Auth ────────────────────────────────────────────────────

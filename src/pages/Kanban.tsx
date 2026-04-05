@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ExternalLink,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import { getProjectVisualTone } from '../lib/projectVisuals';
@@ -30,18 +31,6 @@ import { openPopup } from '../lib/popupWindow';
 
 type GroupBy = 'phase' | 'assignee' | 'status';
 type FilterMode = 'all' | 'in_progress' | 'completed';
-
-const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
-  { value: 'all', label: '전체' },
-  { value: 'in_progress', label: '진행중' },
-  { value: 'completed', label: '완료' },
-];
-
-const GROUP_OPTIONS: Array<{ value: GroupBy; label: string; icon: typeof Layers3 }> = [
-  { value: 'phase', label: 'Phase별', icon: Layers3 },
-  { value: 'assignee', label: '담당자별', icon: Users },
-  { value: 'status', label: '상태별', icon: ListChecks },
-];
 
 const STATUS_COLUMN_ORDER: TaskStatus[] = ['pending', 'in_progress', 'completed', 'on_hold'];
 const STATUS_ACCENT_COLORS: Record<TaskStatus, string> = {
@@ -69,6 +58,7 @@ interface ColumnDef {
 }
 
 export default function Kanban() {
+  const { t } = useTranslation();
   const { tasks, updateTask, loadedProjectId } = useTaskStore();
   const { currentProject, members, updateProject } = useProjectStore();
   const projectTone = currentProject ? getProjectVisualTone(currentProject) : null;
@@ -80,6 +70,18 @@ export default function Kanban() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
+    { value: 'all', label: t('kanban.filterAll') },
+    { value: 'in_progress', label: t('kanban.filterInProgress') },
+    { value: 'completed', label: t('kanban.filterCompleted') },
+  ];
+
+  const GROUP_OPTIONS: Array<{ value: GroupBy; label: string; icon: typeof Layers3 }> = [
+    { value: 'phase', label: t('kanban.groupPhase'), icon: Layers3 },
+    { value: 'assignee', label: t('kanban.groupAssignee'), icon: Users },
+    { value: 'status', label: t('kanban.groupStatus'), icon: ListChecks },
+  ];
 
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();
@@ -102,7 +104,7 @@ export default function Kanban() {
   // Pre-compute maps
   const taskMap = useMemo(() => {
     const map = new Map<string, Task>();
-    for (const t of tasks) map.set(t.id, t);
+    for (const tk of tasks) map.set(tk.id, tk);
     return map;
   }, [tasks]);
 
@@ -111,8 +113,8 @@ export default function Kanban() {
   // Stats
   const stats = useMemo(() => {
     const total = leafTasks.length;
-    const inProgress = leafTasks.filter((t) => t.status === 'in_progress').length;
-    const completed = leafTasks.filter((t) => t.status === 'completed').length;
+    const inProgress = leafTasks.filter((tk) => tk.status === 'in_progress').length;
+    const completed = leafTasks.filter((tk) => tk.status === 'completed').length;
     const overallProgress = calculateOverallProgress(tasks);
     return { total, inProgress, completed, overallProgress };
   }, [tasks, leafTasks]);
@@ -120,23 +122,23 @@ export default function Kanban() {
   // Filtering
   const filteredTasks = useMemo(() => {
     const baseTasks = groupBy === 'phase'
-      ? tasks.filter((t) => t.level === 3 || (t.level === 2 && !tasks.some((c) => c.parentId === t.id)))
+      ? tasks.filter((tk) => tk.level === 3 || (tk.level === 2 && !tasks.some((c) => c.parentId === tk.id)))
       : leafTasks;
 
     let result = baseTasks;
 
     if (filterMode === 'in_progress') {
-      result = result.filter((t) => t.status !== 'completed');
+      result = result.filter((tk) => tk.status !== 'completed');
     } else if (filterMode === 'completed') {
-      result = result.filter((t) => t.status === 'completed');
+      result = result.filter((tk) => tk.status === 'completed');
     }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          getAssigneeName(t, members).toLowerCase().includes(q)
+        (tk) =>
+          tk.name.toLowerCase().includes(q) ||
+          getAssigneeName(tk, members).toLowerCase().includes(q)
       );
     }
 
@@ -150,17 +152,17 @@ export default function Kanban() {
       const phaseGroups = new Map<string, { phase: Task; tasks: Task[] }>();
       const noPhase: Task[] = [];
 
-      for (const t of filteredTasks) {
-        const phase = getPhaseAncestor(t.id, taskMap);
+      for (const tk of filteredTasks) {
+        const phase = getPhaseAncestor(tk.id, taskMap);
         if (phase) {
           const group = phaseGroups.get(phase.id);
           if (group) {
-            group.tasks.push(t);
+            group.tasks.push(tk);
           } else {
-            phaseGroups.set(phase.id, { phase, tasks: [t] });
+            phaseGroups.set(phase.id, { phase, tasks: [tk] });
           }
         } else {
-          noPhase.push(t);
+          noPhase.push(tk);
         }
       }
 
@@ -170,7 +172,7 @@ export default function Kanban() {
 
       const cols: ColumnDef[] = sorted.map((g) => ({
         id: g.phase.id,
-        title: g.phase.name || '이름 없음',
+        title: g.phase.name || t('kanban.unnamed'),
         tasks: g.tasks.sort((a, b) => a.orderIndex - b.orderIndex),
         accentColor: projectTone?.accent || '#0f766e',
       }));
@@ -178,7 +180,7 @@ export default function Kanban() {
       if (noPhase.length > 0) {
         cols.push({
           id: '__no_phase__',
-          title: '미분류',
+          title: t('kanban.uncategorized'),
           tasks: noPhase,
         });
       }
@@ -190,19 +192,19 @@ export default function Kanban() {
       const assigneeGroups = new Map<string, { name: string; tasks: Task[] }>();
       const unassigned: Task[] = [];
 
-      for (const t of filteredTasks) {
-        if (!t.assigneeId) {
-          unassigned.push(t);
+      for (const tk of filteredTasks) {
+        if (!tk.assigneeId) {
+          unassigned.push(tk);
           continue;
         }
-        const group = assigneeGroups.get(t.assigneeId);
+        const group = assigneeGroups.get(tk.assigneeId);
         if (group) {
-          group.tasks.push(t);
+          group.tasks.push(tk);
         } else {
-          const member = members.find((m) => m.id === t.assigneeId);
-          assigneeGroups.set(t.assigneeId, {
-            name: member?.name || '미지정',
-            tasks: [t],
+          const member = members.find((m) => m.id === tk.assigneeId);
+          assigneeGroups.set(tk.assigneeId, {
+            name: member?.name || t('kanban.unspecified'),
+            tasks: [tk],
           });
         }
       }
@@ -217,7 +219,7 @@ export default function Kanban() {
       if (unassigned.length > 0) {
         cols.unshift({
           id: '__unassigned__',
-          title: '미배정',
+          title: t('kanban.unassigned'),
           tasks: unassigned,
           accentColor: '#8B95A5',
         });
@@ -230,7 +232,7 @@ export default function Kanban() {
     return STATUS_COLUMN_ORDER.map((status) => ({
       id: status,
       title: TASK_STATUS_LABELS[status],
-      tasks: filteredTasks.filter((t) => t.status === status),
+      tasks: filteredTasks.filter((tk) => tk.status === status),
       accentColor: STATUS_ACCENT_COLORS[status],
     }));
   }, [filteredTasks, groupBy, taskMap, members, projectTone]);
@@ -241,12 +243,12 @@ export default function Kanban() {
   };
 
   const handleSaveTask = (taskId: string, updates: Partial<Task>) => {
-    const task = tasks.find((t) => t.id === taskId);
+    const task = tasks.find((tk) => tk.id === taskId);
     if (!task || !canEditSpecificTask(permissions, task, currentMemberId)) {
       showFeedback({
         tone: 'warning',
-        title: '권한 없음',
-        message: '이 작업을 편집할 권한이 없습니다.',
+        title: t('kanban.noPermission'),
+        message: t('kanban.noPermissionMessage'),
       });
       return;
     }
@@ -255,8 +257,8 @@ export default function Kanban() {
     setEditingTask(null);
     showFeedback({
       tone: 'success',
-      title: '저장 완료',
-      message: '작업이 업데이트되었습니다.',
+      title: t('kanban.saveComplete'),
+      message: t('kanban.taskUpdated'),
     });
   };
 
@@ -269,7 +271,7 @@ export default function Kanban() {
   const editingChildTasks = useMemo(() => {
     if (!editingTask) return [];
     return tasks
-      .filter((t) => t.parentId === editingTask.id)
+      .filter((tk) => tk.parentId === editingTask.id)
       .sort((a, b) => a.orderIndex - b.orderIndex);
   }, [editingTask, tasks]);
 
@@ -294,7 +296,7 @@ export default function Kanban() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="검색"
+              placeholder={t('common.search')}
               className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
           </div>
@@ -332,7 +334,7 @@ export default function Kanban() {
             );
           })}
           <div className="ml-auto flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
-            <span>{stats.total}개 작업</span>
+            <span>{t('kanban.taskCount', { count: stats.total })}</span>
             <span>·</span>
             <span>{stats.overallProgress}%</span>
           </div>
@@ -358,7 +360,7 @@ export default function Kanban() {
               <div className="text-center">
                 <LayoutGrid className="mx-auto h-12 w-12 text-[color:var(--text-muted)]" />
                 <p className="mt-3 text-sm text-[color:var(--text-secondary)]">
-                  표시할 작업이 없습니다
+                  {t('kanban.noTasksToShow')}
                 </p>
               </div>
             </div>
@@ -414,7 +416,7 @@ export default function Kanban() {
             {projectTone?.label || 'Kanban Board'}
           </div>
           <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
-            {currentProject?.name || '프로젝트'} 칸반 보드
+            {currentProject?.name || t('common.project')} {t('kanban.kanbanBoard')}
           </h1>
           {projectTone && (
             <p
@@ -425,32 +427,32 @@ export default function Kanban() {
             </p>
           )}
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
-            작업을 시각적으로 분류하고, 상태별/담당자별/Phase별로 그룹핑하여 진행 현황을 한눈에 파악할 수 있습니다.
+            {t('kanban.heroDescription')}
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-4">
             <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 작업</p>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.totalTasks')}</p>
               <p className="mt-2 text-3xl font-semibold text-white">{stats.total}</p>
             </div>
             <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
               <div className="flex items-center gap-1.5">
                 <Clock3 className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">진행중</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterInProgress')}</p>
               </div>
               <p className="mt-2 text-3xl font-semibold text-white">{stats.inProgress}</p>
             </div>
             <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">완료</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterCompleted')}</p>
               </div>
               <p className="mt-2 text-3xl font-semibold text-white">{stats.completed}</p>
             </div>
             <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
               <div className="flex items-center gap-1.5">
                 <Target className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 진척률</p>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.overallProgress')}</p>
               </div>
               <p className="mt-2 text-3xl font-semibold text-white">{stats.overallProgress}%</p>
             </div>
@@ -509,7 +511,7 @@ export default function Kanban() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="작업명, 담당자 검색"
+            placeholder={t('kanban.searchPlaceholder')}
             className="h-9 w-56 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
           />
         </div>
@@ -521,7 +523,7 @@ export default function Kanban() {
           <button
             onClick={() => openPopup({ projectId: currentProject.id, page: 'kanban' })}
             className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-            title="새 창에서 열기"
+            title={t('kanban.openInNewWindow')}
           >
             <ExternalLink className="h-4 w-4" />
           </button>
@@ -545,10 +547,10 @@ export default function Kanban() {
               <div className="text-center">
                 <LayoutGrid className="mx-auto h-12 w-12 text-[color:var(--text-muted)]" />
                 <p className="mt-3 text-sm text-[color:var(--text-secondary)]">
-                  표시할 작업이 없습니다
+                  {t('kanban.noTasksToShow')}
                 </p>
                 <p className="mt-1 text-xs text-[color:var(--text-muted)]">
-                  필터 조건을 조정하거나 WBS에서 작업을 추가하세요
+                  {t('kanban.adjustFilterHint')}
                 </p>
               </div>
             </div>

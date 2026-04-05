@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import KanbanCard from './KanbanCard';
 import type { Task, ProjectMember } from '../../types';
@@ -22,6 +23,7 @@ export default function KanbanColumn({
   onEditTask,
   accentColor,
 }: KanbanColumnProps) {
+  const { t } = useTranslation();
   const childTasksMap = useMemo(() => {
     const map = new Map<string, Task[]>();
     for (const task of tasks) {
@@ -66,7 +68,7 @@ export default function KanbanColumn({
       <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3 max-h-[calc(100vh-240px)]">
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-[var(--text-muted)]">
-            등록된 작업이 없습니다
+            {t('kanbanComponents.noTasks')}
           </div>
         ) : (
           tasks.map((task) => (

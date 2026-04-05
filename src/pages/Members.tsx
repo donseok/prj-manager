@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown, Activity } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useTaskStore } from '../store/taskStore';
@@ -19,6 +20,7 @@ import type { ProjectMember } from '../types';
 import { analyzeWorkload, type OverloadLevel } from '../lib/resourceAnalytics';
 
 export default function Members() {
+  const { t, i18n } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { members, membersLoadedProjectId, addMember, updateMember, removeMember, currentProject } = useProjectStore();
   const tasks = useTaskStore((s) => s.tasks);
@@ -76,6 +78,15 @@ export default function Members() {
 
   const [pendingDuplicateName, setPendingDuplicateName] = useState<string | null>(null);
 
+  const roleLabels: Record<ProjectMember['role'], string> = {
+    owner: t('members.roles.owner'),
+    admin: t('members.roles.admin'),
+    editor: t('members.roles.editor'),
+    member: t('members.roles.member'),
+    restricted_member: t('members.roles.restricted_member'),
+    viewer: t('members.roles.viewer'),
+  };
+
   const executeSingleAdd = (name: string) => {
     addMember({
       id: generateId(),
@@ -96,8 +107,8 @@ export default function Members() {
     }
     showFeedback({
       tone: 'success',
-      title: '멤버 추가 완료',
-      message: `"${name}" 멤버를 추가했습니다.`,
+      title: t('members.addSuccess'),
+      message: t('members.addSuccessMsg', { name }),
     });
     setSingleName('');
     setPendingDuplicateName(null);
@@ -150,8 +161,8 @@ export default function Members() {
     }
     showFeedback({
       tone: 'success',
-      title: '멤버 추가 완료',
-      message: `${validMembers.length}명의 멤버를 추가했습니다.`,
+      title: t('members.addSuccess'),
+      message: t('members.bulkAddSuccessMsg', { count: validMembers.length }),
     });
     setShowAddModal(false);
     resetBulkForm();
@@ -175,8 +186,8 @@ export default function Members() {
     }
     showFeedback({
       tone: 'success',
-      title: '멤버 삭제 완료',
-      message: `"${pendingDeleteMember.name}" 멤버를 팀 구성에서 제거했습니다.`,
+      title: t('members.deleteSuccess'),
+      message: t('members.deleteSuccessMsg', { name: pendingDeleteMember.name }),
     });
     setPendingDeleteMember(null);
   };
@@ -243,8 +254,8 @@ export default function Members() {
       }
       showFeedback({
         tone: 'success',
-        title: '소유권 이전 완료',
-        message: `"${target.name}"에게 프로젝트 소유권을 이전했습니다.`,
+        title: t('members.transferSuccess'),
+        message: t('members.transferSuccessMsg', { name: target.name }),
       });
     } catch (error) {
       console.error('Failed to transfer ownership:', error);
@@ -253,20 +264,11 @@ export default function Members() {
       updateMember(target.id, { role: target.role });
       showFeedback({
         tone: 'error',
-        title: '소유권 이전 실패',
-        message: '소유권 이전 중 오류가 발생했습니다.',
+        title: t('members.transferFail'),
+        message: t('members.transferFailMsg'),
       });
     }
     setPendingTransferTarget(null);
-  };
-
-  const roleLabels: Record<ProjectMember['role'], string> = {
-    owner: '소유자',
-    admin: '관리자',
-    editor: '편집자',
-    member: '멤버',
-    restricted_member: '제한 멤버',
-    viewer: '뷰어',
   };
 
   const roleStyles: Record<ProjectMember['role'], string> = {
@@ -276,6 +278,12 @@ export default function Members() {
     member: 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
     restricted_member: 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]',
     viewer: 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
+  };
+
+  const getDateLocale = () => {
+    if (i18n.language === 'ko') return 'ko-KR';
+    if (i18n.language === 'vi') return 'vi-VN';
+    return 'en-US';
   };
 
   return (
@@ -303,7 +311,7 @@ export default function Members() {
               {projectTone?.label || 'Team Workspace'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
-              {currentProject?.name || '프로젝트'} 팀 구성
+              {currentProject?.name || t('common.project')} {t('members.teamComposition')}
             </h1>
             {projectTone && (
               <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
@@ -311,18 +319,18 @@ export default function Members() {
               </p>
             )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
-              참여자를 단순 목록이 아니라 역할과 편집 상태가 명확하게 보이는 팀 보드 형태로 정리했습니다.
+              {t('members.teamDesc')}
             </p>
             <div className="mt-8 flex items-center gap-3">
               {canManageMembers && (
                 <Button onClick={() => setShowAddModal(true)}>
                   <Plus className="w-4 h-4" />
-                  멤버 추가
+                  {t('members.addMember')}
                 </Button>
               )}
               {isReadOnly && (
                 <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
-                  읽기 전용
+                  {t('common.readOnly')}
                 </span>
               )}
             </div>
@@ -335,21 +343,21 @@ export default function Members() {
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {members.length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">등록된 전체 멤버</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('members.registeredMembers')}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Admins</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {members.filter((member) => member.role === 'admin' || member.role === 'owner').length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">관리 권한 사용자</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('members.adminUsers')}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Contributors</p>
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {members.filter((member) => member.role === 'member').length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">실무 작업 참여자</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('members.contributors')}</p>
           </div>
         </div>
       </section>
@@ -359,7 +367,7 @@ export default function Members() {
           <div>
             <p className="page-kicker">Member Board</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              멤버 목록
+              {t('members.memberList')}
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -371,37 +379,37 @@ export default function Members() {
               data-testid="members-save-button"
             >
               {saveStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              저장
+              {t('common.save')}
             </Button>
             <div className={cn(
               'surface-badge',
               saveStatus === 'error' && 'border-[rgba(203,75,95,0.22)] text-[color:var(--accent-danger)]'
             )}>
-              {saveStatus === 'pending' && '변경사항 저장 대기'}
+              {saveStatus === 'pending' && t('members.savePending')}
               {saveStatus === 'saving' && (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  저장중...
+                  {t('common.saving')}
                 </>
               )}
               {saveStatus === 'saved' && (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--accent-success)]" />
-                  {formatSaveStatus(lastSavedAt)}
+                  {formatSaveStatus(lastSavedAt, t, getDateLocale())}
                 </>
               )}
               {saveStatus === 'error' && (
                 <>
                   <AlertCircle className="h-3.5 w-3.5" />
-                  저장 실패
+                  {t('members.saveFail')}
                 </>
               )}
-              {saveStatus === 'idle' && '자동 저장 준비'}
+              {saveStatus === 'idle' && t('members.autoSaveReady')}
             </div>
             {canManageMembers && (
               <Button variant="outline" onClick={() => setShowAddModal(true)} data-testid="members-add-button">
                 <Plus className="w-4 h-4" />
-                멤버 추가
+                {t('members.addMember')}
               </Button>
             )}
           </div>
@@ -453,7 +461,7 @@ export default function Members() {
                           {member.name}
                         </p>
                         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                          추가됨: {new Date(member.createdAt).toLocaleDateString('ko-KR')}
+                          {t('members.addedOn', { date: new Date(member.createdAt).toLocaleDateString(getDateLocale()) })}
                         </p>
                       </div>
                     )}
@@ -484,7 +492,7 @@ export default function Members() {
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
                   <div className="flex items-center gap-2 text-sm text-[color:var(--text-secondary)]">
                     <ShieldCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />
-                    역할 지정
+                    {t('members.roleAssign')}
                   </div>
                   <select
                     value={member.role}
@@ -514,7 +522,7 @@ export default function Members() {
                         className="flex h-10 items-center gap-1.5 rounded-full border border-[rgba(18,61,100,0.16)] bg-[rgba(18,61,100,0.05)] px-3 text-xs font-semibold text-[color:var(--accent-ink)] transition-colors hover:bg-[rgba(18,61,100,0.12)]"
                       >
                         <Crown className="w-3.5 h-3.5" />
-                        소유권 이전
+                        {t('members.transferOwnership')}
                       </button>
                     )}
                     <button
@@ -542,15 +550,15 @@ export default function Members() {
           <div className="empty-state px-6 py-14">
             <UserCircle className="h-14 w-14 text-[color:var(--text-muted)]" />
             <h3 className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-              아직 멤버가 없습니다
+              {t('members.noMembersYet')}
             </h3>
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
-              첫 멤버를 추가하면 역할 관리와 이름 편집이 같은 카드 안에서 바로 가능해집니다.
+              {t('members.noMembersDesc')}
             </p>
             {canManageMembers && (
               <Button onClick={() => setShowAddModal(true)}>
                 <Plus className="w-4 h-4" />
-                첫 멤버 추가
+                {t('members.addFirstMember')}
               </Button>
             )}
           </div>
@@ -560,7 +568,7 @@ export default function Members() {
       <Modal
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); resetBulkForm(); }}
-        title="멤버 추가"
+        title={t('members.addMember')}
         size="md"
       >
         <div className="p-6">
@@ -576,7 +584,7 @@ export default function Members() {
               )}
             >
               <ListPlus className="h-4 w-4" />
-              개별 입력
+              {t('members.singleInput')}
             </button>
             <button
               onClick={() => setBulkMode('paste')}
@@ -588,29 +596,29 @@ export default function Members() {
               )}
             >
               <ClipboardPaste className="h-4 w-4" />
-              일괄 붙여넣기
+              {t('members.pasteInput')}
             </button>
           </div>
 
           {bulkMode === 'single' ? (
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">역할</label>
+                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('members.roleLabel')}</label>
                 <select
                   value={singleRole}
                   onChange={(e) => setSingleRole(e.target.value as ProjectMember['role'])}
                   className="field-select w-full py-2.5"
                   data-testid="member-role-select"
                 >
-                  <option value="member">멤버</option>
-                  <option value="admin">관리자</option>
-                  <option value="editor">편집자</option>
-                  <option value="restricted_member">제한 멤버</option>
-                  <option value="viewer">뷰어</option>
+                  <option value="member">{t('members.roles.member')}</option>
+                  <option value="admin">{t('members.roles.admin')}</option>
+                  <option value="editor">{t('members.roles.editor')}</option>
+                  <option value="restricted_member">{t('members.roles.restricted_member')}</option>
+                  <option value="viewer">{t('members.roles.viewer')}</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">이름</label>
+                <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('members.nameLabel')}</label>
                 <input
                   ref={singleNameRef}
                   type="text"
@@ -623,14 +631,14 @@ export default function Members() {
                     }
                   }}
                   className="field-input w-full py-2.5"
-                  placeholder="멤버 이름을 입력하세요"
+                  placeholder={t('members.namePlaceholder')}
                   autoFocus
                   data-testid="member-name-input"
                 />
               </div>
               <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">
                 <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
-                  닫기
+                  {t('common.close')}
                 </Button>
                 <Button
                   onClick={handleSingleAdd}
@@ -638,14 +646,14 @@ export default function Members() {
                   data-testid="members-confirm-add-button"
                 >
                   <Plus className="h-4 w-4" />
-                  추가
+                  {t('common.add')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-[color:var(--text-secondary)]">
-                한 줄에 한 명씩 이름을 입력하세요. 기본 역할은 '멤버'로 설정됩니다.
+                {t('members.pasteHint')}
               </p>
               <textarea
                 value={pasteText}
@@ -656,18 +664,18 @@ export default function Members() {
               />
               <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">
                 <span className="text-sm text-[color:var(--text-secondary)]">
-                  {getValidPasteMembers().length > 0 && `${getValidPasteMembers().length}명`}
+                  {getValidPasteMembers().length > 0 && t('members.addCountPersons', { count: getValidPasteMembers().length })}
                 </span>
                 <div className="flex gap-3">
                   <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
-                    취소
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     onClick={handlePasteAdd}
                     disabled={getValidPasteMembers().length === 0}
                     data-testid="members-paste-add-button"
                   >
-                    {getValidPasteMembers().length > 0 ? `${getValidPasteMembers().length}명 추가` : '추가'}
+                    {getValidPasteMembers().length > 0 ? t('members.addCount', { count: getValidPasteMembers().length }) : t('common.add')}
                   </Button>
                 </div>
               </div>
@@ -680,9 +688,9 @@ export default function Members() {
         isOpen={pendingDuplicateName !== null}
         onClose={() => setPendingDuplicateName(null)}
         onConfirm={() => pendingDuplicateName && executeSingleAdd(pendingDuplicateName)}
-        title="동일 이름 멤버 존재"
-        description={`"${pendingDuplicateName}" 이름의 멤버가 이미 존재합니다. 그래도 추가하시겠습니까?`}
-        confirmLabel="추가"
+        title={t('members.duplicateTitle')}
+        description={t('members.duplicateDesc', { name: pendingDuplicateName })}
+        confirmLabel={t('common.add')}
         confirmVariant="primary"
       />
 
@@ -690,13 +698,13 @@ export default function Members() {
         isOpen={Boolean(pendingDeleteMember)}
         onClose={() => setPendingDeleteMember(null)}
         onConfirm={confirmDeleteMember}
-        title="멤버 삭제"
+        title={t('members.deleteTitle')}
         description={
           pendingDeleteMember
-            ? `"${pendingDeleteMember.name}" 멤버를 프로젝트 팀 구성에서 제거합니다. 저장되면 멤버 보드와 관련 필터에서 바로 반영됩니다.`
+            ? t('members.deleteDesc', { name: pendingDeleteMember.name })
             : ''
         }
-        confirmLabel="멤버 삭제"
+        confirmLabel={t('members.deleteLabel')}
         confirmVariant="danger"
       />
 
@@ -704,23 +712,28 @@ export default function Members() {
         isOpen={Boolean(pendingTransferTarget)}
         onClose={() => setPendingTransferTarget(null)}
         onConfirm={() => { if (pendingTransferTarget) void handleTransferOwnership(pendingTransferTarget); }}
-        title="소유권 이전"
+        title={t('members.transferOwnership')}
         description={
           pendingTransferTarget
-            ? `"${pendingTransferTarget.name}"에게 프로젝트 소유권을 이전합니다. 이전 후 기존 소유자는 관리자 역할로 변경됩니다. 이 작업은 되돌릴 수 없습니다.`
+            ? t('members.transferDesc', { name: pendingTransferTarget.name })
             : ''
         }
-        confirmLabel="소유권 이전"
+        confirmLabel={t('members.transferOwnership')}
         confirmVariant="danger"
       />
     </div>
   );
 }
 
-function formatSaveStatus(lastSavedAt: string | null) {
-  if (!lastSavedAt) return '저장됨';
-  return `${new Date(lastSavedAt).toLocaleTimeString('ko-KR', {
+function formatSaveStatus(
+  lastSavedAt: string | null,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  locale: string,
+) {
+  if (!lastSavedAt) return t('members.saved');
+  const time = new Date(lastSavedAt).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
-  })} 저장됨`;
+  });
+  return t('members.savedAt', { time });
 }

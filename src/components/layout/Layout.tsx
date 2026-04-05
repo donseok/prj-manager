@@ -1,9 +1,11 @@
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ChatbotWidget from '../chatbot/ChatbotWidget';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
 export default function Layout() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen text-[color:var(--text-primary)]">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -22,7 +24,7 @@ export default function Layout() {
           </main>
         </div>
         <footer className="relative py-4 text-center text-xs text-[var(--text-tertiary)]">
-          © {new Date().getFullYear()} 동국시스템즈. All rights reserved.
+          {t('footer.copyright', { year: new Date().getFullYear() })}
         </footer>
         <ChatbotWidget />
       </div>

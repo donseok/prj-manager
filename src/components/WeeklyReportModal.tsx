@@ -4,6 +4,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Download,
   ChevronLeft,
@@ -65,6 +66,7 @@ export default function WeeklyReportModal({
   members,
   attendances,
 }: WeeklyReportModalProps) {
+  const { t } = useTranslation();
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'detail' | 'member-write'>('overview');
 
@@ -132,7 +134,7 @@ export default function WeeklyReportModal({
       }), 2000);
     } catch (err) {
       console.error('Failed to save member report:', err);
-      alert(err instanceof Error ? err.message : '저장에 실패했습니다.');
+      alert(err instanceof Error ? err.message : t('weeklyReport.saveFailed'));
     } finally {
       setSavingMemberId(null);
     }
@@ -144,7 +146,7 @@ export default function WeeklyReportModal({
     return Array.from(memberDrafts.entries())
       .filter(([, d]) => d.thisWeekResult.trim() || d.nextWeekPlan.trim())
       .map(([memberId, d]) => ({
-        memberName: memberMap.get(memberId) || '알 수 없음',
+        memberName: memberMap.get(memberId) || t('weeklyReport.unknown'),
         thisWeekResult: d.thisWeekResult,
         nextWeekPlan: d.nextWeekPlan,
       }));
@@ -183,11 +185,11 @@ export default function WeeklyReportModal({
       ...report.nextWeekPlan.tasks,
     ];
     const map = new Map<string, { name: string; count: number; completed: number }>();
-    allTasks.forEach((t) => {
-      const key = t.assigneeName || '미지정';
+    allTasks.forEach((tk) => {
+      const key = tk.assigneeName || t('weeklyReport.unassigned');
       const prev = map.get(key) || { name: key, count: 0, completed: 0 };
       prev.count += 1;
-      if (t.status === 'completed') prev.completed += 1;
+      if (tk.status === 'completed') prev.completed += 1;
       map.set(key, prev);
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 5);
@@ -196,7 +198,7 @@ export default function WeeklyReportModal({
   const progressGap = report.summary.overallPlanProgress - report.summary.overallActualProgress;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="주간보고" size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('weeklyReport.title')} size="xl">
       <div className="weekly-report-modal">
         {/* 헤더 + 주차 네비게이션 */}
         <div className="weekly-report-header">
@@ -211,7 +213,7 @@ export default function WeeklyReportModal({
                   {report.projectName}
                 </h2>
                 <p className="mt-0.5 text-xs text-white/70">
-                  주간보고 · {report.generatedAt} 기준
+                  {t('weeklyReport.title')} · {report.generatedAt} {t('weeklyReport.asOf')}
                 </p>
               </div>
             </div>
@@ -240,7 +242,7 @@ export default function WeeklyReportModal({
                   onClick={() => setWeekOffset(0)}
                   className="ml-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/90 hover:bg-white/20 transition-colors"
                 >
-                  이번 주
+                  {t('weeklyReport.thisWeek')}
                 </button>
               )}
 
@@ -274,7 +276,7 @@ export default function WeeklyReportModal({
             onClick={() => setActiveTab('overview')}
           >
             <BarChart3 className="h-3.5 w-3.5" />
-            요약 현황
+            {t('weeklyReport.overviewTab')}
           </button>
           <button
             className={cn(
@@ -284,7 +286,7 @@ export default function WeeklyReportModal({
             onClick={() => setActiveTab('detail')}
           >
             <Target className="h-3.5 w-3.5" />
-            상세 작업
+            {t('weeklyReport.detailTab')}
           </button>
           {isSupabaseConfigured && (
             <button
@@ -295,7 +297,7 @@ export default function WeeklyReportModal({
               onClick={() => setActiveTab('member-write')}
             >
               <UserPen className="h-3.5 w-3.5" />
-              담당자 작성
+              {t('weeklyReport.memberWriteTab')}
             </button>
           )}
         </div>
@@ -353,28 +355,29 @@ function OverviewTab({
   assigneeStats,
   attendanceSummary,
 }: OverviewTabProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-5">
       {/* 요약 KPI 카드 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
-          label="전체 작업"
+          label={t('weeklyReport.totalTasks')}
           value={report.summary.totalLeafTasks}
-          unit="건"
+          unit={t('weeklyReport.unitCount')}
           icon={<Clock className="h-4 w-4" />}
           gradient="from-[#0f766e] to-[#2fa67c]"
         />
         <KpiCard
-          label="완료"
+          label={t('weeklyReport.completed')}
           value={report.summary.completedTasks}
-          unit="건"
+          unit={t('weeklyReport.unitCount')}
           icon={<CheckCircle2 className="h-4 w-4" />}
           gradient="from-[#1fa37a] to-[#34c997]"
           delta={comparison.completedDelta}
-          deltaUnit="건"
+          deltaUnit={t('weeklyReport.unitCount')}
         />
         <KpiCard
-          label="실적 공정율"
+          label={t('weeklyReport.actualProgress')}
           value={Math.round(report.summary.overallActualProgress)}
           unit="%"
           icon={<TrendingUp className="h-4 w-4" />}
@@ -383,13 +386,13 @@ function OverviewTab({
           deltaUnit="%p"
         />
         <KpiCard
-          label="지연"
+          label={t('weeklyReport.delayed')}
           value={report.summary.delayedTasks}
-          unit="건"
+          unit={t('weeklyReport.unitCount')}
           icon={<AlertTriangle className="h-4 w-4" />}
           gradient="from-[#cb4b5f] to-[#ff738a]"
           delta={comparison.delayedDelta}
-          deltaUnit="건"
+          deltaUnit={t('weeklyReport.unitCount')}
           inverseDelta
         />
       </div>
@@ -398,7 +401,7 @@ function OverviewTab({
       <div className="weekly-report-progress-compare">
         <div className="flex items-center justify-between mb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
-            계획 vs 실적
+            {t('weeklyReport.planVsActual')}
           </p>
           <span className={cn(
             'rounded-full px-2.5 py-1 text-[10px] font-bold',
@@ -408,14 +411,14 @@ function OverviewTab({
                 ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
                 : 'bg-[rgba(203,75,95,0.12)] text-[color:var(--accent-danger)]'
           )}>
-            {progressGap <= 0 ? '정상' : `${Math.round(progressGap)}%p 미달`}
+            {progressGap <= 0 ? t('weeklyReport.onTrack') : `${Math.round(progressGap)}%p ${t('weeklyReport.behind')}`}
           </span>
         </div>
 
         <div className="space-y-3">
           <div>
             <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="text-[color:var(--text-secondary)]">계획 공정율</span>
+              <span className="text-[color:var(--text-secondary)]">{t('weeklyReport.planProgress')}</span>
               <span className="font-semibold text-[color:var(--text-primary)]">
                 {Math.round(report.summary.overallPlanProgress)}%
               </span>
@@ -430,7 +433,7 @@ function OverviewTab({
 
           <div>
             <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="text-[color:var(--text-secondary)]">실적 공정율</span>
+              <span className="text-[color:var(--text-secondary)]">{t('weeklyReport.actualProgressRate')}</span>
               <span className="font-semibold text-[color:var(--text-primary)]">
                 {Math.round(report.summary.overallActualProgress)}%
               </span>
@@ -451,7 +454,7 @@ function OverviewTab({
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-[color:var(--accent-warning)]" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--accent-warning)]">
-              이슈 / 리스크
+              {t('weeklyReport.issuesRisks')}
             </p>
           </div>
           <ul className="space-y-2">
@@ -471,7 +474,7 @@ function OverviewTab({
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-4 w-4 text-[color:var(--accent-primary)]" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
-              담당자별 작업 현황
+              {t('weeklyReport.assigneeTaskStatus')}
             </p>
           </div>
           <div className="space-y-2.5">
@@ -486,7 +489,7 @@ function OverviewTab({
                       {stat.name}
                     </span>
                     <span className="text-xs text-[color:var(--text-secondary)]">
-                      {stat.completed}/{stat.count}건
+                      {stat.completed}/{stat.count}{t('weeklyReport.unitCount')}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
@@ -508,18 +511,18 @@ function OverviewTab({
           <div className="flex items-center gap-2 mb-4">
             <CalendarCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
-              금주 근태현황
+              {t('weeklyReport.weeklyAttendance')}
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="weekly-report-table-header">
-                  <th className="px-3 py-2 text-left">담당자</th>
-                  {['월', '화', '수', '목', '금'].map((d) => (
+                  <th className="px-3 py-2 text-left">{t('weeklyReport.assignee')}</th>
+                  {[t('weeklyReport.dayMon'), t('weeklyReport.dayTue'), t('weeklyReport.dayWed'), t('weeklyReport.dayThu'), t('weeklyReport.dayFri')].map((d) => (
                     <th key={d} className="px-3 py-2 text-center">{d}</th>
                   ))}
-                  <th className="px-3 py-2 text-left">소계</th>
+                  <th className="px-3 py-2 text-left">{t('weeklyReport.subtotal')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -566,22 +569,22 @@ function OverviewTab({
       {/* 섹션 요약 리본 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <SectionRibbon
-          label="금주 실적"
+          label={t('weeklyReport.thisWeekActual')}
           count={report.thisWeekActual.tasks.length}
           color="var(--accent-primary)"
         />
         <SectionRibbon
-          label="금주 완료"
+          label={t('weeklyReport.thisWeekCompleted')}
           count={report.completedThisWeek.tasks.length}
           color="var(--accent-success)"
         />
         <SectionRibbon
-          label="차주 계획"
+          label={t('weeklyReport.nextWeekPlan')}
           count={report.nextWeekPlan.tasks.length}
           color="#6366f1"
         />
         <SectionRibbon
-          label="지연 작업"
+          label={t('weeklyReport.delayedTasks')}
           count={report.delayed.tasks.length}
           color="var(--accent-danger)"
         />
@@ -625,11 +628,12 @@ function MemberWriteTab({
   savedMemberIds,
   loaded,
 }: MemberWriteTabProps) {
+  const { t } = useTranslation();
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-12 text-[color:var(--text-muted)]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" />
-        담당자 보고 데이터 로드 중...
+        {t('weeklyReport.loadingMemberReports')}
       </div>
     );
   }
@@ -637,7 +641,7 @@ function MemberWriteTab({
   return (
     <div className="space-y-4">
       <p className="text-xs text-[color:var(--text-secondary)] leading-5">
-        각 담당자별로 금주 실적과 차주 계획을 작성하고 저장하세요. 저장된 내용은 PPT 출력 시 반영됩니다.
+        {t('weeklyReport.memberWriteDesc')}
       </p>
       {members.map((member) => {
         const draft = drafts.get(member.id) || { thisWeekResult: '', nextWeekPlan: '' };
@@ -655,7 +659,7 @@ function MemberWriteTab({
                   {member.name}
                 </span>
                 <span className="text-[10px] text-[color:var(--text-muted)] bg-[color:var(--bg-elevated)] rounded-full px-2 py-0.5">
-                  {member.role === 'owner' ? '소유자' : member.role === 'admin' ? '관리자' : '멤버'}
+                  {member.role === 'owner' ? t('members.roles.owner') : member.role === 'admin' ? t('members.roles.admin') : t('members.roles.member')}
                 </span>
               </div>
               <button
@@ -670,35 +674,35 @@ function MemberWriteTab({
                 )}
               >
                 {isSaving ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> 저장 중...</>
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('common.saving')}</>
                 ) : isSaved ? (
-                  <><CheckCircle2 className="h-3.5 w-3.5" /> 저장됨</>
+                  <><CheckCircle2 className="h-3.5 w-3.5" /> {t('weeklyReport.saved')}</>
                 ) : (
-                  <><Save className="h-3.5 w-3.5" /> 저장</>
+                  <><Save className="h-3.5 w-3.5" /> {t('common.save')}</>
                 )}
               </button>
             </div>
             <div className="grid gap-4 p-5 md:grid-cols-2">
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-2">
-                  금주 실적
+                  {t('weeklyReport.thisWeekResult')}
                 </label>
                 <textarea
                   value={draft.thisWeekResult}
                   onChange={(e) => onDraftChange(member.id, 'thisWeekResult', e.target.value)}
-                  placeholder="이번 주 수행한 작업 내용을 작성하세요..."
+                  placeholder={t('weeklyReport.thisWeekResultPlaceholder')}
                   rows={4}
                   className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
                 />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-2">
-                  차주 계획
+                  {t('weeklyReport.nextWeekPlanLabel')}
                 </label>
                 <textarea
                   value={draft.nextWeekPlan}
                   onChange={(e) => onDraftChange(member.id, 'nextWeekPlan', e.target.value)}
-                  placeholder="다음 주 수행할 작업 계획을 작성하세요..."
+                  placeholder={t('weeklyReport.nextWeekPlanPlaceholder')}
                   rows={4}
                   className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
                 />
@@ -720,7 +724,7 @@ function KpiCard({
   icon,
   gradient,
   delta,
-  deltaUnit = '건',
+  deltaUnit = '',
   inverseDelta = false,
 }: {
   label: string;
@@ -732,6 +736,7 @@ function KpiCard({
   deltaUnit?: string;
   inverseDelta?: boolean;
 }) {
+  const { t } = useTranslation();
   const hasDelta = delta !== undefined && delta !== 0;
   const isPositive = inverseDelta ? (delta ?? 0) < 0 : (delta ?? 0) > 0;
 
@@ -774,7 +779,7 @@ function KpiCard({
           )}
           {delta! > 0 ? '+' : ''}
           {delta}
-          {deltaUnit} vs 전주
+          {deltaUnit} vs {t('weeklyReport.prevWeek')}
         </div>
       )}
     </div>
@@ -790,6 +795,7 @@ function SectionRibbon({
   count: number;
   color: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="weekly-report-ribbon">
       <div className="weekly-report-ribbon-indicator" style={{ backgroundColor: color }} />
@@ -798,7 +804,7 @@ function SectionRibbon({
           {label}
         </p>
         <p className="mt-1 text-lg font-bold tracking-[-0.04em] text-[color:var(--text-primary)]">
-          {count}<span className="text-xs font-medium text-[color:var(--text-secondary)] ml-0.5">건</span>
+          {count}<span className="text-xs font-medium text-[color:var(--text-secondary)] ml-0.5">{t('weeklyReport.unitCount')}</span>
         </p>
       </div>
     </div>
@@ -812,6 +818,7 @@ function ReportSection({
   section: WeeklyReportSection;
   accentColor: string;
 }) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -828,7 +835,7 @@ function ReportSection({
           <span className="text-sm font-semibold text-[color:var(--text-primary)]">
             {section.title}
           </span>
-          <span className="weekly-report-count-badge">{section.tasks.length}건</span>
+          <span className="weekly-report-count-badge">{section.tasks.length}{t('weeklyReport.unitCount')}</span>
         </div>
         <ChevronRight
           className={cn(
@@ -842,18 +849,18 @@ function ReportSection({
         <div className="border-t border-[var(--border-color)]">
           {section.tasks.length === 0 ? (
             <p className="px-5 py-4 text-sm text-[color:var(--text-muted)] italic">
-              해당 작업 없음
+                {t('weeklyReport.noTasks')}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="weekly-report-table-header">
-                    <th className="px-4 py-2.5 text-left">작업명</th>
-                    <th className="px-4 py-2.5 text-center">담당자</th>
-                    <th className="px-4 py-2.5 text-center">상태</th>
-                    <th className="px-4 py-2.5 text-center">실적</th>
-                    <th className="px-4 py-2.5 text-center">지연</th>
+                    <th className="px-4 py-2.5 text-left">{t('weeklyReport.taskName')}</th>
+                    <th className="px-4 py-2.5 text-center">{t('weeklyReport.assignee')}</th>
+                    <th className="px-4 py-2.5 text-center">{t('weeklyReport.status')}</th>
+                    <th className="px-4 py-2.5 text-center">{t('weeklyReport.progress')}</th>
+                    <th className="px-4 py-2.5 text-center">{t('weeklyReport.delay')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -871,6 +878,7 @@ function ReportSection({
 }
 
 function TaskRow({ task }: { task: WeeklyReportTask }) {
+  const { t } = useTranslation();
   return (
     <tr className="weekly-report-task-row">
       <td className="px-4 py-3">
@@ -919,7 +927,7 @@ function TaskRow({ task }: { task: WeeklyReportTask }) {
         {task.delayDays > 0 ? (
           <span className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--accent-danger)]">
             <AlertTriangle className="h-3 w-3" />
-            {task.delayDays}일
+            {t('weeklyReport.delayDays', { days: task.delayDays })}
           </span>
         ) : (
           <span className="text-xs text-[color:var(--text-muted)]">—</span>

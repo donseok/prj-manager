@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   UserCircle,
   ShieldCheck,
@@ -18,13 +19,13 @@ import Modal from '../components/common/Modal';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 
-const CONFIRM_TEXT = '회원탈퇴';
-
 export default function AccountSettings() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isAdmin, logout } = useAuthStore();
   const { projects } = useProjectStore();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
+  const CONFIRM_TEXT = t('account.confirmText');
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [password, setPassword] = useState('');
@@ -61,7 +62,7 @@ export default function AccountSettings() {
       });
 
       if (error) {
-        showFeedback({ tone: 'error', title: '회원 탈퇴 실패', message: error });
+        showFeedback({ tone: 'error', title: t('account.deleteFail'), message: error });
         setIsDeleting(false);
         return;
       }
@@ -72,8 +73,8 @@ export default function AccountSettings() {
       console.error('Account deletion error:', err);
       showFeedback({
         tone: 'error',
-        title: '회원 탈퇴 실패',
-        message: '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        title: t('account.deleteFail'),
+        message: t('account.deleteFailMsg'),
       });
       setIsDeleting(false);
     }
@@ -100,10 +101,10 @@ export default function AccountSettings() {
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              계정 설정
+              {t('account.title')}
             </h1>
             <p className="text-sm text-[color:var(--text-secondary)]">
-              계정 정보 확인 및 관리
+              {t('account.subtitle')}
             </p>
           </div>
         </div>
@@ -112,7 +113,7 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
-                이름
+                {t('account.nameLabel')}
               </p>
               <p className="mt-1 font-medium text-[color:var(--text-primary)]">{user.name}</p>
             </div>
@@ -121,7 +122,7 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
-                이메일
+                {t('account.emailLabel')}
               </p>
               <p className="mt-1 font-medium text-[color:var(--text-primary)]">{user.email}</p>
             </div>
@@ -130,11 +131,11 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
-                역할
+                {t('account.roleLabel')}
               </p>
               <p className="mt-1 flex items-center gap-1.5 font-medium text-[color:var(--text-primary)]">
                 {isAdmin && <ShieldCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />}
-                {isAdmin ? '관리자' : '일반 사용자'}
+                {isAdmin ? t('account.admin') : t('account.normalUser')}
               </p>
             </div>
           </div>
@@ -142,9 +143,9 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
-                소유 프로젝트
+                {t('account.ownedProjects')}
               </p>
-              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{ownedProjects.length}개</p>
+              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{t('account.projectCount', { count: ownedProjects.length })}</p>
             </div>
           </div>
         </div>
@@ -157,40 +158,40 @@ export default function AccountSettings() {
             <Trash2 className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[color:var(--accent-danger)]">회원 탈퇴</h2>
+            <h2 className="text-lg font-semibold text-[color:var(--accent-danger)]">{t('account.deleteAccount')}</h2>
             <p className="text-sm text-[color:var(--text-secondary)]">
-              계정과 관련 데이터를 영구적으로 삭제합니다
+              {t('account.deleteAccountDesc')}
             </p>
           </div>
         </div>
 
         <div className="mt-5 rounded-[18px] border border-[rgba(203,75,95,0.15)] bg-[rgba(203,75,95,0.04)] p-4">
           <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-            회원 탈퇴 시 다음 데이터가 <strong className="text-[color:var(--accent-danger)]">영구 삭제</strong>됩니다:
+            {t('account.deleteWarning')} <strong className="text-[color:var(--accent-danger)]">{t('account.permanentlyDeleted')}</strong>{t('account.deleteWarningEnd')}
           </p>
           <ul className="mt-3 space-y-1.5 text-sm text-[color:var(--text-secondary)]">
             <li className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-danger)]" />
-              소유한 프로젝트 및 WBS/작업 데이터 ({ownedProjects.length}개)
+              {t('account.deleteItem1', { count: ownedProjects.length })}
             </li>
             <li className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-danger)]" />
-              프로젝트 멤버 참여 내역
+              {t('account.deleteItem2')}
             </li>
             <li className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-danger)]" />
-              계정 프로필 정보
+              {t('account.deleteItem3')}
             </li>
           </ul>
           <p className="mt-3 text-xs font-medium text-[color:var(--accent-danger)]">
-            이 작업은 되돌릴 수 없습니다.
+            {t('account.irreversible')}
           </p>
         </div>
 
         <div className="mt-5 flex justify-end">
           <Button variant="danger" onClick={() => void handleOpenDeleteModal()}>
             <Trash2 className="h-4 w-4" />
-            회원 탈퇴
+            {t('account.deleteAccount')}
           </Button>
         </div>
       </section>
@@ -199,7 +200,7 @@ export default function AccountSettings() {
       <Modal
         isOpen={showDeleteModal}
         onClose={() => !isDeleting && setShowDeleteModal(false)}
-        title="회원 탈퇴 확인"
+        title={t('account.deleteConfirmTitle')}
         size="md"
       >
         <div className="space-y-5 p-6">
@@ -209,11 +210,11 @@ export default function AccountSettings() {
             </div>
             <div>
               <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-                정말로 탈퇴하시겠습니까? 계정과 관련된 모든 데이터가 영구적으로 삭제됩니다.
+                {t('account.deleteConfirmMessage')}
               </p>
               {ownedCount !== null && ownedCount > 0 && (
                 <p className="mt-2 text-sm font-semibold text-[color:var(--accent-danger)]">
-                  소유 프로젝트 {ownedCount}개가 함께 삭제됩니다.
+                  {t('account.ownedProjectsWillBeDeleted', { count: ownedCount })}
                 </p>
               )}
             </div>
@@ -221,14 +222,14 @@ export default function AccountSettings() {
 
           {isSupabaseConfigured && (
             <div>
-              <label className="field-label">비밀번호 확인</label>
+              <label className="field-label">{t('account.passwordConfirm')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="field-input !pr-10"
-                  placeholder="현재 비밀번호를 입력해주세요"
+                  placeholder={t('account.passwordPlaceholder')}
                   disabled={isDeleting}
                   autoComplete="current-password"
                 />
@@ -246,7 +247,7 @@ export default function AccountSettings() {
 
           <div>
             <label className="field-label">
-              확인을 위해 <strong className="text-[color:var(--accent-danger)]">{CONFIRM_TEXT}</strong>을 입력해주세요
+              {t('account.confirmTextLabel')} <strong className="text-[color:var(--accent-danger)]">{CONFIRM_TEXT}</strong>{t('account.confirmTextSuffix')}
             </label>
             <input
               type="text"
@@ -265,7 +266,7 @@ export default function AccountSettings() {
               onClick={() => setShowDeleteModal(false)}
               disabled={isDeleting}
             >
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -275,10 +276,10 @@ export default function AccountSettings() {
               {isDeleting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  처리 중...
+                  {t('common.processing')}
                 </>
               ) : (
-                '회원 탈퇴'
+                t('account.deleteAccount')
               )}
             </Button>
           </div>

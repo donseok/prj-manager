@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Sparkles, Check } from 'lucide-react';
 import Button from '../common/Button';
 import { cn } from '../../lib/utils';
@@ -63,6 +64,7 @@ function countNodes(nodes: TreeNode[]): { total: number; selected: number } {
 }
 
 export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPanelProps) {
+  const { t } = useTranslation();
   const [tree, setTree] = useState<TreeNode[]>(() => buildTree(tasks));
 
   const counts = useMemo(() => countNodes(tree), [tree]);
@@ -176,10 +178,10 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />
           <span className="text-sm font-medium text-[color:var(--text-primary)]">
-            AI 생성 결과 미리보기
+            {t('app.wbsComponents.aiReview.previewTitle')}
           </span>
           <span className="surface-badge text-xs">
-            {counts.selected}/{counts.total}개 선택
+            {t('app.wbsComponents.aiReview.selectedCount', { selected: counts.selected, total: counts.total })}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -188,14 +190,14 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
             onClick={() => setTree(setAllSelected(tree, true))}
             className="rounded-full px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]"
           >
-            전체 선택
+            {t('app.wbsComponents.aiReview.selectAll')}
           </button>
           <button
             type="button"
             onClick={() => setTree(setAllSelected(tree, false))}
             className="rounded-full px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]"
           >
-            전체 해제
+            {t('app.wbsComponents.aiReview.deselectAll')}
           </button>
         </div>
       </div>
@@ -206,11 +208,11 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          취소
+          {t('app.wbsComponents.aiReview.cancel')}
         </Button>
         <Button onClick={handleApply} disabled={counts.selected === 0}>
           <Sparkles className="h-4 w-4" />
-          {counts.selected}개 작업 적용
+          {t('app.wbsComponents.aiReview.applyTasks', { count: counts.selected })}
         </Button>
       </div>
     </div>

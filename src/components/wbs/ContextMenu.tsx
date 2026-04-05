@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import {
   Plus,
@@ -68,6 +69,7 @@ export default function ContextMenu({
   canMoveUp,
   canMoveDown,
 }: ContextMenuProps) {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,57 +103,57 @@ export default function ContextMenu({
   }, [x, y]);
 
   const actions: ContextMenuAction[] = [
-    { label: '위에 작업 추가', icon: <Plus className="w-3.5 h-3.5" />, onClick: onAddAbove },
-    { label: '아래에 작업 추가', icon: <Plus className="w-3.5 h-3.5" />, onClick: onAddBelow },
+    { label: t('app.wbsComponents.contextMenu.addAbove'), icon: <Plus className="w-3.5 h-3.5" />, onClick: onAddAbove },
+    { label: t('app.wbsComponents.contextMenu.addBelow'), icon: <Plus className="w-3.5 h-3.5" />, onClick: onAddBelow },
     {
-      label: '하위 작업 추가',
+      label: t('app.wbsComponents.contextMenu.addChild'),
       icon: <Plus className="w-3.5 h-3.5" />,
       onClick: onAddChild,
       disabled: task.level >= 4,
       dividerAfter: true,
     },
-    { label: '복사', icon: <Copy className="w-3.5 h-3.5" />, onClick: onCopy },
+    { label: t('app.wbsComponents.contextMenu.copy'), icon: <Copy className="w-3.5 h-3.5" />, onClick: onCopy },
     {
-      label: '붙여넣기',
+      label: t('app.wbsComponents.contextMenu.paste'),
       icon: <ClipboardPaste className="w-3.5 h-3.5" />,
       onClick: onPaste,
       disabled: !canPaste,
       dividerAfter: true,
     },
     {
-      label: '들여쓰기',
+      label: t('app.wbsComponents.contextMenu.indent'),
       icon: <IndentIcon className="w-3.5 h-3.5" />,
       onClick: onIndent,
       disabled: !canIndent,
     },
     {
-      label: '내어쓰기',
+      label: t('app.wbsComponents.contextMenu.outdent'),
       icon: <OutdentIcon className="w-3.5 h-3.5" />,
       onClick: onOutdent,
       disabled: !canOutdent,
     },
     {
-      label: '위로 이동',
+      label: t('app.wbsComponents.contextMenu.moveUp'),
       icon: <ArrowUp className="w-3.5 h-3.5" />,
       onClick: onMoveUp,
       disabled: !canMoveUp,
     },
     {
-      label: '아래로 이동',
+      label: t('app.wbsComponents.contextMenu.moveDown'),
       icon: <ArrowDown className="w-3.5 h-3.5" />,
       onClick: onMoveDown,
       disabled: !canMoveDown,
       dividerAfter: true,
     },
     {
-      label: '완료 처리',
+      label: t('app.wbsComponents.contextMenu.markComplete'),
       icon: <CheckCircle2 className="w-3.5 h-3.5" />,
       onClick: onMarkComplete,
       disabled: task.status === 'completed',
       dividerAfter: true,
     },
     {
-      label: '삭제',
+      label: t('app.wbsComponents.contextMenu.delete'),
       icon: <Trash2 className="w-3.5 h-3.5" />,
       onClick: onDelete,
       danger: true,

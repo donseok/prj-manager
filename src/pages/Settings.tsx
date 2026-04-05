@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Save,
@@ -41,6 +42,7 @@ import { loadAISettings, saveAISettings, hasEnvAIConfig, getDefaultModel } from 
 import { testConnection } from '../lib/ai/aiClient';
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { currentProject, members, updateProject, deleteProject } = useProjectStore();
@@ -87,7 +89,7 @@ export default function Settings() {
       const result = await testConnection(aiSettings);
       setAiTestResult(result);
     } catch {
-      setAiTestResult({ success: false, message: '연결 테스트 중 오류가 발생했습니다.' });
+      setAiTestResult({ success: false, message: t('settings.testConnectionError') });
     } finally {
       setIsAiTesting(false);
     }
@@ -114,16 +116,16 @@ export default function Settings() {
   // 실시간 유효성 검사
   const nameError = (() => {
     const trimmed = resolvedFormData.name.trim();
-    if (!trimmed) return '프로젝트명을 입력해주세요.';
-    if (trimmed.length < 2) return '프로젝트명은 2자 이상이어야 합니다.';
-    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return '프로젝트명에는 한글, 영문 또는 숫자가 포함되어야 합니다.';
+    if (!trimmed) return t('validation.projectNameRequired');
+    if (trimmed.length < 2) return t('validation.projectNameMinLength');
+    if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return t('validation.projectNamePattern');
     return null;
   })();
 
   const dateError = (() => {
     if (resolvedFormData.startDate && resolvedFormData.endDate &&
         new Date(resolvedFormData.startDate) >= new Date(resolvedFormData.endDate)) {
-      return '종료일은 시작일보다 이후여야 합니다.';
+      return t('validation.endDateAfterStart');
     }
     return null;
   })();
@@ -132,11 +134,11 @@ export default function Settings() {
     if (!projectId || !currentProject) return;
 
     if (nameError) {
-      showFeedback({ tone: 'error', title: '프로젝트명 오류', message: nameError });
+      showFeedback({ tone: 'error', title: t('validation.projectNameError'), message: nameError });
       return;
     }
     if (dateError) {
-      showFeedback({ tone: 'error', title: '날짜 오류', message: dateError });
+      showFeedback({ tone: 'error', title: t('validation.dateError'), message: dateError });
       return;
     }
 
@@ -158,20 +160,20 @@ export default function Settings() {
           userId: user.id,
           userName: user.name,
           action: 'project.settings_change',
-          details: '프로젝트 기본 정보 변경',
+          details: t('settings.auditCoreInfoChange'),
         });
       }
       showFeedback({
         tone: 'success',
-        title: '설정 저장 완료',
-        message: '프로젝트 기본 정보와 기준일을 저장했습니다.',
+        title: t('settings.saveSuccess'),
+        message: t('settings.saveSuccessMsg'),
       });
     } catch (error) {
       console.error('Failed to save project settings:', error);
       showFeedback({
         tone: 'error',
-        title: '설정 저장 실패',
-        message: '프로젝트 설정을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        title: t('settings.saveFail'),
+        message: t('settings.saveFailMsg'),
       });
     } finally {
       setIsSaving(false);
@@ -189,8 +191,8 @@ export default function Settings() {
       console.error('Failed to delete project:', error);
       showFeedback({
         tone: 'error',
-        title: '프로젝트 삭제 실패',
-        message: error instanceof Error ? error.message : '프로젝트를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        title: t('settings.deleteFail'),
+        message: error instanceof Error ? error.message : t('settings.deleteFailMsg'),
       });
     } finally {
       setIsDeleting(false);
@@ -219,15 +221,15 @@ export default function Settings() {
       await changeStatus(currentProject, newStatus);
       showFeedback({
         tone: 'success',
-        title: '프로젝트 상태 변경',
-        message: `프로젝트 상태를 "${PROJECT_STATUS_LABELS[newStatus]}"로 고정했습니다.`,
+        title: t('settings.statusChangeSuccess'),
+        message: t('settings.statusChangeSuccessMsg', { status: PROJECT_STATUS_LABELS[newStatus] }),
       });
     } catch (error) {
       console.error('Failed to change project status:', error);
       showFeedback({
         tone: 'error',
-        title: '상태 변경 실패',
-        message: '프로젝트 상태를 변경하지 못했습니다. 다시 시도해주세요.',
+        title: t('settings.statusChangeFail'),
+        message: t('settings.statusChangeFailMsg'),
       });
     }
   };
@@ -236,8 +238,8 @@ export default function Settings() {
     if (tasks.length === 0) {
       showFeedback({
         tone: 'info',
-        title: '내보낼 작업 없음',
-        message: 'WBS에 작업을 추가한 뒤 다시 내보내기를 시도해주세요.',
+        title: t('settings.noTasksToExport'),
+        message: t('settings.noTasksToExportMsg'),
       });
       return;
     }
@@ -252,8 +254,8 @@ export default function Settings() {
       console.error('WBS export failed:', error);
       showFeedback({
         tone: 'error',
-        title: 'WBS 내보내기 실패',
-        message: error instanceof Error ? error.message : '엑셀 파일 생성 중 오류가 발생했습니다.',
+        title: t('settings.exportFail'),
+        message: error instanceof Error ? error.message : t('settings.exportFailMsg'),
       });
     }
   };
@@ -268,15 +270,15 @@ export default function Settings() {
         updateProject(project.id, project);
         showFeedback({
           tone: 'success',
-          title: '엑셀 가져오기 완료',
-          message: `${normalizedTasks.length}개의 작업을 현재 프로젝트에 반영했습니다.`,
+          title: t('settings.importSuccess'),
+          message: t('settings.importSuccessMsg', { count: normalizedTasks.length }),
         });
       } catch (error) {
         console.error('Import error:', error);
         showFeedback({
           tone: 'error',
-          title: '엑셀 가져오기 실패',
-          message: '엑셀 파일을 읽는 중 오류가 발생했습니다.',
+          title: t('settings.importFail'),
+          message: t('settings.importFailMsg'),
         });
       } finally {
         setPendingImportTasks(null);
@@ -306,8 +308,8 @@ export default function Settings() {
         console.error('Import error:', error);
         showFeedback({
           tone: 'error',
-          title: '엑셀 가져오기 실패',
-          message: '엑셀 파일을 읽는 중 오류가 발생했습니다.',
+          title: t('settings.importFail'),
+          message: t('settings.importFailMsg'),
         });
       }
     };
@@ -335,8 +337,8 @@ export default function Settings() {
         updateProject(project.id, project);
         showFeedback({
           tone: 'info',
-          title: '자동 상태 동기화 활성화',
-          message: '이제 WBS와 간트 변경 내용이 프로젝트 상태에 자동 반영됩니다.',
+          title: t('settings.autoSyncEnabled'),
+          message: t('settings.autoSyncEnabledMsg'),
         });
         return;
       }
@@ -359,15 +361,15 @@ export default function Settings() {
       updateProject(savedProject.id, savedProject);
       showFeedback({
         tone: 'success',
-        title: '수동 상태 고정 활성화',
-        message: '이제 프로젝트 상태를 직접 선택할 수 있고 작업 변경은 상태를 덮어쓰지 않습니다.',
+        title: t('settings.manualFixEnabled'),
+        message: t('settings.manualFixEnabledMsg'),
       });
     } catch (error) {
       console.error('Failed to update status mode:', error);
       showFeedback({
         tone: 'error',
-        title: '상태 정책 변경 실패',
-        message: '상태 동기화 방식을 변경하지 못했습니다.',
+        title: t('settings.statusPolicyFail'),
+        message: t('settings.statusPolicyFailMsg'),
       });
     } finally {
       setIsStatusModeSaving(false);
@@ -399,7 +401,7 @@ export default function Settings() {
               {projectTone?.label || 'Project Settings'}
             </div>
             <h1 className="mt-5 text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-[-0.06em] text-white">
-              {currentProject?.name || '프로젝트'} 설정
+              {currentProject?.name || t('common.project')} {t('settings.pageTitle')}
             </h1>
             {projectTone && (
               <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
@@ -407,16 +409,16 @@ export default function Settings() {
               </p>
             )}
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/88 md:text-base">
-              프로젝트 메타 정보와 데이터 관리, 위험 작업을 분리해서 조정 포인트가 더 명확하게 보이도록 정리했습니다.
+              {t('settings.heroDesc')}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
                 <Save className="w-4 h-4" />
-                저장
+                {t('common.save')}
               </Button>
               {isReadOnly && (
                 <span className="rounded-full border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-warning)]">
-                  읽기 전용
+                  {t('common.readOnly')}
                 </span>
               )}
               {currentProject && (
@@ -437,22 +439,22 @@ export default function Settings() {
             <p className="mt-3 text-4xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
               {tasks.length}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">등록된 작업 수</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('settings.registeredTasks')}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Base Date</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {resolvedFormData.baseDate || '미설정'}
+              {resolvedFormData.baseDate || t('settings.notSet')}
             </p>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">공정율 기준일</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{t('settings.baseDateLabel')}</p>
           </div>
           <div className="metric-card p-6">
             <p className="eyebrow-stat">Schedule</p>
             <p className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-[color:var(--text-primary)]">
-              {resolvedFormData.startDate || '미정'}
+              {resolvedFormData.startDate || t('settings.pending')}
             </p>
             <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-              {resolvedFormData.endDate ? `~ ${resolvedFormData.endDate}` : '종료일 미정'}
+              {resolvedFormData.endDate ? `~ ${resolvedFormData.endDate}` : t('settings.endDatePending')}
             </p>
           </div>
         </div>
@@ -467,14 +469,14 @@ export default function Settings() {
             <div>
               <p className="page-kicker">Core Information</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                기본 정보
+                {t('settings.coreInfo')}
               </h2>
             </div>
           </div>
 
           <div className="mt-6 space-y-5">
             <div>
-              <label className="field-label">프로젝트명 *</label>
+              <label className="field-label">{t('settings.projectName')}</label>
               <input
                 type="text"
                 value={resolvedFormData.name}
@@ -493,7 +495,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="field-label">설명</label>
+              <label className="field-label">{t('settings.descriptionLabel')}</label>
               <textarea
                 value={resolvedFormData.description}
                 onChange={(event) => setFormData({ ...formData, description: event.target.value })}
@@ -505,7 +507,7 @@ export default function Settings() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="field-label">시작일</label>
+                <label className="field-label">{t('settings.startDate')}</label>
                 <input
                   type="date"
                   value={resolvedFormData.startDate}
@@ -519,7 +521,7 @@ export default function Settings() {
                 />
               </div>
               <div>
-                <label className="field-label">종료일</label>
+                <label className="field-label">{t('settings.endDate')}</label>
                 <input
                   type="date"
                   value={resolvedFormData.endDate}
@@ -538,7 +540,7 @@ export default function Settings() {
             )}
 
             <div>
-              <label className="field-label">진척기준일</label>
+              <label className="field-label">{t('settings.baseDate')}</label>
               <input
                 type="date"
                 value={resolvedFormData.baseDate}
@@ -547,14 +549,14 @@ export default function Settings() {
                 className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
               />
               <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-                공정율 계산의 기준이 되는 날짜입니다.
+                {t('settings.baseDateDesc')}
               </p>
             </div>
 
             <div className="flex justify-end pt-2">
               <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
                 <Save className="w-4 h-4" />
-                저장
+                {t('common.save')}
               </Button>
             </div>
           </div>
@@ -563,23 +565,23 @@ export default function Settings() {
         <div className="space-y-6">
           <div className="app-panel p-6">
             <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              프로젝트 상태 관리
+              {t('settings.statusManagement')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              작업 기반 자동 동기화와 수동 상태 고정 중 하나를 선택할 수 있습니다. 상태 정책이 명확해야 WBS, 간트, 대시보드 지표가 서로 충돌하지 않습니다.
+              {t('settings.statusDesc')}
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {([
                 {
                   key: 'auto' as const,
-                  title: '자동 상태 동기화',
-                  description: '작업 일정과 진행률에 따라 프로젝트 상태를 자동 계산합니다.',
+                  title: t('settings.autoSync'),
+                  description: t('settings.autoSyncDesc'),
                 },
                 {
                   key: 'manual' as const,
-                  title: '수동 상태 고정',
-                  description: '관리자가 직접 프로젝트 상태를 고정합니다.',
+                  title: t('settings.manualFix'),
+                  description: t('settings.manualFixDesc'),
                 },
               ]).map((mode) => {
                 const isCurrentMode = statusMode === mode.key;
@@ -601,7 +603,7 @@ export default function Settings() {
                     <p className="font-medium text-[color:var(--text-primary)]">
                       {mode.title}
                       {isCurrentMode && (
-                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 정책</span>
+                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentPolicy')}</span>
                       )}
                     </p>
                     <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{mode.description}</p>
@@ -612,15 +614,15 @@ export default function Settings() {
 
             <div className="mt-4 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
               {isManualStatus
-                ? '수동 상태 고정이 켜져 있습니다. 아래 상태 선택은 프로젝트 상태를 직접 고정하며, 이후 작업 저장은 상태를 자동 변경하지 않습니다.'
-                : '자동 상태 동기화가 켜져 있습니다. WBS와 간트에서 작업 상태를 저장하면 프로젝트 상태도 자동으로 다시 계산됩니다.'}
+                ? t('settings.manualFixActiveDesc')
+                : t('settings.autoSyncActiveDesc')}
             </div>
 
             <div className="mt-5 space-y-3">
               {([
-                { status: 'preparing' as ProjectStatus, icon: <Clock3 className="w-4 h-4" />, desc: '프로젝트 준비 단계입니다.' },
-                { status: 'active' as ProjectStatus, icon: <Play className="w-4 h-4" />, desc: '프로젝트가 진행 중입니다.' },
-                { status: 'completed' as ProjectStatus, icon: <CheckCircle2 className="w-4 h-4" />, desc: '프로젝트가 완료되었습니다.' },
+                { status: 'preparing' as ProjectStatus, icon: <Clock3 className="w-4 h-4" />, desc: t('settings.statusPreparing') },
+                { status: 'active' as ProjectStatus, icon: <Play className="w-4 h-4" />, desc: t('settings.statusActive') },
+                { status: 'completed' as ProjectStatus, icon: <CheckCircle2 className="w-4 h-4" />, desc: t('settings.statusCompleted') },
               ]).map((item) => {
                 const isCurrent = currentProject?.status === item.status;
                 return (
@@ -650,7 +652,7 @@ export default function Settings() {
                       <p className="font-medium text-[color:var(--text-primary)]">
                         {PROJECT_STATUS_LABELS[item.status]}
                         {isCurrent && (
-                          <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">현재 상태</span>
+                          <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentStatus')}</span>
                         )}
                       </p>
                       <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">{item.desc}</p>
@@ -660,36 +662,36 @@ export default function Settings() {
               })}
             </div>
             {!isAdmin && (
-              <p className="mt-3 text-xs text-[color:var(--text-muted)]">상태 변경은 관리자만 가능합니다.</p>
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.adminOnlyStatus')}</p>
             )}
             {isAdmin && !isManualStatus && (
-              <p className="mt-3 text-xs text-[color:var(--text-muted)]">수동 상태 고정을 켜면 아래 상태를 직접 선택할 수 있습니다.</p>
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.enableManualHint')}</p>
             )}
 
             {currentProject?.completedAt && (
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
-                완료일: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
+                {t('settings.completedDate')}: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
               </p>
             )}
           </div>
 
           <div className="app-panel p-6">
             <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              데이터 관리
+              {t('settings.dataManagement')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              WBS 데이터를 내보내거나 다시 가져와 현재 프로젝트 구조를 재정렬할 수 있습니다.
+              {t('settings.dataManagementDesc')}
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Button variant="outline" onClick={handleExportExcel}>
                 <Download className="w-4 h-4" />
-                WBS 엑셀 내보내기
+                {t('settings.excelExport')}
               </Button>
 
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5 py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-tertiary)]">
                 <Upload className="w-4 h-4" />
-                엑셀 가져오기
+                {t('settings.excelImport')}
                 <input
                   type="file"
                   accept=".xlsx,.xls"
@@ -700,7 +702,7 @@ export default function Settings() {
 
               <Button variant="outline" onClick={generateWbsTemplate}>
                 <FileSpreadsheet className="w-4 h-4" />
-                업로드 양식 다운로드
+                {t('settings.templateDownload')}
               </Button>
             </div>
           </div>
@@ -712,17 +714,17 @@ export default function Settings() {
               </div>
               <div>
                 <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-                  AI 설정
+                  {t('settings.aiSettings')}
                 </h2>
                 <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                  AI 자동입력 모드에 사용할 API를 설정합니다.
+                  {t('settings.aiSettingsDesc')}
                 </p>
               </div>
             </div>
 
             {envAIConfigured && (
               <div className="mt-4 rounded-[16px] border border-[rgba(31,163,122,0.2)] bg-[rgba(31,163,122,0.06)] px-4 py-3 text-sm text-[color:var(--accent-success)]">
-                환경변수로 AI API가 설정되어 있습니다. 환경변수 설정이 우선 적용됩니다.
+                {t('settings.aiEnvConfigured')}
               </div>
             )}
 
@@ -731,8 +733,8 @@ export default function Settings() {
                 <label className="field-label">AI Provider</label>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   {([
-                    { key: 'claude' as const, label: 'Claude (Anthropic)', desc: 'Claude Sonnet 4.5 등' },
-                    { key: 'openai' as const, label: 'OpenAI', desc: 'GPT-4o 등' },
+                    { key: 'claude' as const, label: 'Claude (Anthropic)', desc: t('settings.aiClaudeDesc') },
+                    { key: 'openai' as const, label: 'OpenAI', desc: t('settings.aiOpenaiDesc') },
                   ]).map((provider) => {
                     const isSelected = aiSettings.provider === provider.key;
                     return (
@@ -750,7 +752,7 @@ export default function Settings() {
                         <p className="font-medium text-[color:var(--text-primary)]">
                           {provider.label}
                           {isSelected && (
-                            <span className="ml-2 text-xs font-semibold text-violet-500">선택됨</span>
+                            <span className="ml-2 text-xs font-semibold text-violet-500">{t('settings.selected')}</span>
                           )}
                         </p>
                         <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">{provider.desc}</p>
@@ -769,7 +771,7 @@ export default function Settings() {
                       value={aiSettings.apiKey}
                       onChange={(e) => handleAiApiKeyChange(e.target.value)}
                       disabled={envAIConfigured}
-                      placeholder={envAIConfigured ? '환경변수로 설정됨' : 'API Key를 입력하세요'}
+                      placeholder={envAIConfigured ? t('settings.aiEnvSet') : t('settings.aiApiKeyPlaceholder')}
                       className={cn(
                         'field-input pr-10',
                         envAIConfigured && 'cursor-not-allowed opacity-60'
@@ -789,7 +791,7 @@ export default function Settings() {
                     onClick={() => void handleAiTestConnection()}
                     disabled={!aiSettings.apiKey || isAiTesting}
                   >
-                    {isAiTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : '연결 테스트'}
+                    {isAiTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settings.testConnection')}
                   </Button>
                 </div>
                 {aiTestResult && (
@@ -806,8 +808,7 @@ export default function Settings() {
               </div>
 
               <div className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-                AI 모드가 활성화되면 WBS 자동 생성, 실적 자동 제안 등의 기능을 사용할 수 있습니다.
-                헤더의 AI/수동 토글로 모드를 전환하세요.
+                {t('settings.aiModeDesc')}
               </div>
             </div>
           </div>
@@ -816,19 +817,19 @@ export default function Settings() {
             <div className="danger-zone-container rounded-[30px] border border-[rgba(203,75,95,0.16)] p-6 shadow-[0_28px_60px_-36px_rgba(203,75,95,0.26)]">
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--accent-danger)]">
                 <AlertTriangle className="w-5 h-5" />
-                위험 영역
+                {t('settings.dangerZone')}
               </h2>
 
               <div className="mt-5">
                 <div className="danger-zone-inner rounded-[22px] border border-[rgba(203,75,95,0.16)] p-4">
-                  <p className="font-medium text-[color:var(--text-primary)]">프로젝트 삭제</p>
+                  <p className="font-medium text-[color:var(--text-primary)]">{t('settings.deleteProject')}</p>
                   <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
-                    프로젝트와 모든 데이터가 영구 삭제됩니다. 되돌릴 수 없습니다.
+                    {t('settings.deleteDesc')}
                   </p>
                   <div className="mt-4">
                     <Button variant="danger" onClick={() => setShowDeleteModal(true)} data-testid="settings-delete-project-button">
                       <Trash2 className="w-4 h-4" />
-                      삭제
+                      {t('common.delete')}
                     </Button>
                   </div>
                 </div>
@@ -841,10 +842,10 @@ export default function Settings() {
       {projectId && (canEditProject || isAdmin) && (
         <section className="app-panel p-6">
           <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-            감사 로그
+            {t('settings.auditLog')}
           </h2>
           <p className="mt-2 mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-            프로젝트에서 발생한 주요 변경 이력을 확인합니다.
+            {t('settings.auditLogDesc')}
           </p>
           <AuditLogPanel projectId={projectId} />
         </section>
@@ -854,9 +855,9 @@ export default function Settings() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={() => void handleDelete()}
-        title="프로젝트 삭제"
-        description="프로젝트와 모든 관련 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
-        confirmLabel="프로젝트 삭제"
+        title={t('settings.deleteProject')}
+        description={t('settings.deleteConfirmDesc', { name: currentProject?.name })}
+        confirmLabel={t('settings.deleteProject')}
         confirmVariant="danger"
         isLoading={isDeleting}
       />
@@ -865,9 +866,9 @@ export default function Settings() {
         isOpen={pendingStatus !== null}
         onClose={() => setPendingStatus(null)}
         onConfirm={() => pendingStatus && void executeStatusChange(pendingStatus)}
-        title="상태 단계 건너뛰기"
-        description={`현재 "${PROJECT_STATUS_LABELS[currentProject?.status ?? 'preparing']}" 상태에서 "${PROJECT_STATUS_LABELS[pendingStatus ?? 'preparing']}"(으)로 건너뛰어 변경합니다. 계속하시겠습니까?`}
-        confirmLabel="상태 변경"
+        title={t('settings.skipStepConfirmTitle')}
+        description={t('settings.skipStepConfirmDesc', { current: PROJECT_STATUS_LABELS[currentProject?.status ?? 'preparing'], target: PROJECT_STATUS_LABELS[pendingStatus ?? 'preparing'] })}
+        confirmLabel={t('settings.statusChange')}
         confirmVariant="primary"
       />
 
@@ -882,9 +883,9 @@ export default function Settings() {
             void applyImportedTasks(pendingImportTasks);
           }
         }}
-        title="기존 작업 덮어쓰기"
-        description="현재 WBS 작업을 엑셀 파일 내용으로 교체합니다. 가져오기 후에는 새 작업 구조와 일정이 프로젝트 전체 지표에 반영됩니다."
-        confirmLabel="덮어쓰기 후 가져오기"
+        title={t('settings.importReplaceTitle')}
+        description={t('settings.importReplaceDesc', { count: tasks.length })}
+        confirmLabel={t('settings.importReplaceLabel')}
         confirmVariant="primary"
       />
     </div>

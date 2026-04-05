@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet, Navigate, useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import ProjectList from './pages/ProjectList';
@@ -69,13 +70,13 @@ function App() {
     let unsubscribe = () => {};
 
     const initializeApp = async () => {
-      // DB 스키마 마이그레이션 확인
-      await ensureMigrations();
-      // 시스템 설정 로드
-      await useSystemSettingsStore.getState().loadSettings();
-
       if (!isSupabaseConfigured) {
-        // localStorage 모드: 로컬 사용자로 자동 로그인
+        // localStorage 모드: 마이그레이션과 설정 로드를 병렬 실행
+        await Promise.all([
+          ensureMigrations(),
+          useSystemSettingsStore.getState().loadSettings(),
+        ]);
+        // 로컬 사용자로 자동 로그인
         const localUser = {
           id: 'local-user',
           email: 'local@localhost',
@@ -92,7 +93,12 @@ function App() {
         return;
       }
 
-      const sessionUser = await ensureSupabaseSession();
+      // Supabase 모드: 마이그레이션, 설정 로드, 세션 확인을 병렬 실행
+      const [, , sessionUser] = await Promise.all([
+        ensureMigrations(),
+        useSystemSettingsStore.getState().loadSettings(),
+        ensureSupabaseSession(),
+      ]);
       if (isCancelled) return;
 
       if (sessionUser) {
@@ -175,6 +181,7 @@ function App() {
 
 // 프로젝트 상세 래퍼 (프로젝트 로드)
 function ProjectDetailWrapper() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { projects, projectsInitialized, setCurrentProject, setMembers } = useProjectStore();
   const { setTasks, expandAll } = useTaskStore();
@@ -242,16 +249,16 @@ function ProjectDetailWrapper() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <div className="text-7xl font-bold text-[color:var(--text-muted)]">404</div>
         <h1 className="text-2xl font-semibold text-[color:var(--text-primary)]">
-          프로젝트를 찾을 수 없습니다
+          {t('notFound.projectNotFound')}
         </h1>
         <p className="max-w-md text-sm text-[color:var(--text-secondary)]">
-          요청하신 프로젝트가 존재하지 않거나 삭제되었습니다.
+          {t('notFound.projectNotFoundDesc')}
         </p>
         <Link
           to="/projects"
           className="mt-2 rounded-full bg-[image:var(--gradient-primary)] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:brightness-105"
         >
-          프로젝트 목록으로
+          {t('notFound.goToProjectList')}
         </Link>
       </div>
     );
@@ -262,6 +269,7 @@ function ProjectDetailWrapper() {
 
 // 팝업 전용 래퍼 (사이드바/헤더 없는 최소 레이아웃)
 function PopupProjectWrapper() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const { setProjects, projects, setCurrentProject, setMembers } = useProjectStore();
   const { setUser } = useAuthStore();
@@ -273,9 +281,11 @@ function PopupProjectWrapper() {
     let isCancelled = false;
 
     const init = async () => {
-      await ensureMigrations();
-
       if (!isSupabaseConfigured) {
+        await Promise.all([
+          ensureMigrations(),
+          useSystemSettingsStore.getState().loadSettings(),
+        ]);
         const localUser = {
           id: 'local-user',
           email: 'local@localhost',
@@ -294,7 +304,11 @@ function PopupProjectWrapper() {
         return;
       }
 
-      const sessionUser = await ensureSupabaseSession();
+      const [, , sessionUser] = await Promise.all([
+        ensureMigrations(),
+        useSystemSettingsStore.getState().loadSettings(),
+        ensureSupabaseSession(),
+      ]);
       if (isCancelled) return;
 
       if (sessionUser) {
@@ -339,7 +353,7 @@ function PopupProjectWrapper() {
   }, [ready, projectId, projects, setCurrentProject, setMembers, setTasks, expandAll]);
 
   const currentProject = useProjectStore((s) => s.currentProject);
-  const page = window.location.pathname.includes('/wbs') ? 'WBS' : '간트 차트';
+  const page = window.location.pathname.includes('/wbs') ? 'WBS' : window.location.pathname.includes('/kanban') ? t('sidebar.kanbanBoard') : t('sidebar.ganttChart');
 
   if (!ready) {
     return (
@@ -353,15 +367,15 @@ function PopupProjectWrapper() {
     <div className="flex h-screen flex-col bg-[color:var(--bg-primary)]">
       <header className="flex h-12 flex-shrink-0 items-center justify-between border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-[color:var(--text-primary)] truncate" title={`${currentProject?.name || '프로젝트'} — ${page}`}>
-            {currentProject?.name || '프로젝트'} — {page}
+          <span className="text-sm font-semibold text-[color:var(--text-primary)] truncate" title={`${currentProject?.name || t('common.project')} — ${page}`}>
+            {currentProject?.name || t('common.project')} — {page}
           </span>
-          <span className="surface-badge !py-0.5 !px-2 !text-[10px]">팝업</span>
+          <span className="surface-badge !py-0.5 !px-2 !text-[10px]">{t('popup.label')}</span>
         </div>
         <button
           onClick={() => window.close()}
           className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
-          title="닫기"
+          title={t('popup.close')}
         >
           ✕
         </button>
@@ -374,20 +388,21 @@ function PopupProjectWrapper() {
 }
 
 function NotFound() {
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
       <div className="text-7xl font-bold text-[color:var(--text-muted)]">404</div>
       <h1 className="text-2xl font-semibold text-[color:var(--text-primary)]">
-        페이지를 찾을 수 없습니다
+        {t('notFound.pageNotFound')}
       </h1>
       <p className="max-w-md text-sm text-[color:var(--text-secondary)]">
-        요청하신 페이지가 존재하지 않거나 이동되었습니다.
+        {t('notFound.pageNotFoundDesc')}
       </p>
       <Link
         to="/"
         className="mt-2 rounded-full bg-[image:var(--gradient-primary)] px-6 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:brightness-105"
       >
-        홈으로 돌아가기
+        {t('notFound.goHome')}
       </Link>
     </div>
   );
