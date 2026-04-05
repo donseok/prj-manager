@@ -138,7 +138,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
     slide.addShape(pptx.ShapeType.roundRect, {
       x, y: kpiStartY, w: cardW, h: cardH,
       fill: { color: C.white },
-      shadow: { type: 'outer', blur: 6, offset: 2, color: '00000010' },
+      shadow: { type: 'outer', blur: 6, offset: 2, color: '000000', opacity: 0.06 },
       rectRadius: 0.08,
       line: { color: C.gray200, width: 0.5 },
     });
@@ -146,7 +146,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData) {
     // 색 인디케이터
     slide.addShape(pptx.ShapeType.rect, {
       x, y: kpiStartY, w: 0.06, h: cardH,
-      fill: { color: kpi.color }, rectRadius: 0.08,
+      fill: { color: kpi.color },
     });
 
     slide.addText(kpi.label, {
