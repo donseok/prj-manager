@@ -149,7 +149,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('app.wbsComponents.memberSelect.searchPlaceholder')}
+              placeholder={t('wbsComponents.memberSelect.searchPlaceholder')}
               className="flex-1 bg-transparent text-sm text-[color:var(--menu-text)] outline-none placeholder:text-[color:var(--menu-muted)]"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && filtered.length === 1) {
@@ -178,7 +178,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
               )}
             >
               <span className="text-[color:var(--menu-muted)]">-</span>
-              <span className="text-[color:var(--menu-muted)]">{t('app.wbsComponents.memberSelect.unassigned')}</span>
+              <span className="text-[color:var(--menu-muted)]">{t('wbsComponents.memberSelect.unassigned')}</span>
             </button>
 
             {filtered.map((m) => (
@@ -197,7 +197,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
 
             {filtered.length === 0 && search && (
               <div className="px-3 py-2 text-center text-xs text-[color:var(--menu-muted)]">
-                {t('app.wbsComponents.memberSelect.noResults')}
+                {t('wbsComponents.memberSelect.noResults')}
               </div>
             )}
           </div>
@@ -211,7 +211,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder={t('app.wbsComponents.memberSelect.namePlaceholder')}
+                  placeholder={t('wbsComponents.memberSelect.namePlaceholder')}
                   className="flex-1 rounded-md border border-[var(--border-color)] bg-[color:var(--menu-surface-strong)] px-2 py-1.5 text-sm text-[color:var(--menu-text)] outline-none focus:border-[var(--accent-primary)] placeholder:text-[color:var(--menu-muted)]"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleCreate();
@@ -226,7 +226,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                   disabled={!newName.trim()}
                   className="rounded-md bg-[image:var(--gradient-primary)] px-3 py-1.5 text-xs font-medium text-white transition-opacity disabled:opacity-40"
                 >
-                  {t('app.wbsComponents.memberSelect.add')}
+                  {t('wbsComponents.memberSelect.add')}
                 </button>
               </div>
             ) : (
@@ -235,7 +235,7 @@ export default function MemberSelect({ members, value, onChange, onCreateMember 
                 className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
               >
                 <Plus className="h-4 w-4" />
-                {t('app.wbsComponents.memberSelect.addNewMember')}
+                {t('wbsComponents.memberSelect.addNewMember')}
               </button>
             )}
           </div>

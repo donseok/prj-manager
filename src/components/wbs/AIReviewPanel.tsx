@@ -178,10 +178,10 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />
           <span className="text-sm font-medium text-[color:var(--text-primary)]">
-            {t('app.wbsComponents.aiReview.previewTitle')}
+            {t('wbsComponents.aiReview.previewTitle')}
           </span>
           <span className="surface-badge text-xs">
-            {t('app.wbsComponents.aiReview.selectedCount', { selected: counts.selected, total: counts.total })}
+            {t('wbsComponents.aiReview.selectedCount', { selected: counts.selected, total: counts.total })}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -190,14 +190,14 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
             onClick={() => setTree(setAllSelected(tree, true))}
             className="rounded-full px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]"
           >
-            {t('app.wbsComponents.aiReview.selectAll')}
+            {t('wbsComponents.aiReview.selectAll')}
           </button>
           <button
             type="button"
             onClick={() => setTree(setAllSelected(tree, false))}
             className="rounded-full px-2.5 py-1 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]"
           >
-            {t('app.wbsComponents.aiReview.deselectAll')}
+            {t('wbsComponents.aiReview.deselectAll')}
           </button>
         </div>
       </div>
@@ -208,11 +208,11 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          {t('app.wbsComponents.aiReview.cancel')}
+          {t('wbsComponents.aiReview.cancel')}
         </Button>
         <Button onClick={handleApply} disabled={counts.selected === 0}>
           <Sparkles className="h-4 w-4" />
-          {t('app.wbsComponents.aiReview.applyTasks', { count: counts.selected })}
+          {t('wbsComponents.aiReview.applyTasks', { count: counts.selected })}
         </Button>
       </div>
     </div>

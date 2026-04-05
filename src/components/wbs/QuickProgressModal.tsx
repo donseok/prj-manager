@@ -93,16 +93,16 @@ export default function QuickProgressModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('app.wbsComponents.quickProgress.title')} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('wbsComponents.quickProgress.title')} size="xl">
       <div className="flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         <div className="border-b border-[var(--border-color)] px-6 py-3">
           <p className="text-sm text-[color:var(--text-secondary)]">
-            {t('app.wbsComponents.quickProgress.description')}
+            {t('wbsComponents.quickProgress.description')}
           </p>
           <div className="mt-2 flex items-center gap-3">
             <span className="surface-badge text-xs">
               <Clock3 className="h-3 w-3" />
-              {t('app.wbsComponents.quickProgress.taskCount', { count: activeTasks.length })}
+              {t('wbsComponents.quickProgress.taskCount', { count: activeTasks.length })}
             </span>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function QuickProgressModal({
         <div className="flex-1 overflow-auto px-6 py-4">
           {activeTasks.length === 0 ? (
             <div className="empty-state min-h-[12rem]">
-              <p>{t('app.wbsComponents.quickProgress.noTasks')}</p>
+              <p>{t('wbsComponents.quickProgress.noTasks')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -137,25 +137,25 @@ export default function QuickProgressModal({
                           {delayed && (
                             <span className="flex items-center gap-1 rounded-full bg-[rgba(203,75,95,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
                               <AlertTriangle className="h-2.5 w-2.5" />
-                              {t('app.wbsComponents.quickProgress.delayed')}
+                              {t('wbsComponents.quickProgress.delayed')}
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]" title={task.name || t('app.wbsComponents.quickProgress.unnamedTask')}>
-                          {task.name || t('app.wbsComponents.quickProgress.unnamedTask')}
+                        <p className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]" title={task.name || t('wbsComponents.quickProgress.unnamedTask')}>
+                          {task.name || t('wbsComponents.quickProgress.unnamedTask')}
                         </p>
                         <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
-                          {task.assigneeId ? memberMap[task.assigneeId] || t('app.wbsComponents.quickProgress.unassigned') : t('app.wbsComponents.quickProgress.unassigned')}
-                          {task.planEnd && ` · ${t('app.wbsComponents.quickProgress.planEnd')}: ${formatDate(task.planEnd)}`}
+                          {task.assigneeId ? memberMap[task.assigneeId] || t('wbsComponents.quickProgress.unassigned') : t('wbsComponents.quickProgress.unassigned')}
+                          {task.planEnd && ` · ${t('wbsComponents.quickProgress.planEnd')}: ${formatDate(task.planEnd)}`}
                         </p>
                       </div>
                       <button
                         onClick={() => handleMarkComplete(task.id)}
                         className="flex items-center gap-1 rounded-full border border-[rgba(31,163,122,0.2)] bg-[rgba(31,163,122,0.08)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-success)] transition-colors hover:bg-[rgba(31,163,122,0.16)]"
-                        title={t('app.wbsComponents.quickProgress.markComplete')}
+                        title={t('wbsComponents.quickProgress.markComplete')}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        {t('app.wbsComponents.quickProgress.complete')}
+                        {t('wbsComponents.quickProgress.complete')}
                       </button>
                     </div>
 
@@ -166,9 +166,9 @@ export default function QuickProgressModal({
                           inputMode="numeric"
                           value={progress}
                           onChange={(e) => {
-                            const raw = e.target.value.replace(/[^0-9]/g, '');
-                            const num = Math.min(100, Math.max(0, parseInt(raw) || 0));
-                            handleLocalChange(task.id, 'actualProgress', raw === '' ? 0 : num);
+                            const intPart = e.target.value.split('.')[0].replace(/[^0-9]/g, '');
+                            const num = Math.min(100, Math.max(0, parseInt(intPart) || 0));
+                            handleLocalChange(task.id, 'actualProgress', intPart === '' ? 0 : num);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
@@ -182,27 +182,39 @@ export default function QuickProgressModal({
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
-                          {t('app.wbsComponents.quickProgress.actualStart')}
+                          {t('wbsComponents.quickProgress.actualStart')}
                         </label>
                         <input
                           type="date"
                           value={(getEffectiveValue(task, 'actualStart') as string) || ''}
-                          onChange={(e) =>
-                            handleLocalChange(task.id, 'actualStart', e.target.value || null)
-                          }
+                          onChange={(e) => {
+                            const startVal = e.target.value || null;
+                            handleLocalChange(task.id, 'actualStart', startVal);
+                            const endVal = (getEffectiveValue(task, 'actualEnd') as string) || null;
+                            if (startVal && endVal && endVal < startVal) {
+                              handleLocalChange(task.id, 'actualEnd', startVal);
+                            }
+                          }}
                           className="mt-0.5 w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-2 py-1 text-sm text-[color:var(--text-primary)] outline-none focus:border-[rgba(15,118,110,0.4)]"
                         />
                       </div>
                       <div>
                         <label className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
-                          {t('app.wbsComponents.quickProgress.actualEnd')}
+                          {t('wbsComponents.quickProgress.actualEnd')}
                         </label>
                         <input
                           type="date"
                           value={(getEffectiveValue(task, 'actualEnd') as string) || ''}
-                          onChange={(e) =>
-                            handleLocalChange(task.id, 'actualEnd', e.target.value || null)
-                          }
+                          min={(getEffectiveValue(task, 'actualStart') as string) || undefined}
+                          onChange={(e) => {
+                            const endVal = e.target.value || null;
+                            const startVal = (getEffectiveValue(task, 'actualStart') as string) || null;
+                            if (endVal && startVal && endVal < startVal) {
+                              handleLocalChange(task.id, 'actualEnd', startVal);
+                            } else {
+                              handleLocalChange(task.id, 'actualEnd', endVal);
+                            }
+                          }}
                           className="mt-0.5 w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-2 py-1 text-sm text-[color:var(--text-primary)] outline-none focus:border-[rgba(15,118,110,0.4)]"
                         />
                       </div>
@@ -216,10 +228,10 @@ export default function QuickProgressModal({
 
         <div className="flex items-center justify-between border-t border-[var(--border-color)] px-6 py-4">
           <Button variant="ghost" onClick={onClose}>
-            {t('app.wbsComponents.quickProgress.close')}
+            {t('wbsComponents.quickProgress.close')}
           </Button>
           <Button onClick={handleApplyAll} disabled={!hasChanges}>
-            {t('app.wbsComponents.quickProgress.applyAll')}
+            {t('wbsComponents.quickProgress.applyAll')}
           </Button>
         </div>
       </div>
