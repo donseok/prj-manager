@@ -1445,7 +1445,11 @@ export default function WBS() {
                   }
 
                   return (
-                    <td key={column.key} className={cellClassName} style={stickyStyle}>
+                    <td
+                      key={column.key}
+                      className={cn(cellClassName, column.key === 'actions' && 'overflow-visible')}
+                      style={stickyStyle}
+                    >
                       {renderCell(task, column.key)}
                     </td>
                   );

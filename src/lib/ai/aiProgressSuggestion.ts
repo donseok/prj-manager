@@ -1,4 +1,5 @@
 import type { Task, ProjectMember } from '../../types';
+import { getLocalDateString } from '../utils';
 import { loadAISettings } from './aiConfig';
 import { callAI } from './aiClient';
 import { buildProgressSuggestionPrompt } from './aiPrompts';
@@ -35,7 +36,7 @@ export async function suggestProgressUpdates(params: {
   }
 
   const { tasks, members } = params;
-  const baseDate = params.baseDate || new Date().toISOString().split('T')[0];
+  const baseDate = params.baseDate || getLocalDateString();
 
   // Only analyze leaf tasks that are not completed
   const parentIds = new Set(tasks.filter((t) => t.parentId).map((t) => t.parentId!));

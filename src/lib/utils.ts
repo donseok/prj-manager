@@ -2,6 +2,11 @@ import { format, parseISO, startOfWeek, endOfWeek, addWeeks, isWithinInterval, i
 import { ko } from 'date-fns/locale';
 import type { Task } from '../types';
 
+// 오늘 날짜를 로컬 timezone 기준 'yyyy-MM-dd' 문자열로 반환 (UTC 오프셋 방지)
+export function getLocalDateString(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // 날짜 포맷팅
 export function formatDate(date: string | Date | null | undefined, formatStr: string = 'yyyy-MM-dd'): string {
   if (!date) return '';

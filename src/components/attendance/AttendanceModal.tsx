@@ -5,7 +5,7 @@ import Modal from '../common/Modal';
 import Button from '../common/Button';
 import type { Attendance, AttendanceType, ProjectMember } from '../../types';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../../types';
-import { generateId } from '../../lib/utils';
+import { generateId, getLocalDateString } from '../../lib/utils';
 import { isKoreanHoliday, getKoreanHolidayNames } from '../../lib/koreanHolidays';
 
 interface AttendanceModalProps {
@@ -35,7 +35,7 @@ function getInitialMemberId(
 
 function getInitialDate(editingAttendance: Attendance | null | undefined, defaultDate: string | undefined) {
   if (editingAttendance) return editingAttendance.date;
-  return defaultDate || new Date().toISOString().slice(0, 10);
+  return defaultDate || getLocalDateString();
 }
 
 function getInitialType(editingAttendance: Attendance | null | undefined): AttendanceType {
@@ -96,7 +96,7 @@ export default function AttendanceModal({
             id: generateId(),
             projectId,
             memberId,
-            date: current.toISOString().slice(0, 10),
+            date: getLocalDateString(current),
             type,
             note: note || undefined,
             createdAt: now,

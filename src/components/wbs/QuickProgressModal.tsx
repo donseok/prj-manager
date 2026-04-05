@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Clock3, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
-import { cn, formatDate } from '../../lib/utils';
+import { cn, formatDate, getLocalDateString } from '../../lib/utils';
 import type { Task, ProjectMember } from '../../types';
 import { LEVEL_LABELS } from '../../types';
 
@@ -70,8 +70,7 @@ export default function QuickProgressModal({
   };
 
   const handleMarkComplete = (taskId: string) => {
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = getLocalDateString();
     const task = tasks.find((t) => t.id === taskId);
     onUpdateTask(taskId, {
       actualProgress: 100,
