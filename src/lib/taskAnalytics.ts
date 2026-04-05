@@ -1,3 +1,4 @@
+import { parseISO } from 'date-fns';
 import type { Task, ProjectMember, TaskStatus } from '../types';
 import { getDelayedTasks, getDelayDays, calculateOverallProgress } from './utils';
 import i18n from '../i18n';
@@ -195,11 +196,12 @@ export interface TimelineData {
 }
 
 export function calculateTimeline(startDate: string, endDate: string): TimelineData {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseISO(startDate);
+  const end = parseISO(endDate);
   const now = new Date();
-  const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-  const elapsedDays = Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay));
+  const elapsedDays = Math.round((now.getTime() - start.getTime()) / msPerDay);
   const clampedElapsed = Math.max(0, elapsedDays);
   const remainingDays = totalDays - clampedElapsed;
   const elapsedPercent = Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100));

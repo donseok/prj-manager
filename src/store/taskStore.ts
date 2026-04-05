@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Task } from '../types';
 import { buildTaskTree, flattenTaskTree, calculateParentProgress } from '../lib/utils';
 import { normalizeTaskHierarchy } from '../lib/projectTaskSync';
+import { autoCalculateWeights } from '../lib/taskAutoFill';
 import { broadcastTasks, onTasksUpdated } from '../lib/broadcastSync';
 import { checkAndGenerateNotifications } from '../lib/notificationGenerator';
 
@@ -124,7 +125,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       newExpanded.add(task.parentId);
       set({ expandedIds: newExpanded });
     }
-    get().setTasks(newTasks, undefined, { recordHistory: true });
+    get().setTasks(autoCalculateWeights(newTasks), undefined, { recordHistory: true });
   },
 
   updateTask: (id, updates, options) => {
@@ -143,7 +144,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     };
     findChildren(id);
     const newTasks = tasks.filter((t) => !idsToDelete.has(t.id));
-    get().setTasks(newTasks, undefined, { recordHistory: true });
+    get().setTasks(autoCalculateWeights(newTasks), undefined, { recordHistory: true });
   },
 
   moveTask: (taskId, newParentId, newIndex) => {

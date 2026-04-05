@@ -1191,7 +1191,7 @@ export default function WBS() {
         const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : task.level === 3 ? 'Todo' : null;
         const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : task.level === 4 ? 'Todo' : null;
         return (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             {permissions.canCreateTask && childLabel && (
               <button
                 onClick={() => handleAddTask(task.id, task.level + 1)}
@@ -1211,6 +1211,7 @@ export default function WBS() {
                 <Plus className="w-3.5 h-3.5" />
               </button>
             )}
+            <span className="mx-0.5 h-4 w-px bg-[var(--border-color)]" />
             <button
               onClick={() => setCommentTaskId(task.id)}
               className="relative flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(15,118,110,0.08)] hover:text-[color:var(--accent-primary)]"
