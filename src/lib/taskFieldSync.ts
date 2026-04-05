@@ -6,13 +6,14 @@
  * 부모 task는 normalizeTaskHierarchy에서 자식 기반으로 재계산되므로 여기서는 leaf만 처리.
  */
 
-import { format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 import type { Task, TaskStatus } from '../types';
+import { parseDate } from './utils';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
 /** 변경된 필드 이름 */
-type SyncField = 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress';
+type SyncField = 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress' | 'planStart' | 'planEnd';
 
 interface SyncResult {
   updates: Partial<Task>;
@@ -42,6 +43,10 @@ export function syncTaskField(task: Task, field: SyncField, newValue: unknown): 
     case 'planProgress':
       // planProgress 변경은 다른 필드에 영향 없음
       break;
+    case 'planStart':
+    case 'planEnd':
+      applySyncFromPlanDates(task, updates);
+      break;
   }
 
   const changed = Object.keys(updates).length > 0;
@@ -54,12 +59,12 @@ export function syncTaskField(task: Task, field: SyncField, newValue: unknown): 
  */
 export function syncTaskFields(
   task: Task,
-  changes: Partial<Pick<Task, 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress'>>
+  changes: Partial<Pick<Task, 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress' | 'planStart' | 'planEnd'>>
 ): SyncResult {
   let merged: Partial<Task> = {};
   const workingTask = { ...task, ...changes };
 
-  for (const [field, value] of Object.entries(changes)) {
+  for (const [field, value] of Object.entries(changes) as [SyncField, unknown][]) {
     const { updates } = syncTaskField(workingTask, field as SyncField, value);
     merged = { ...merged, ...updates };
     Object.assign(workingTask, updates);
@@ -204,7 +209,32 @@ function applySyncFromActualEnd(task: Task, actualEnd: string | null, updates: P
   }
 }
 
+// ── 계획시작/종료 → 계획공정율 ─────────────────────────────────
+
+function applySyncFromPlanDates(task: Task, updates: Partial<Task>) {
+  if (task.status === 'completed') {
+    updates.planProgress = 100;
+    return;
+  }
+  const start = parseDate(task.planStart);
+  const end = parseDate(task.planEnd);
+  if (!start || !end) {
+    updates.planProgress = 0;
+    return;
+  }
+
+  const totalDays = differenceInCalendarDays(end, start);
+  const now = new Date();
+  if (totalDays <= 0) {
+    updates.planProgress = now >= start ? 100 : 0;
+    return;
+  }
+
+  const elapsedDays = differenceInCalendarDays(now, start);
+  updates.planProgress = Math.round(Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)));
+}
+
 /** 동기화 대상 필드인지 확인 */
 export function isSyncableField(field: string): field is SyncField {
-  return ['status', 'actualProgress', 'actualStart', 'actualEnd', 'planProgress'].includes(field);
+  return ['status', 'actualProgress', 'actualStart', 'actualEnd', 'planProgress', 'planStart', 'planEnd'].includes(field);
 }

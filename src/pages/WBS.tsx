@@ -291,7 +291,7 @@ export default function WBS() {
     if (task && !hasChildren && isSyncableField(field)) {
       const { updates, changed } = syncTaskField(
         { ...task, [field]: value },
-        field as 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress',
+        field as 'status' | 'actualProgress' | 'actualStart' | 'actualEnd' | 'planProgress' | 'planStart' | 'planEnd',
         value
       );
       if (changed) {
@@ -1340,6 +1340,7 @@ export default function WBS() {
         label: t('wbs.colActions'),
         width: getResponsiveWidth(workspaceWidth * 0.12, 160, fullscreen ? 220 : 190),
         className: 'text-center',
+        stickyRight: true,
       },
     ];
 
@@ -1363,11 +1364,16 @@ export default function WBS() {
           {layout.columns.map((column, index) => (
             <th
               key={column.key}
-              className={cn(column.className, column.sticky && `sticky-col sticky-col-${index}`)}
+              className={cn(
+                column.className,
+                column.sticky && `sticky-col sticky-col-${index}`,
+                column.stickyRight && 'sticky-col-right',
+              )}
               style={{
                 width: column.width,
                 minWidth: column.width,
                 ...(column.sticky ? { left: layout.stickyLefts[index] } : {}),
+                ...(column.stickyRight ? { position: 'sticky' as const, right: 0, zIndex: 12 } : {}),
               }}
             >
               {column.label}
@@ -1447,8 +1453,14 @@ export default function WBS() {
                   return (
                     <td
                       key={column.key}
-                      className={cn(cellClassName, column.key === 'actions' && 'overflow-visible')}
-                      style={stickyStyle}
+                      className={cn(
+                        cellClassName,
+                        column.stickyRight && 'sticky-col-right',
+                      )}
+                      style={{
+                        ...stickyStyle,
+                        ...(column.stickyRight ? { position: 'sticky' as const, right: 0, zIndex: 2 } : {}),
+                      }}
                     >
                       {renderCell(task, column.key)}
                     </td>
