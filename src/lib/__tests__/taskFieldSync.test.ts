@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { format, subDays, addDays } from 'date-fns';
 import { syncTaskField, isSyncableField } from '../taskFieldSync';
 import type { Task } from '../../types';
