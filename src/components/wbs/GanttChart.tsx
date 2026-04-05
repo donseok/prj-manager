@@ -295,11 +295,11 @@ function GanttChartInner({
           </Button>
           <Button variant="ghost" size="sm" onClick={handleGoToToday}>
             <CalendarDays className="w-4 h-4" />
-            {t('app.wbsComponents.ganttChart.today')}
+            {t('wbsComponents.ganttChart.today')}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleFitToTasks}>
             <ScanSearch className="w-4 h-4" />
-            {t('app.wbsComponents.ganttChart.fitToSchedule')}
+            {t('wbsComponents.ganttChart.fitToSchedule')}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleNextWeek}>
             <ChevronRight className="w-4 h-4" />
@@ -309,12 +309,12 @@ function GanttChartInner({
         <div className="flex flex-wrap items-center gap-2">
           {selectedTask && (
             <div className="surface-badge">
-              {t('app.wbsComponents.ganttChart.selected')}: {selectedTask.name || t('app.wbsComponents.ganttChart.unnamedTask')}
+              {t('wbsComponents.ganttChart.selected')}: {selectedTask.name || t('wbsComponents.ganttChart.unnamedTask')}
             </div>
           )}
           <div className="surface-badge">
-            {format(displayStartDate, t('app.wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })} ~{' '}
-            {format(viewEndDate, t('app.wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })}
+            {format(displayStartDate, t('wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })} ~{' '}
+            {format(viewEndDate, t('wbsComponents.ganttChart.dateFormatFull'), { locale: dateFnsLocale })}
           </div>
         </div>
       </div>
@@ -344,7 +344,7 @@ function GanttChartInner({
                     color: isDark ? '#ffffff' : 'var(--text-secondary)',
                   }}
                 >
-                  {format(parseISO(`${month.month}-01`), t('app.wbsComponents.ganttChart.dateFormatMonth'), { locale: dateFnsLocale })}
+                  {format(parseISO(`${month.month}-01`), t('wbsComponents.ganttChart.dateFormatMonth'), { locale: dateFnsLocale })}
                 </div>
               ))}
             </div>
@@ -440,7 +440,7 @@ function GanttChartInner({
                   className="pointer-events-none absolute top-3 z-20 -translate-x-1/2 rounded-full bg-[color:var(--accent-danger)] px-2 py-1 text-[10px] font-semibold text-white shadow-[0_16px_36px_-20px_rgba(203,75,95,0.9)]"
                   style={{ left: todayX + dayWidth / 2 }}
                 >
-                  {t('app.wbsComponents.ganttChart.today')}
+                  {t('wbsComponents.ganttChart.today')}
                 </div>
               </>
             )}
@@ -611,14 +611,14 @@ function GanttChartInner({
                           width: Math.max(actualBar.width * (task.actualProgress / 100), task.actualProgress > 0 ? 8 : 0),
                           height: barHeight,
                         }}
-                        title={`${t('app.wbsComponents.ganttChart.actual')}: ${task.actualStart} ~ ${task.actualEnd || t('app.wbsComponents.ganttChart.inProgress')} (${task.actualProgress}%)`}
+                        title={`${t('wbsComponents.ganttChart.actual')}: ${task.actualStart} ~ ${task.actualEnd || t('wbsComponents.ganttChart.inProgress')} (${task.actualProgress}%)`}
                       />
                     </>
                   )}
 
                   {!planBar && !actualBar && (
                     <div className="absolute left-2 top-0 flex h-full items-center text-xs text-[color:var(--text-muted)]">
-                      {t('app.wbsComponents.ganttChart.noSchedule')}
+                      {t('wbsComponents.ganttChart.noSchedule')}
                     </div>
                   )}
 
