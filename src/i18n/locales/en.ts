@@ -28,6 +28,8 @@ const en = {
       noData: 'No Data',
       retry: 'Retry',
       back: 'Back',
+      warning: 'Warning',
+      info: 'Notice',
     },
 
     // ─── Header ─────────────────────────────────────────
@@ -669,6 +671,9 @@ const en = {
       weightZeroMsg: 'A weight of 0 will not be reflected in progress calculation.',
       dateStartAfterEnd: 'Start date is after end date',
       dateDelayed: 'Delayed vs plan',
+      dateAutoSwapped: 'Start and end dates were reversed and automatically adjusted',
+      dateOutOfRange: 'Date is outside the allowed range (2000-2099)',
+      dateZeroDuration: 'Start and end dates are the same. Task duration will be 0 days.',
       addChild: 'Add {{label}}',
       addSameLevel: 'Add {{label}} at same level',
       deleteLabel: 'Delete',

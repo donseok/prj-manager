@@ -320,7 +320,45 @@ export default function WBS() {
     if (task && !canEditSpecificTask(permissions, task, currentMemberId)) return;
     const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
 
+    // TC4: 극단값 날짜 Validation — 2000~2099년 범위만 허용
+    if (['planStart', 'planEnd', 'actualStart', 'actualEnd'].includes(field) && typeof value === 'string' && value) {
+      const year = parseInt(value.substring(0, 4), 10);
+      if (isNaN(year) || year < 2000 || year > 2099) {
+        showFeedback({ tone: 'warning', title: t('common.warning'), message: t('wbs.dateOutOfRange') });
+        return;
+      }
+    }
+
+    // TC1: 역전 날짜 입력 시 자동 스왑 + 사용자 알림
+    if (task && typeof value === 'string' && value) {
+      let needsSwapNotice = false;
+      if (field === 'planEnd' && task.planStart && value < task.planStart) {
+        needsSwapNotice = true;
+      } else if (field === 'planStart' && task.planEnd && value > task.planEnd) {
+        needsSwapNotice = true;
+      } else if (field === 'actualEnd' && task.actualStart && value < task.actualStart) {
+        needsSwapNotice = true;
+      } else if (field === 'actualStart' && task.actualEnd && value > task.actualEnd) {
+        needsSwapNotice = true;
+      }
+      if (needsSwapNotice) {
+        showFeedback({ tone: 'info', title: t('common.info'), message: t('wbs.dateAutoSwapped') });
+      }
+    }
+
     if (!recordHistory) cellDirtyRef.current = true;
+
+    // TC2: 동일 날짜(0일 기간) 경고
+    if (task && typeof value === 'string' && value) {
+      const isZeroDuration =
+        (field === 'planEnd' && task.planStart === value) ||
+        (field === 'planStart' && task.planEnd === value) ||
+        (field === 'actualEnd' && task.actualStart === value) ||
+        (field === 'actualStart' && task.actualEnd === value);
+      if (isZeroDuration) {
+        showFeedback({ tone: 'warning', title: t('common.warning'), message: t('wbs.dateZeroDuration') });
+      }
+    }
 
     // leaf task의 동기화 대상 필드가 변경되면 연관 필드를 자동 동기화
     if (task && !hasChildren && isSyncableField(field)) {

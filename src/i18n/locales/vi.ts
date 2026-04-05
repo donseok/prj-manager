@@ -28,6 +28,8 @@ const vi = {
       noData: 'Không có dữ liệu',
       retry: 'Thử lại',
       back: 'Quay lại',
+      warning: 'Cảnh báo',
+      info: 'Thông báo',
     },
 
     // ─── Header ─────────────────────────────────────────
@@ -668,6 +670,9 @@ const vi = {
       weightZeroMsg: 'Trọng số 0 sẽ không được tính vào tiến độ.',
       dateStartAfterEnd: 'Ngày bắt đầu sau ngày kết thúc',
       dateDelayed: 'Trễ so với kế hoạch',
+      dateAutoSwapped: 'Ngày bắt đầu và kết thúc đã bị đảo ngược và được tự động điều chỉnh',
+      dateOutOfRange: 'Ngày nằm ngoài phạm vi cho phép (2000-2099)',
+      dateZeroDuration: 'Ngày bắt đầu và kết thúc giống nhau. Thời lượng công việc sẽ là 0 ngày.',
       addChild: 'Thêm {{label}}',
       addSameLevel: 'Thêm {{label}} cùng cấp',
       deleteLabel: 'Xóa',

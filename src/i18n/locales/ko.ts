@@ -28,6 +28,8 @@ const ko = {
       noData: '데이터 없음',
       retry: '다시 시도',
       back: '뒤로',
+      warning: '주의',
+      info: '안내',
     },
 
     // ─── Header ─────────────────────────────────────────
@@ -663,6 +665,9 @@ const ko = {
       weightZeroMsg: '가중치가 0이면 공정률에 반영되지 않습니다.',
       dateStartAfterEnd: '시작일이 종료일보다 늦습니다',
       dateDelayed: '계획 대비 지연',
+      dateAutoSwapped: '시작일과 종료일이 역전되어 자동으로 조정되었습니다',
+      dateOutOfRange: '입력 가능한 날짜 범위를 초과했습니다 (2000년~2099년)',
+      dateZeroDuration: '시작일과 종료일이 동일합니다. 작업 기간이 0일로 설정됩니다.',
       addChild: '{{label}} 추가',
       addSameLevel: '같은 레벨 {{label}} 추가',
       deleteLabel: '삭제',
