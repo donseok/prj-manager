@@ -605,6 +605,7 @@ const ko = {
     validation: {
       projectNameRequired: '프로젝트명을 입력해주세요.',
       projectNameMinLength: '프로젝트명은 2자 이상이어야 합니다.',
+      projectNameMaxLength: '프로젝트명은 100자를 초과할 수 없습니다.',
       projectNamePattern: '프로젝트명에는 한글, 영문 또는 숫자가 포함되어야 합니다.',
       htmlNotAllowed: 'HTML 태그는 사용할 수 없습니다.',
       endDateAfterStart: '종료일은 시작일보다 이후여야 합니다.',
@@ -663,6 +664,7 @@ const ko = {
       aiGenerated: 'AI 생성',
       weightZero: '가중치 0',
       weightZeroMsg: '가중치가 0이면 공정률에 반영되지 않습니다.',
+      weightNoNegative: '가중치에 음수 값은 허용되지 않습니다.',
       dateStartAfterEnd: '시작일이 종료일보다 늦습니다',
       dateDelayed: '계획 대비 지연',
       dateAutoSwapped: '시작일과 종료일이 역전되어 자동으로 조정되었습니다',

@@ -1113,7 +1113,11 @@ export default function WBS() {
             inputMode="numeric"
             defaultValue={Math.round(task.weight)}
             onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9]/g, '');
+              const original = e.target.value;
+              const raw = original.replace(/[^0-9]/g, '');
+              if (original !== raw && original.includes('-')) {
+                showFeedback({ tone: 'warning', title: t('common.warning'), message: t('wbs.weightNoNegative') });
+              }
               const num = Math.max(0, parseInt(raw) || 0);
               e.target.value = raw === '' ? '' : String(num);
               if (raw !== '') {

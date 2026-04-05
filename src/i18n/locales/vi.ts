@@ -592,6 +592,7 @@ const vi = {
     validation: {
       projectNameRequired: 'Vui lòng nhập tên dự án.',
       projectNameMinLength: 'Tên dự án phải có ít nhất 2 ký tự.',
+      projectNameMaxLength: 'Tên dự án không được vượt quá 100 ký tự.',
       projectNamePattern: 'Tên dự án phải chứa chữ cái hoặc số.',
       htmlNotAllowed: 'Không cho phép thẻ HTML.',
       endDateAfterStart: 'Ngày kết thúc phải sau ngày bắt đầu.',
@@ -668,6 +669,7 @@ const vi = {
       aiGenerated: 'AI tạo',
       weightZero: 'Trọng số là 0',
       weightZeroMsg: 'Trọng số 0 sẽ không được tính vào tiến độ.',
+      weightNoNegative: 'Không cho phép giá trị âm cho trọng số.',
       dateStartAfterEnd: 'Ngày bắt đầu sau ngày kết thúc',
       dateDelayed: 'Trễ so với kế hoạch',
       dateAutoSwapped: 'Ngày bắt đầu và kết thúc đã bị đảo ngược và được tự động điều chỉnh',

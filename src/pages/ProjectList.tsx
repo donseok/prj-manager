@@ -98,6 +98,7 @@ export default function ProjectList() {
     const trimmed = name.trim();
     if (!trimmed) return null; // 빈 값은 disabled로 처리
     if (trimmed.length < 2) return t('validation.projectNameMinLength');
+    if (trimmed.length > 100) return t('validation.projectNameMaxLength');
     if (!/[a-zA-Z0-9가-힣]/.test(trimmed)) return t('validation.projectNamePattern');
     if (/<[^>]*>/.test(trimmed)) return t('validation.htmlNotAllowed');
     return null;

@@ -593,6 +593,7 @@ const en = {
     validation: {
       projectNameRequired: 'Project name is required.',
       projectNameMinLength: 'Project name must be at least 2 characters.',
+      projectNameMaxLength: 'Project name cannot exceed 100 characters.',
       projectNamePattern: 'Project name must contain letters or numbers.',
       htmlNotAllowed: 'HTML tags are not allowed.',
       endDateAfterStart: 'End date must be after start date.',
@@ -669,6 +670,7 @@ const en = {
       aiGenerated: 'AI Generated',
       weightZero: 'Weight is 0',
       weightZeroMsg: 'A weight of 0 will not be reflected in progress calculation.',
+      weightNoNegative: 'Negative values are not allowed for weight.',
       dateStartAfterEnd: 'Start date is after end date',
       dateDelayed: 'Delayed vs plan',
       dateAutoSwapped: 'Start and end dates were reversed and automatically adjusted',

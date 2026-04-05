@@ -36,6 +36,15 @@ function formatDateOnly(value: string | null | undefined) {
   return parsed ? format(parsed, 'yyyy-MM-dd') : undefined;
 }
 
+/** 합리적 범위(2000~2099)를 벗어나는 극단값 날짜를 필터링 */
+function filterReasonableDates(dates: Array<string | null | undefined>): Array<string | null | undefined> {
+  return dates.filter((d) => {
+    if (!d) return false;
+    const year = parseInt(d.substring(0, 4), 10);
+    return !isNaN(year) && year >= 2000 && year <= 2099;
+  });
+}
+
 function calculateAggregateProgress(tasks: Task[], field: 'planProgress' | 'actualProgress') {
   if (tasks.length === 0) return 0;
 
@@ -95,14 +104,14 @@ function applyParentAggregation(task: InternalTask, children: InternalTask[]) {
     (child) => child.status === 'completed' || child.actualProgress >= 100
   );
 
-  task.planStart = getEarliestDate(children.map((child) => child.planStart)) ?? task.planStart ?? null;
-  task.planEnd = getLatestDate(children.map((child) => child.planEnd)) ?? task.planEnd ?? null;
-  task.actualStart = getEarliestDate(children.map((child) => child.actualStart)) ?? task.actualStart ?? null;
+  task.planStart = getEarliestDate(filterReasonableDates(children.map((child) => child.planStart))) ?? task.planStart ?? null;
+  task.planEnd = getLatestDate(filterReasonableDates(children.map((child) => child.planEnd))) ?? task.planEnd ?? null;
+  task.actualStart = getEarliestDate(filterReasonableDates(children.map((child) => child.actualStart))) ?? task.actualStart ?? null;
   // 자식이 모두 완료되지 않으면 부모의 actualEnd를 null로 되돌린다.
   // 자식이 in_progress로 되돌아가면 부모도 미완료 상태여야 하므로 이는 의도된 동작이다.
   // 이전 actualEnd 값은 별도 보존하지 않는다 — 자식이 다시 모두 완료되면 재계산된다.
   task.actualEnd = allChildrenCompleted
-    ? getLatestDate(children.map((child) => child.actualEnd)) ?? task.actualEnd ?? null
+    ? getLatestDate(filterReasonableDates(children.map((child) => child.actualEnd))) ?? task.actualEnd ?? null
     : null;
   task.planProgress = calculateAggregateProgress(children, 'planProgress');
   task.actualProgress = calculateAggregateProgress(children, 'actualProgress');
@@ -220,8 +229,8 @@ function buildDerivedProject(project: Project, tasks: Task[]) {
   const now = new Date().toISOString();
   const derivedStatus = deriveProjectStatus(project, tasks);
   // WBS 작업 기반 일정 산출
-  const taskStartDate = getEarliestDate(tasks.flatMap((task) => [task.planStart, task.actualStart]));
-  const taskEndDate = getLatestDate(tasks.flatMap((task) => [task.planEnd, task.actualEnd]));
+  const taskStartDate = getEarliestDate(filterReasonableDates(tasks.flatMap((task) => [task.planStart, task.actualStart])));
+  const taskEndDate = getLatestDate(filterReasonableDates(tasks.flatMap((task) => [task.planEnd, task.actualEnd])));
   // 프로젝트 설정 일정과 WBS 일정 중 더 넓은 범위를 사용
   const startDate = getEarliestDate([taskStartDate, project.startDate]) ?? taskStartDate;
   const endDate = getLatestDate([taskEndDate, project.endDate]) ?? taskEndDate;
