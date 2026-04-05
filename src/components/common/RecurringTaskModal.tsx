@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Play, RefreshCw } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
@@ -43,6 +44,7 @@ export default function RecurringTaskModal({
   members,
   onTasksGenerated,
 }: Props) {
+  const { t } = useTranslation();
   const { tasks, addTask } = useTaskStore();
   const [rules, setRules] = useState<RecurringRule[]>([]);
   const [editingRule, setEditingRule] = useState<RecurringRule | null>(null);
@@ -238,7 +240,7 @@ export default function RecurringTaskModal({
                 type="text"
                 value={form.templateTaskName}
                 onChange={(e) => setForm((f) => ({ ...f, templateTaskName: e.target.value }))}
-                placeholder="예: 주간 회의, 일일 스탠드업"
+                placeholder={t('recurringTask.namePlaceholder')}
                 className="field-input mt-1"
               />
             </div>
@@ -250,7 +252,7 @@ export default function RecurringTaskModal({
                 type="text"
                 value={form.output ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, output: e.target.value || undefined }))}
-                placeholder="예: 회의록"
+                placeholder={t('recurringTask.outputPlaceholder')}
                 className="field-input mt-1"
               />
             </div>

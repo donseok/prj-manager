@@ -39,9 +39,9 @@ type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
 type DensityMode = 'compact' | 'comfortable';
 
 const VIEW_OPTIONS = [4, 8, 12] as const;
-const DENSITY_OPTIONS: Array<{ value: DensityMode; label: string }> = [
-  { value: 'compact', label: 'Compact' },
-  { value: 'comfortable', label: 'Comfortable' },
+const DENSITY_OPTIONS: Array<{ value: DensityMode; labelKey: string }> = [
+  { value: 'compact', labelKey: 'gantt.densityCompact' },
+  { value: 'comfortable', labelKey: 'gantt.densityComfortable' },
 ];
 
 export default function Gantt() {
@@ -392,7 +392,7 @@ export default function Gantt() {
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
               )}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           ))}
           <button
@@ -771,7 +771,7 @@ export default function Gantt() {
                     : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
                 )}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
             <button

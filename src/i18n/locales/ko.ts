@@ -378,6 +378,7 @@ const ko = {
       nameLabel: '이름',
       namePlaceholder: '멤버 이름을 입력하세요',
       pasteHint: '한 줄에 한 명씩 이름을 입력하세요. 기본 역할은 \'멤버\'로 설정됩니다.',
+      bulkAddPlaceholder: '홍길동\n김철수\n이영희',
       addCount: '{{count}}명 추가',
       addCountPersons: '{{count}}명',
       // Feedback
@@ -1109,11 +1110,29 @@ const ko = {
       legendPlan: '계획',
       legendActual: '실적',
       legendToday: '오늘',
+      densityCompact: '조밀',
+      densityComfortable: '여유',
       autoFocusHint: '선택한 작업으로 차트가 자동 포커스됩니다',
       weekendsHighlight: '주말 강조',
       noTaskSelected: '선택된 작업이 없습니다',
     },
 
+
+    // ─── Recurring Task ─────────────────────────────────
+    recurringTask: {
+      namePlaceholder: '예: 주간 회의, 일일 스탠드업',
+      outputPlaceholder: '예: 회의록',
+    },
+
+    // ─── Save Template ──────────────────────────────────
+    saveTemplate: {
+      namePlaceholder: '예: 우리팀 표준 WBS',
+    },
+
+    // ─── Comments ───────────────────────────────────────
+    comments: {
+      inputPlaceholder: '코멘트를 입력하세요...',
+    },
     // ─── Kanban ─────────────────────────────────────────
     kanban: {
       filterAll: '전체',

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Send, Trash2, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -14,6 +15,7 @@ interface TaskCommentPanelProps {
 }
 
 export default function TaskCommentPanel({ taskId, projectId, isOpen, onClose }: TaskCommentPanelProps) {
+  const { t } = useTranslation();
   const { comments, loadComments, addComment, deleteComment } = useCommentStore();
   const user = useAuthStore((s) => s.user);
   const [content, setContent] = useState('');
@@ -211,7 +213,7 @@ export default function TaskCommentPanel({ taskId, projectId, isOpen, onClose }:
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="코멘트를 입력하세요..."
+                placeholder={t('comments.inputPlaceholder')}
                 className="field-input min-h-[80px] resize-none"
                 rows={3}
               />

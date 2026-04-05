@@ -305,7 +305,7 @@ export default function Login() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="홍길동"
+                      placeholder={t('login.namePlaceholder')}
                       className="field-input !pl-10"
                     />
                   </div>

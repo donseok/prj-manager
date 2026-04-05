@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BookmarkPlus } from 'lucide-react';
 import Modal from './Modal';
 import Button from './Button';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function SaveTemplateModal({ isOpen, onClose, tasks, onSaved }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
 
   const phases = tasks.filter((t) => t.level === 1).length;
@@ -37,7 +39,7 @@ export default function SaveTemplateModal({ isOpen, onClose, tasks, onSaved }: P
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-            placeholder="예: 우리팀 표준 WBS"
+            placeholder={t('saveTemplate.namePlaceholder')}
             className="field-input mt-1"
             autoFocus
           />

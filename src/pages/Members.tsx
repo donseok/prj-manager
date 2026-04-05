@@ -659,7 +659,7 @@ export default function Members() {
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
                 className="field-input min-h-[180px] resize-y"
-                placeholder={"홍길동\n김철수\n이영희"}
+                placeholder={t('members.bulkAddPlaceholder')}
                 autoFocus
               />
               <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">

@@ -376,6 +376,7 @@ const en = {
       nameLabel: 'Name',
       namePlaceholder: 'Enter member name',
       pasteHint: 'Enter one name per line. Default role is \'Member\'.',
+      bulkAddPlaceholder: 'John Doe\nJane Smith\nBob Johnson',
       addCount: 'Add {{count}}',
       addCountPersons: '{{count}}',
       addSuccess: 'Member Added',
@@ -1097,11 +1098,29 @@ const en = {
       legendPlan: 'Plan',
       legendActual: 'Actual',
       legendToday: 'Today',
+      densityCompact: 'Compact',
+      densityComfortable: 'Comfortable',
       autoFocusHint: 'The chart auto-focuses on the selected task',
       weekendsHighlight: 'Highlight weekends',
       noTaskSelected: 'No task selected',
     },
 
+
+    // ─── Recurring Task ─────────────────────────────────
+    recurringTask: {
+      namePlaceholder: 'e.g. Weekly meeting, Daily standup',
+      outputPlaceholder: 'e.g. Meeting minutes',
+    },
+
+    // ─── Save Template ──────────────────────────────────
+    saveTemplate: {
+      namePlaceholder: 'e.g. Our team standard WBS',
+    },
+
+    // ─── Comments ───────────────────────────────────────
+    comments: {
+      inputPlaceholder: 'Write a comment...',
+    },
     // ─── Kanban ─────────────────────────────────────────
     kanban: {
       filterAll: 'All',
