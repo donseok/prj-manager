@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BookOpen,
   LogIn,
@@ -30,8 +31,6 @@ import {
   Lightbulb,
   Sparkles,
   Compass,
-  Kanban,
-  BrainCircuit,
 } from 'lucide-react';
 
 interface Section {
@@ -151,915 +150,580 @@ function FloatingStatBubble({
 }
 
 export default function UserManual() {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('getting-started');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const s = 'manual.sections';
 
   const sections: Section[] = [
     {
       id: 'getting-started',
-      title: '시작하기',
+      title: t(`${s}.gettingStarted.title`),
       icon: <LogIn className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="시스템 요구사항">
+          <SectionCard title={t(`${s}.gettingStarted.systemRequirements`)}>
             <InfoTable
-              headers={['항목', '권장 사양']}
-              rows={[
-                ['브라우저', 'Chrome, Edge, Safari 최신 버전'],
-                ['해상도', '1280×720 이상 (1920×1080 권장)'],
-                ['네트워크', '인터넷 연결 필요 (Supabase 연동 시)'],
-              ]}
+              headers={t(`${s}.gettingStarted.systemTableHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gettingStarted.systemTableRows`, { returnObjects: true }) as string[][]}
             />
           </SectionCard>
-          <SectionCard title="로그인">
-            <StepList steps={[
-              '브라우저에서 DK Flow 접속 URL을 엽니다.',
-              '로그인 탭을 선택합니다.',
-              '이메일과 비밀번호를 입력한 후 로그인 버튼을 클릭합니다.',
-            ]} />
+          <SectionCard title={t(`${s}.gettingStarted.login`)}>
+            <StepList steps={t(`${s}.gettingStarted.loginSteps`, { returnObjects: true }) as string[]} />
             <div className="mt-4">
-              <Tip>Supabase가 설정되지 않은 환경에서는 자동으로 로컬 모드로 접속됩니다. 별도의 계정 없이 바로 사용할 수 있습니다.</Tip>
+              <Tip>{t(`${s}.gettingStarted.loginTip`)}</Tip>
             </div>
           </SectionCard>
-          <SectionCard title="회원가입">
-            <StepList steps={[
-              '로그인 화면에서 회원가입 탭을 선택합니다.',
-              '이름, 이메일, 비밀번호(6자 이상)를 입력합니다.',
-              '회원가입 버튼을 클릭하면 가입 승인 대기 상태로 전환됩니다.',
-              '시스템 관리자가 승인하면 자동으로 로그인 가능 상태가 됩니다.',
-            ]} />
+          <SectionCard title={t(`${s}.gettingStarted.signup`)}>
+            <StepList steps={t(`${s}.gettingStarted.signupSteps`, { returnObjects: true }) as string[]} />
             <div className="mt-4">
-              <Tip type="warning">가입 후 관리자 승인이 필요합니다. 승인 대기 화면에서 10초마다 자동으로 승인 여부를 확인하며, 승인 시 자동으로 홈 화면으로 이동합니다.</Tip>
+              <Tip type="warning">{t(`${s}.gettingStarted.signupTip`)}</Tip>
             </div>
           </SectionCard>
-          <SectionCard title="운영 모드">
-            <InfoTable headers={['모드', '설명']} rows={[
-              ['온라인 모드 (Supabase)', '이메일 계정으로 로그인하며 서버에 데이터가 저장됩니다. 멀티 사용자와 동기화를 지원합니다.'],
-              ['로컬 모드', '브라우저 localStorage에 데이터가 저장됩니다. 계정 없이 바로 사용 가능하며, 4개의 샘플 프로젝트가 제공됩니다.'],
-            ]} />
+          <SectionCard title={t(`${s}.gettingStarted.operatingMode`)}>
+            <InfoTable
+              headers={t(`${s}.gettingStarted.operatingModeHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gettingStarted.operatingModeRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'home',
-      title: '홈 화면',
+      title: t(`${s}.home.title`),
       icon: <Home className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="히어로 영역">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">홈 화면 최상단에 프로젝트 운영 현황을 한눈에 보여주는 풀 와이드 히어로 패널이 표시됩니다. 우측에는 실시간 지표 버블과 아이콘이 부드럽게 움직이는 장식 요소가 배치되어 있습니다.</p>
-            <InfoTable headers={['요소', '설명']} rows={[
-              ['히어로 타이틀', '"한눈에 보이는 프로젝트 운영" — 서비스 소개 및 CTA 버튼'],
-              ['새 프로젝트 시작', '새 프로젝트 생성 페이지로 이동'],
-              ['전체 프로젝트', '프로젝트 목록 페이지로 이동'],
-              ['플로팅 장식', '프로젝트 지표 버블(숫자)과 아이콘이 우측에 표시 (lg 이상 화면)'],
-            ]} />
+          <SectionCard title={t(`${s}.home.heroArea`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.home.heroAreaDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.home.heroTableHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.home.heroTableRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="요약 카드">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">히어로 하단에 3개의 요약 카드가 표시됩니다:</p>
-            <InfoTable headers={['카드', '설명']} rows={[
-              ['전체 프로젝트', '시스템에 등록된 모든 프로젝트 수'],
-              ['진행중', '현재 진행중 상태인 프로젝트 수'],
-              ['최근 기록', '빠르게 접근할 수 있는 최근 프로젝트 수'],
-            ]} />
+          <SectionCard title={t(`${s}.home.summaryCards`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.home.summaryCardsDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.home.summaryTableHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.home.summaryTableRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="지표 패널">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">히어로 아래에 3개의 지표 카드가 배치됩니다:</p>
-            <InfoTable headers={['지표', '설명']} rows={[
-              ['Active Ratio', '전체 프로젝트 대비 진행중 프로젝트 비율'],
-              ['Completed', '완료된 프로젝트 수'],
-              ['Quick Access', '최근 프로젝트 바로가기 (최대 3개)'],
-            ]} />
+          <SectionCard title={t(`${s}.home.metricsPanel`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.home.metricsPanelDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.home.metricsTableHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.home.metricsTableRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="빠른 접근 카드">
-            <InfoTable headers={['카드', '설명']} rows={[
-              ['새 프로젝트', '프로젝트 생성 페이지로 바로가기'],
-              ['프로젝트 라이브러리', '전체 프로젝트 목록으로 이동'],
-              ['운영 중심 대시보드', '핵심 지표와 작업 흐름 중심 레이아웃 안내'],
-            ]} />
+          <SectionCard title={t(`${s}.home.quickAccessCards`)}>
+            <InfoTable
+              headers={t(`${s}.home.quickAccessTableHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.home.quickAccessTableRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="최근 프로젝트">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              하단에 최근 작업한 프로젝트 카드가 표시됩니다. 카드를 클릭하면 해당 프로젝트의 대시보드로 바로 진입합니다. 각 프로젝트에는 자동으로 부여된 테마(톤)에 따라 고유한 색상과 아이콘이 적용됩니다.
-            </p>
+          <SectionCard title={t(`${s}.home.recentProjects`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.home.recentProjectsDesc`)}</p>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'project-management',
-      title: '프로젝트 관리',
+      title: t(`${s}.projectManagement.title`),
       icon: <FolderOpen className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="프로젝트 목록">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">프로젝트 목록 페이지에서 등록된 프로젝트를 탐색하고 관리할 수 있습니다:</p>
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['상태 필터 탭', '전체 / 준비 / 진행 / 완료 탭으로 프로젝트를 상태별 필터링 (각 탭에 건수 표시)'],
-              ['검색', '프로젝트 이름으로 실시간 검색'],
-              ['컨텍스트 메뉴', '각 프로젝트 카드의 ⋮ 버튼으로 상태 변경(관리자) 및 삭제 가능'],
-            ]} />
+          <SectionCard title={t(`${s}.projectManagement.projectList`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.projectManagement.projectListDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.projectManagement.projectListHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.projectManagement.projectListRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="프로젝트 생성">
-            <StepList steps={[
-              '홈 화면의 새 프로젝트 시작 버튼 또는 프로젝트 목록의 새 프로젝트 버튼을 클릭합니다.',
-              '프로젝트명(필수), 설명을 입력합니다.',
-              '시작 방식을 선택합니다: 빈 프로젝트(기본) 또는 기존 프로젝트 복제.',
-              '복제를 선택하면 원본 프로젝트의 WBS와 멤버 구성이 복사되고, 진행 상태와 실적은 초기화됩니다.',
-              '시작일/종료일을 입력한 후 생성 버튼을 클릭합니다.',
-              '생성 후 자동으로 프로젝트 대시보드로 이동합니다.',
-            ]} />
+          <SectionCard title={t(`${s}.projectManagement.projectCreation`)}>
+            <StepList steps={t(`${s}.projectManagement.projectCreationSteps`, { returnObjects: true }) as string[]} />
           </SectionCard>
-          <SectionCard title="프로젝트 상태">
-            <InfoTable headers={['상태', '설명']} rows={[
-              ['준비', '프로젝트 준비 단계 (기본 상태)'],
-              ['진행중', '프로젝트가 활발하게 진행 중'],
-              ['완료', '프로젝트 완료 (완료일 자동 기록)'],
-            ]} />
-            <div className="mt-4">
-              <Tip>프로젝트 상태는 기본적으로 WBS 작업 데이터를 기반으로 자동 계산됩니다. 설정 페이지에서 수동 모드로 전환하면 관리자가 직접 상태를 고정할 수 있습니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.projectManagement.projectStatus`)}>
+            <InfoTable
+              headers={t(`${s}.projectManagement.projectStatusHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.projectManagement.projectStatusRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.projectManagement.projectStatusTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="프로젝트 테마 (톤)">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">프로젝트 설명의 키워드에 따라 자동으로 시각 테마가 부여됩니다:</p>
-            <InfoTable headers={['테마', '적용 기준']} rows={[
-              ['Steel', '철강, 소재, 제조 관련 키워드'],
-              ['Precision', '계측, 분석, 정밀 관련 키워드'],
-              ['Digital', '디지털, IT, 소프트웨어 관련 키워드'],
-              ['Creative', '디자인, 기획, 마케팅 관련 키워드'],
-              ['Standard', '기본 테마 (키워드 없을 때)'],
-            ]} />
+          <SectionCard title={t(`${s}.projectManagement.projectTheme`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.projectManagement.projectThemeDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.projectManagement.projectThemeHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.projectManagement.projectThemeRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'dashboard',
-      title: '대시보드',
+      title: t(`${s}.dashboard.title`),
       icon: <LayoutDashboard className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="상단 현황 영역">
-            <InfoTable headers={['항목', '설명']} rows={[
-              ['전체 작업', '등록된 리프(말단) 작업 수'],
-              ['멤버', '프로젝트 참여 멤버 수'],
-              ['지연', '계획 종료일을 초과한 작업 수'],
-              ['실적 공정율', '전체 프로젝트의 실적 진행률 (프로그레스 바 표시)'],
-              ['계획 공정율', '전체 프로젝트의 계획 진행률'],
-              ['진행중 작업', '현재 진행중 상태인 리프 작업 수'],
-              ['완료 작업', '완료된 리프 작업 수'],
-              ['리스크 작업', '지연된 작업 수 (지연 카드)'],
-            ]} />
+          <SectionCard title={t(`${s}.dashboard.topStatus`)}>
+            <InfoTable
+              headers={t(`${s}.dashboard.topStatusHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dashboard.topStatusRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="차트 섹션">
-            <InfoTable headers={['차트', '설명']} rows={[
-              ['상태별 분포', '대기/진행중/완료/보류 각 상태의 작업 수와 비율 (프로그레스 바 카드)'],
-              ['담당자별 진행률', '각 담당자의 작업 완료/잔여 현황 (수평 막대 그래프)'],
-              ['Phase별 진행률', '단계별 계획 vs 실적 공정율 비교 (막대 그래프)'],
-              ['프로젝트 일정 요약', '시작일, 종료일, 일정 경과율, 총/경과/잔여일'],
-              ['Phase 가중치 분포', '각 Phase의 가중치 비중 (도넛 차트)'],
-            ]} />
+          <SectionCard title={t(`${s}.dashboard.chartSection`)}>
+            <InfoTable
+              headers={t(`${s}.dashboard.chartSectionHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dashboard.chartSectionRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="작업 큐">
-            <InfoTable headers={['큐', '설명']} rows={[
-              ['지연 작업', '지연 일수와 함께 지연된 작업 목록 (상위 5개)'],
-              ['금주 작업', '이번 주에 진행 예정인 작업'],
-              ['차주 작업', '다음 주에 진행 예정인 작업'],
-              ['최근 완료 작업', '가장 최근에 완료된 작업 목록'],
-            ]} />
+          <SectionCard title={t(`${s}.dashboard.taskQueue`)}>
+            <InfoTable
+              headers={t(`${s}.dashboard.taskQueueHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dashboard.taskQueueRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="현황 보고서">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">대시보드 상단의 현황 보고서 버튼을 클릭하면 Word(.docx) 형식의 프로젝트 현황 보고서를 자동 생성합니다.</p>
-            <InfoTable headers={['보고서 섹션', '포함 내용']} rows={[
-              ['표지', '프로젝트명, 상태, 생성일, 보고서 생성일'],
-              ['프로젝트 개요', '기본 정보 테이블'],
-              ['진행 지표', '계획/실적 공정율, 상태별 작업 수'],
-              ['Phase별 현황', '단계별 진행률 비교 차트 이미지 + 테이블'],
-              ['담당자별 현황', '멤버별 작업 완료 현황 차트 이미지 + 테이블'],
-              ['Phase 가중치 분포', '가중치 분포 차트 이미지 (데이터 존재 시)'],
-              ['지연/금주/차주 작업', '상세 작업 목록'],
-            ]} />
+          <SectionCard title={t(`${s}.dashboard.statusReport`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.dashboard.statusReportDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.dashboard.statusReportHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dashboard.statusReportRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'wbs',
-      title: 'WBS (작업분류체계)',
+      title: t(`${s}.wbs.title`),
       icon: <ListTree className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="작업 계층 구조">
-            <InfoTable headers={['레벨', '구분', '설명']} rows={[
-              ['Level 1', 'Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
-              ['Level 2', 'Activity', '단계 내 활동'],
-              ['Level 3', 'Task', '구체적 작업'],
-              ['Level 4', 'Todo', '구체적인 실행 항목 (체크리스트)'],
-            ]} />
-            <div className="mt-4">
-              <Tip>상위 작업(Phase, Activity)의 일정, 공정율, 상태는 하위 작업을 기반으로 자동 계산됩니다. 직접 수정해도 다음 저장 시 하위 작업 기준으로 다시 계산됩니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.wbs.taskHierarchy`)}>
+            <InfoTable
+              headers={t(`${s}.wbs.taskHierarchyHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.taskHierarchyRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.wbs.taskHierarchyTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="인라인 편집 (엑셀 스타일)">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">테이블의 각 셀을 클릭하면 바로 편집할 수 있습니다:</p>
-            <InfoTable headers={['컬럼', '편집 방식']} rows={[
-              ['작업명', '클릭 후 텍스트 입력 → Enter로 확정'],
-              ['산출물', '클릭 후 텍스트 입력'],
-              ['담당자', '드롭다운에서 멤버 선택 (목록에 없으면 새 멤버를 바로 생성 가능)'],
-              ['가중치', '클릭 후 숫자 입력 (소수점 지원)'],
-              ['계획/실적 일정', '날짜 선택기로 입력'],
-              ['계획/실적 공정율', '클릭 후 0~100 숫자 입력'],
-              ['상태', '드롭다운에서 선택 (대기/진행중/완료/보류)'],
-            ]} />
+          <SectionCard title={t(`${s}.wbs.inlineEdit`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.inlineEditDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.wbs.inlineEditHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.inlineEditRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="필드 자동 연동">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">리프(말단) 작업에서 필드 값을 변경하면 관련 필드가 자동으로 동기화됩니다:</p>
-            <InfoTable headers={['변경 필드', '자동 반영']} rows={[
-              ['상태 → 완료', '실적 공정율 100%, 실적 종료일 자동 설정'],
-              ['상태 → 진행중', '실적 시작일 자동 설정 (미설정 시)'],
-              ['상태 → 대기', '실적 공정율, 실적 시작/종료일 초기화'],
-              ['실적 공정율 100%', '상태 → 완료로 자동 변경'],
-              ['실적 종료일 설정', '상태 → 완료, 공정율 100%'],
-            ]} />
+          <SectionCard title={t(`${s}.wbs.fieldAutoSync`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.fieldAutoSyncDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.wbs.fieldAutoSyncHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.fieldAutoSyncRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="드래그 앤 드롭">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              작업 행 좌측의 그립 아이콘을 드래그하여 작업 순서를 변경하거나 다른 상위 작업으로 이동할 수 있습니다. 드롭 위치에 따라 위/아래 이동 또는 하위 작업으로 편입됩니다.
-            </p>
+          <SectionCard title={t(`${s}.wbs.dragAndDrop`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.dragAndDropDesc`)}</p>
           </SectionCard>
-          <SectionCard title="도구 모음">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['Phase 추가', '최상위 Phase 작업 추가'],
-              ['Activity 추가', '마지막 Phase 하위에 Activity 추가 (Phase 존재 시 활성)'],
-              ['초안 생성', '템플릿 기반 WBS 초안을 자동 생성 (아래 별도 설명 참조)'],
-              ['일정계산', '작업 기간과 선후행 관계를 기반으로 계획 일정을 자동 산출'],
-              ['선후행', '같은 상위 작업 내 리프 작업들을 순차적으로 연결'],
-              ['자동채움', '산출물 제안, 담당자 라운드로빈 배정, 가중치 자동 계산을 한 번에 실행'],
-              ['실적 입력', '리프 작업의 실적 공정율을 일괄 입력하는 빠른 입력 화면'],
-              ['주간보고', '주간 현황 보기 (아래 별도 설명 참조)'],
-              ['전체 펼침 / 전체 접기', '모든 작업 트리 확장/축소'],
-              ['저장', '수동 저장 (Ctrl+S)'],
-              ['되돌리기 / 다시하기', 'Ctrl+Z / Ctrl+Y (최대 50단계)'],
-              ['엑셀 다운로드', 'WBS를 엑셀(.xlsx) 파일로 내보내기'],
-              ['크게 보기', 'WBS 테이블을 전체 화면 팝업으로 보기'],
-              ['칸반 보기', '칸반 보드 페이지로 이동'],
-            ]} />
+          <SectionCard title={t(`${s}.wbs.toolbar`)}>
+            <InfoTable
+              headers={t(`${s}.wbs.toolbarHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.toolbarRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="WBS 초안 생성">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">도구 모음의 초안 생성 버튼을 클릭하면 템플릿 기반으로 WBS를 자동 생성할 수 있습니다:</p>
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['템플릿 선택', '4종 기본 템플릿 (철강 프로젝트, 웹 런칭, 모바일 앱, 사내 시스템) 중 선택'],
-              ['스마트 매칭', '프로젝트 설명을 입력하면 가장 적합한 템플릿을 자동 추천'],
-              ['템플릿 미리보기', '선택한 템플릿의 Phase 수, 작업 수, 대상 분야를 사전 확인'],
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">초안 생성 시 기존 작업이 있으면 덮어쓰여집니다. 중요한 데이터가 있는 경우 먼저 엑셀로 내보내기하세요.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.wbs.draftGeneration`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.draftGenerationDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.wbs.draftGenerationHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.draftGenerationRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip type="warning">{t(`${s}.wbs.draftGenerationTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="주간보고">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">WBS 도구 모음의 주간보고 버튼을 클릭하면 주간 현황을 확인할 수 있습니다:</p>
-            <InfoTable headers={['섹션', '내용']} rows={[
-              ['금주 실적', '이번 주 진행/완료 작업 목록'],
-              ['금주 완료', '이번 주에 완료된 작업'],
-              ['차주 계획', '다음 주 예정 작업 목록'],
-              ['지연 작업', '지연된 작업과 지연 일수'],
-            ]} />
+          <SectionCard title={t(`${s}.wbs.weeklyReport`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.weeklyReportDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.wbs.weeklyReportHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.weeklyReportRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="담당자 작성 탭">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">주간보고 모달의 "담당자 작성" 탭에서 각 멤버가 직접 주간 실적과 계획을 작성할 수 있습니다 (Supabase 연동 시):</p>
-            <InfoTable headers={['항목', '설명']} rows={[
-              ['금주 실적', '이번 주에 수행한 업무 내용을 자유 텍스트로 작성'],
-              ['차주 계획', '다음 주에 수행할 업무 계획을 자유 텍스트로 작성'],
-              ['저장', '멤버별 개별 저장 버튼으로 즉시 DB에 반영'],
-            ]} />
-            <div className="mt-4">
-              <Tip>담당자 작성 내용은 PPT/엑셀 내보내기 시 별도 슬라이드/시트로 자동 포함됩니다.</Tip>
-            </div>
-          </SectionCard>
-          <SectionCard title="주간보고 내보내기">
-            <InfoTable headers={['형식', '설명']} rows={[
-              ['엑셀 (.xlsx)', '금주 실적, 차주 계획, 지연 작업, 근태현황을 시트별로 정리한 엑셀 파일'],
-              ['PPT (.pptx)', '주간보고 프레젠테이션 파일 — 금주 실적, 차주 계획, 지연 작업, 근태현황, 담당자 작성 슬라이드 포함'],
-            ]} />
-            <div className="mt-4">
-              <Tip>PPT 내보내기에는 근태현황 슬라이드가 자동 포함되며, 금주/차주 근태를 요일+날짜 형태로 한 페이지에 통합 표시합니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.wbs.weeklyExport`)}>
+            <InfoTable
+              headers={t(`${s}.wbs.weeklyExportHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.weeklyExportRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.wbs.weeklyExportTip`)}</Tip></div>
           </SectionCard>
           <SectionCard>
-            <div>
-              <Tip>주간보고는 스냅샷을 저장하여 주차별 비교가 가능합니다. 전주 대비 완료 수, 공정율 변화량, 지연 변화가 델타 지표로 표시됩니다.</Tip>
-            </div>
+            <div><Tip>{t(`${s}.wbs.snapshotTip`)}</Tip></div>
           </SectionCard>
-          <Tip>WBS에서의 모든 변경사항은 자동 저장됩니다. 입력 후 약 0.7초 뒤 자동으로 서버에 반영됩니다. 하단 상태 표시줄에서 저장 상태와 최종 저장 시간을 확인할 수 있습니다.</Tip>
+          <Tip>{t(`${s}.wbs.autoSaveTip`)}</Tip>
         </div>
       ),
     },
     {
       id: 'gantt',
-      title: '간트 차트',
+      title: t(`${s}.gantt.title`),
       icon: <Calendar className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="화면 구성">
-            <InfoTable headers={['영역', '설명']} rows={[
-              ['상단 히어로', '표시 작업 수, 오픈(미완료) 작업 수, 지연 작업 수'],
-              ['마감 임박', '종료일이 가장 가까운 미완료 작업 5개 목록 (초과 시 빨간색, 임박 시 주황색 표시)'],
-              ['담당자별 워크로드', '각 담당자의 활성 작업 수와 지연 작업 수를 상위 6명까지 표시'],
-              ['작업 포커스 카드', '선택한 작업의 상세 정보 (기간, 공정율, 지연 등)'],
-              ['필터/검색 바', '작업 검색, 상태 필터, 뷰 옵션 설정'],
-              ['간트 차트', '좌측 작업 목록 + 우측 타임라인 바'],
-            ]} />
+          <SectionCard title={t(`${s}.gantt.screenLayout`)}>
+            <InfoTable
+              headers={t(`${s}.gantt.screenLayoutHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.screenLayoutRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="작업 포커스 카드 & 빠른 편집">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">간트 차트에서 작업을 클릭하면 포커스 카드가 표시되고, 직접 편집할 수 있습니다:</p>
-            <InfoTable headers={['편집 가능 필드', '설명']} rows={[
-              ['작업명, 산출물', '텍스트 입력'],
-              ['담당자', '드롭다운 선택'],
-              ['상태', '드롭다운 선택'],
-              ['계획 시작/종료', '날짜 선택기'],
-              ['실적 시작/종료', '날짜 선택기'],
-              ['계획/실적 공정율', '0~100 숫자 입력'],
-            ]} />
-            <div className="mt-4">
-              <Tip>간트 차트에서 편집한 내용도 자동 저장됩니다. WBS 페이지에 가지 않아도 빠르게 작업 정보를 업데이트할 수 있습니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.gantt.focusCard`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.gantt.focusCardDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.gantt.focusCardHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.focusCardRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.gantt.focusCardTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="검색 및 필터">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['검색', '작업명, 산출물, 담당자로 실시간 검색'],
-              ['전체', '모든 작업 표시'],
-              ['진행중/대기', '완료되지 않은 작업만 필터'],
-              ['지연', '지연된 작업만 필터'],
-              ['완료', '완료된 작업만 필터'],
-            ]} />
+          <SectionCard title={t(`${s}.gantt.searchAndFilter`)}>
+            <InfoTable
+              headers={t(`${s}.gantt.searchAndFilterHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.searchAndFilterRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="뷰 옵션">
-            <InfoTable headers={['옵션', '설명']} rows={[
-              ['보기 범위', '4주 / 8주 / 12주 중 선택'],
-              ['행 밀도', 'Compact (조밀) / Comfortable (여유)'],
-              ['주말 강조', '타임라인에서 주말 영역 강조 On/Off'],
-            ]} />
+          <SectionCard title={t(`${s}.gantt.viewOptions`)}>
+            <InfoTable
+              headers={t(`${s}.gantt.viewOptionsHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.viewOptionsRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="타임라인 내비게이션">
-            <InfoTable headers={['버튼', '설명']} rows={[
-              ['← / →', '이전/다음 기간으로 타임라인 이동'],
-              ['오늘', '오늘 날짜로 타임라인 이동'],
-              ['일정에 맞춤', '모든 작업 일정 범위에 맞게 자동 이동'],
-            ]} />
+          <SectionCard title={t(`${s}.gantt.timelineNavigation`)}>
+            <InfoTable
+              headers={t(`${s}.gantt.timelineNavigationHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.timelineNavigationRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="차트 범례">
-            <InfoTable headers={['색상', '의미']} rows={[
-              ['계획 바 (진한 청록)', '계획 일정 범위'],
-              ['실적 바 (밝은 초록)', '실적 일정 범위'],
-              ['오늘선 (빨간 세로선)', '현재 날짜'],
-            ]} />
+          <SectionCard title={t(`${s}.gantt.chartLegend`)}>
+            <InfoTable
+              headers={t(`${s}.gantt.chartLegendHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.gantt.chartLegendRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="내보내기">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              간트 차트 페이지에서 엑셀 다운로드 버튼을 클릭하면 현재 필터가 적용된 상태의 간트 데이터를 엑셀(.xlsx) 파일로 내보낼 수 있습니다. 크게 보기 버튼으로 차트를 전체 화면으로 확대할 수도 있습니다.
-            </p>
+          <SectionCard title={t(`${s}.gantt.export`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.gantt.exportDesc`)}</p>
           </SectionCard>
-        </div>
-      ),
-    },
-    {
-      id: 'kanban',
-      title: '칸반 보드',
-      icon: <Kanban className="h-5 w-5" />,
-      content: (
-        <div className="space-y-6">
-          <SectionCard title="개요">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-              칸반 보드는 작업을 카드 형태로 시각화하여 진행 현황을 한눈에 파악할 수 있는 뷰입니다. 프로젝트 사이드바의 칸반 메뉴 또는 대시보드의 칸반 버튼으로 접근합니다.
-            </p>
-          </SectionCard>
-          <SectionCard title="그룹핑 옵션">
-            <InfoTable headers={['그룹', '설명']} rows={[
-              ['Phase별', 'Level 1 Phase를 기준으로 컬럼을 분류합니다'],
-              ['담당자별', '담당자를 기준으로 카드를 그룹핑합니다 (미지정 포함)'],
-              ['상태별', '대기/진행중/완료/보류 상태 컬럼으로 분류합니다'],
-            ]} />
-          </SectionCard>
-          <SectionCard title="필터 및 검색">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['전체', '모든 작업 카드 표시'],
-              ['진행중', '미완료(대기/진행중/보류) 작업만 필터'],
-              ['완료', '완료된 작업만 필터'],
-              ['검색', '작업명 또는 담당자명으로 실시간 검색'],
-            ]} />
-          </SectionCard>
-          <SectionCard title="칸반 카드">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">각 카드에는 다음 정보가 표시됩니다:</p>
-            <InfoTable headers={['요소', '설명']} rows={[
-              ['상태 바', '카드 상단에 상태별 색상 표시'],
-              ['작업명', '작업 이름 (Level 표시 포함)'],
-              ['담당자', '배정된 멤버 이름'],
-              ['진행률 바', '실적 공정율 프로그레스 바'],
-              ['상태 배지', '현재 상태 (대기/진행중/완료/보류)'],
-              ['체크리스트', '하위 Todo(Level 4) 항목을 최대 5개까지 표시'],
-            ]} />
-          </SectionCard>
-          <SectionCard title="카드 편집">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">카드를 클릭하면 편집 모달이 열리며, 작업명, 산출물, 담당자, 상태, 계획/실적 일정, 공정율을 수정할 수 있습니다.</p>
-          </SectionCard>
-          <SectionCard title="히어로 영역">
-            <InfoTable headers={['지표', '설명']} rows={[
-              ['전체 작업', '칸반에 표시되는 총 작업 수'],
-              ['진행중', '현재 진행중인 작업 수'],
-              ['완료', '완료된 작업 수'],
-              ['전체 진행률', '프로젝트 전체 실적 공정율'],
-            ]} />
-          </SectionCard>
-          <Tip>칸반 보드는 크게 보기 버튼으로 별도 팝업 창에서 열 수도 있습니다.</Tip>
         </div>
       ),
     },
     {
       id: 'members',
-      title: '멤버 관리',
+      title: t(`${s}.members.title`),
       icon: <Users className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="멤버 추가">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">멤버 추가 팝업에서 두 가지 방법으로 멤버를 추가할 수 있습니다:</p>
-            <InfoTable headers={['방법', '설명']} rows={[
-              ['개별 입력', '이름과 역할을 지정하여 한 명씩 추가'],
-              ['일괄 붙여넣기', '여러 이름을 줄바꿈으로 구분하여 한 번에 추가 (역할은 자동으로 "멤버"로 설정)'],
-            ]} />
+          <SectionCard title={t(`${s}.members.addMember`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.members.addMemberDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.members.addMemberHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.members.addMemberRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="역할 유형">
-            <InfoTable headers={['역할', '권한']} rows={[
-              ['소유자', '모든 권한 (프로젝트 생성자에게 자동 부여)'],
-              ['관리자', '대부분의 관리 권한'],
-              ['멤버', '작업 수행 및 업데이트'],
-              ['뷰어', '조회만 가능 (편집 불가)'],
-            ]} />
+          <SectionCard title={t(`${s}.members.roleTypes`)}>
+            <InfoTable
+              headers={t(`${s}.members.roleHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.members.roleRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="멤버 정보 편집">
-            <InfoTable headers={['기능', '방법']} rows={[
-              ['이름 수정', '연필 아이콘 클릭 → 수정 → Enter 또는 ✓ 클릭'],
-              ['역할 변경', '역할 드롭다운에서 변경'],
-              ['소유권 이전', '소유자가 다른 멤버에게 프로젝트 소유권을 이전 (이전 후 기존 소유자는 관리자로 변경)'],
-              ['멤버 삭제', '휴지통 아이콘 클릭 → 확인'],
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">소유권 이전은 되돌릴 수 없습니다. 이전 후 기존 소유자는 관리자 역할로 자동 변경됩니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.members.editMemberInfo`)}>
+            <InfoTable
+              headers={t(`${s}.members.editMemberHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.members.editMemberRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip type="warning">{t(`${s}.members.ownershipTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="멤버 현황">
-            <InfoTable headers={['지표', '설명']} rows={[
-              ['전체 인원', '프로젝트에 등록된 총 멤버 수'],
-              ['관리자', '소유자 + 관리자 역할 멤버 수'],
-              ['기여자', '멤버 역할 인원 수'],
-            ]} />
+          <SectionCard title={t(`${s}.members.memberStatus`)}>
+            <InfoTable
+              headers={t(`${s}.members.memberStatusHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.members.memberStatusRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <Tip>멤버 정보 변경은 자동 저장됩니다. WBS의 담당자 드롭다운에는 여기에 등록된 멤버 목록이 표시됩니다.</Tip>
+          <Tip>{t(`${s}.members.autoSaveTip`)}</Tip>
         </div>
       ),
     },
     {
       id: 'attendance',
-      title: '근태현황',
+      title: t(`${s}.attendance.title`),
       icon: <CalendarCheck className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="근태현황 개요">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-              프로젝트 멤버의 출결 상태를 캘린더 뷰와 리스트 뷰로 관리합니다.
-              평일은 기본 출근 상태이며, 연차/반차/출장 등 변경이 필요한 경우에만 근태를 등록합니다.
-            </p>
-            <InfoTable headers={['항목', '설명']} rows={[
-              ['캘린더 뷰', '월간 달력 형태로 멤버별 근태를 한눈에 확인 (일요일~토요일)'],
-              ['리스트 뷰', '테이블 형태로 날짜/담당자/유형/사유를 목록으로 확인'],
-              ['월간 요약', '페이지 하단에 멤버별 근태유형 카운트 테이블 표시'],
-            ]} />
+          <SectionCard title={t(`${s}.attendance.overview`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.attendance.overviewDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.attendance.overviewHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.attendance.overviewRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="근태 등록">
-            <StepList steps={[
-              '근태현황 페이지에서 "근태 등록" 버튼을 클릭하거나, 캘린더의 날짜 셀을 클릭합니다.',
-              '담당자를 선택합니다.',
-              '날짜를 지정합니다. 여러 날을 한 번에 등록하려면 "범위 선택"을 체크합니다.',
-              '근태유형을 선택합니다 (기본값: 출근).',
-              '필요 시 사유/비고를 입력합니다.',
-              '"등록" 버튼을 클릭하면 즉시 저장됩니다.',
-            ]} />
-            <div className="mt-4">
-              <Tip>범위 선택 시 주말(토/일)은 자동으로 제외됩니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.attendance.registration`)}>
+            <StepList steps={t(`${s}.attendance.registrationSteps`, { returnObjects: true }) as string[]} />
+            <div className="mt-4"><Tip>{t(`${s}.attendance.registrationTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="근태유형">
-            <InfoTable headers={['유형', '설명', '색상']} rows={[
-              ['출근', '정상 출근', '녹색'],
-              ['연차', '연차 휴가', '파란색'],
-              ['오전반차', '오전 반일 휴가', '하늘색'],
-              ['오후반차', '오후 반일 휴가', '하늘색'],
-              ['병가', '질병으로 인한 휴가', '빨간색'],
-              ['출장', '업무 출장', '보라색'],
-              ['지각', '지각 출근', '주황색'],
-              ['조퇴', '조기 퇴근', '주황색'],
-              ['결근', '무단 결근', '진빨간색'],
-            ]} />
+          <SectionCard title={t(`${s}.attendance.attendanceTypes`)}>
+            <InfoTable
+              headers={t(`${s}.attendance.attendanceTypesHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.attendance.attendanceTypesRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="근태 수정 및 삭제">
-            <InfoTable headers={['기능', '방법']} rows={[
-              ['수정', '캘린더 뷰에서 근태 항목 클릭 또는 리스트 뷰에서 편집 아이콘 클릭 → 모달에서 수정 후 저장'],
-              ['삭제', '리스트 뷰에서 휴지통 아이콘 클릭 → 확인 팝업에서 삭제'],
-            ]} />
+          <SectionCard title={t(`${s}.attendance.editAndDelete`)}>
+            <InfoTable
+              headers={t(`${s}.attendance.editAndDeleteHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.attendance.editAndDeleteRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="권한별 기능">
-            <InfoTable headers={['역할', '조회', '본인 근태 등록/수정', '전체 근태 관리']} rows={[
-              ['소유자/관리자', '가능', '가능', '가능'],
-              ['멤버', '가능', '가능', '불가'],
-              ['뷰어', '가능', '불가', '불가'],
-            ]} />
+          <SectionCard title={t(`${s}.attendance.permissionsByRole`)}>
+            <InfoTable
+              headers={t(`${s}.attendance.permissionsHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.attendance.permissionsRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="주간보고서 연동">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              WBS 페이지에서 주간보고를 생성하면, 해당 주의 근태현황이 자동으로 포함됩니다.
-              요약 현황 탭에서 멤버별 요일(월~금) 근태와 소계를 확인할 수 있습니다.
-            </p>
+          <SectionCard title={t(`${s}.attendance.weeklyReportLink`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.attendance.weeklyReportLinkDesc`)}</p>
           </SectionCard>
-          <Tip>대시보드에서도 "금주 근태현황" 위젯으로 오늘 등록된 근태와 주간 통계를 빠르게 확인할 수 있습니다.</Tip>
+          <Tip>{t(`${s}.attendance.dashboardTip`)}</Tip>
         </div>
       ),
     },
     {
       id: 'settings',
-      title: '프로젝트 설정',
+      title: t(`${s}.settings.title`),
       icon: <Settings className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="기본 정보">
-            <InfoTable headers={['항목', '설명']} rows={[
-              ['프로젝트명', '프로젝트 이름 (필수)'],
-              ['설명', '프로젝트에 대한 상세 설명'],
-              ['시작일', '프로젝트 시작 날짜'],
-              ['종료일', '프로젝트 종료 목표 날짜'],
-              ['진척기준일', '공정율 계산의 기준이 되는 날짜'],
-            ]} />
-            <div className="mt-4">
-              <Tip>정보 수정 후 반드시 저장 버튼을 클릭해야 반영됩니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.settings.basicInfo`)}>
+            <InfoTable
+              headers={t(`${s}.settings.basicInfoHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.settings.basicInfoRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.settings.basicInfoTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="프로젝트 상태 관리">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">프로젝트 상태를 자동 또는 수동으로 관리할 수 있습니다:</p>
-            <InfoTable headers={['정책', '설명']} rows={[
-              ['자동 상태 동기화 (기본)', 'WBS와 간트에서 작업을 저장하면 프로젝트 상태가 자동으로 계산됩니다. (모든 작업 완료 → 완료, 진행중 작업 존재 → 진행중, 그 외 → 준비)'],
-              ['수동 상태 고정', '관리자가 직접 프로젝트 상태를 준비/진행중/완료 중 하나로 고정합니다. 작업 변경이 상태를 덮어쓰지 않습니다.'],
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">상태 정책 변경 및 수동 상태 선택은 시스템 관리자(admin) 권한이 필요합니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.settings.statusManagement`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.settings.statusManagementDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.settings.statusManagementHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.settings.statusManagementRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip type="warning">{t(`${s}.settings.statusManagementTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="데이터 관리">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['WBS 엑셀 내보내기', '현재 WBS를 엑셀 파일로 다운로드'],
-              ['엑셀 가져오기', '엑셀 파일에서 WBS 데이터를 불러오기 (.xlsx, .xls)'],
-              ['업로드 양식 다운로드', 'WBS 엑셀 가져오기용 표준 양식 파일을 다운로드하여 올바른 형식으로 데이터를 준비할 수 있습니다'],
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">엑셀 가져오기 시 기존 작업이 있으면 덮어쓰기 확인 대화상자가 표시됩니다. 중요한 데이터는 미리 엑셀로 내보내기하여 백업하세요.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.settings.dataManagement`)}>
+            <InfoTable
+              headers={t(`${s}.settings.dataManagementHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.settings.dataManagementRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip type="warning">{t(`${s}.settings.dataManagementTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="감사 로그">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">설정 페이지 하단에서 프로젝트의 주요 변경 이력을 확인할 수 있습니다:</p>
-            <InfoTable headers={['기록 항목', '설명']} rows={[
-              ['프로젝트 설정 변경', '프로젝트 기본 정보 수정 이력'],
-              ['멤버 역할 변경', '멤버 역할(소유자/관리자/멤버/뷰어) 변경 기록'],
-              ['멤버 추가/삭제', '프로젝트 멤버 추가 및 제거 기록'],
-              ['소유권 이전', '프로젝트 소유자 변경 기록'],
-              ['태스크 삭제', '작업 삭제 이력'],
-              ['프로젝트 삭제', '프로젝트 삭제 기록'],
-            ]} />
-            <div className="mt-4">
-              <Tip>감사 로그에는 시간, 사용자, 작업 유형, 상세 내용이 기록되어 변경 추적이 가능합니다.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.settings.auditLog`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.settings.auditLogDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.settings.auditLogHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.settings.auditLogRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.settings.auditLogTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="위험 영역 (삭제 권한 필요)">
-            <Tip type="warning">프로젝트 삭제 시 모든 관련 데이터(작업, 멤버 등)가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 프로젝트 소유자만 삭제할 수 있습니다.</Tip>
+          <SectionCard title={t(`${s}.settings.dangerZone`)}>
+            <Tip type="warning">{t(`${s}.settings.dangerZoneTip`)}</Tip>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'admin',
-      title: '사용자 관리',
+      title: t(`${s}.userManagement.title`),
       icon: <ShieldCheck className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard>
-            <Tip type="warning">이 메뉴는 시스템 관리자(admin) 권한 사용자에게만 표시됩니다. 사이드바 또는 헤더 사용자 메뉴에서 접근합니다.</Tip>
+          <SectionCard><Tip type="warning">{t(`${s}.userManagement.adminOnlyTip`)}</Tip></SectionCard>
+          <SectionCard title={t(`${s}.userManagement.summaryCards`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.userManagement.summaryCardsDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.userManagement.summaryCardsHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.userManagement.summaryCardsRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="요약 카드">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">페이지 상단에 4개의 요약 카드가 표시됩니다:</p>
-            <InfoTable headers={['카드', '설명']} rows={[
-              ['전체 사용자', '시스템에 등록된 총 사용자 수'],
-              ['승인 대기', '가입 후 관리자 승인을 기다리는 사용자 수'],
-              ['활성', '정상적으로 사용 중인 사용자 수'],
-              ['정지', '사용이 정지된 사용자 수'],
-            ]} />
+          <SectionCard title={t(`${s}.userManagement.userList`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.userManagement.userListDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.userManagement.userListHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.userManagement.userListRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="사용자 목록">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">시스템에 가입한 모든 사용자를 관리할 수 있습니다. 이름이나 이메일로 검색하고, 탭으로 상태별 필터링이 가능합니다.</p>
-            <InfoTable headers={['탭', '설명']} rows={[
-              ['전체', '모든 사용자 표시'],
-              ['승인대기', '가입 후 승인을 기다리는 사용자'],
-              ['활성', '정상적으로 사용 중인 사용자'],
-              ['정지', '사용이 정지된 사용자'],
-            ]} />
+          <SectionCard title={t(`${s}.userManagement.accountStatus`)}>
+            <InfoTable
+              headers={t(`${s}.userManagement.accountStatusHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.userManagement.accountStatusRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="계정 상태 관리">
-            <InfoTable headers={['상태', '설명', '가능한 동작']} rows={[
-              ['승인대기 (Pending)', '회원가입 후 관리자 승인 대기', '승인 → 활성 / 거절 → 정지'],
-              ['활성 (Active)', '정상 사용 가능', '정지 → 정지'],
-              ['정지 (Suspended)', '사용 불가 상태', '복원 → 활성'],
-            ]} />
+          <SectionCard title={t(`${s}.userManagement.systemRoles`)}>
+            <InfoTable
+              headers={t(`${s}.userManagement.systemRolesHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.userManagement.systemRolesRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.userManagement.systemRolesTip`)}</Tip></div>
           </SectionCard>
-          <SectionCard title="시스템 역할 관리">
-            <InfoTable headers={['역할', '권한']} rows={[
-              ['user (일반)', '프로젝트 생성/참여, WBS/간트 작업'],
-              ['admin (관리자)', '일반 권한 + 사용자 관리, 프로젝트 상태 수동 변경'],
-            ]} />
-            <div className="mt-4">
-              <Tip>사용자 목록에서 각 사용자의 역할을 user ↔ admin 간 전환할 수 있습니다. 자기 자신의 역할은 변경할 수 없습니다.</Tip>
-            </div>
-          </SectionCard>
-          <SectionCard title="승인대기 알림">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              승인 대기 중인 사용자가 있으면 헤더의 프로필 아이콘에 빨간 배지로 대기 수가 표시됩니다. 사이드바의 사용자 관리 메뉴에도 배지가 나타납니다.
-            </p>
+          <SectionCard title={t(`${s}.userManagement.pendingNotification`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.userManagement.pendingNotificationDesc`)}</p>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'chatbot',
-      title: 'DK Bot (채팅 어시스턴트)',
+      title: t(`${s}.dkBot.title`),
       icon: <Bot className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="개요">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              화면 우하단의 DK Bot 버튼을 클릭하면 프로젝트 데이터를 기반으로 질문에 답변하는 채팅 어시스턴트가 열립니다.
-              현재 프로젝트의 작업, 멤버, 일정 데이터를 분석하여 자연어로 응답합니다.
-            </p>
+          <SectionCard title={t(`${s}.dkBot.overview`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.dkBot.overviewDesc`)}</p>
           </SectionCard>
-          <SectionCard title="사용 방법">
-            <StepList steps={[
-              '우하단의 DK Bot 아이콘을 클릭합니다.',
-              '추천 질문 칩을 선택하거나 직접 질문을 입력합니다.',
-              'Enter 키 또는 전송 버튼으로 질문을 보냅니다.',
-              '대화 내용을 초기화하려면 리셋 버튼을 클릭합니다.',
-            ]} />
+          <SectionCard title={t(`${s}.dkBot.usage`)}>
+            <StepList steps={t(`${s}.dkBot.usageSteps`, { returnObjects: true }) as string[]} />
           </SectionCard>
-          <SectionCard title="추천 질문 예시">
-            <InfoTable headers={['질문', '응답 내용']} rows={[
-              ['"이번 주 일정은?"', '이번 주에 진행 예정인 작업 목록'],
-              ['"지연 작업 알려줘"', '지연된 작업과 지연 일수'],
-              ['"팀원 현황"', '멤버별 작업 배정 현황'],
-              ['"프로젝트 진행률"', '전체 프로젝트 진행률 요약'],
-            ]} />
+          <SectionCard title={t(`${s}.dkBot.suggestedQuestions`)}>
+            <InfoTable
+              headers={t(`${s}.dkBot.suggestedQuestionsHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dkBot.suggestedQuestionsRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <Tip>DK Bot은 현재 선택된 프로젝트의 데이터를 기반으로 응답합니다. 프로젝트를 전환하면 인사말과 컨텍스트가 자동으로 업데이트됩니다.</Tip>
-        </div>
-      ),
-    },
-    {
-      id: 'ai-mode',
-      title: 'AI 모드',
-      icon: <BrainCircuit className="h-5 w-5" />,
-      content: (
-        <div className="space-y-6">
-          <SectionCard title="개요">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">
-              AI 모드를 활성화하면 WBS 작성과 실적 관리에 AI 지원 기능을 사용할 수 있습니다.
-              헤더 영역의 AI/수동 토글 버튼으로 모드를 전환합니다.
-            </p>
-            <InfoTable headers={['모드', '설명']} rows={[
-              ['AI (자동입력)', 'AI가 WBS 초안 생성과 실적 공정율 제안을 지원합니다'],
-              ['수동', '기존 방식으로 수동 입력합니다 (기본값)'],
-            ]} />
-          </SectionCard>
-          <SectionCard title="AI 설정">
-            <StepList steps={[
-              '프로젝트 설정 페이지에서 AI 설정 섹션을 찾습니다.',
-              'AI 제공사를 선택합니다 (Claude 또는 OpenAI).',
-              'API Key를 입력합니다.',
-              '사용할 모델을 선택합니다.',
-              '저장 버튼을 클릭하면 AI 기능이 활성화됩니다.',
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">API Key는 브라우저 localStorage에 저장됩니다. 공용 PC에서는 사용 후 반드시 키를 삭제하세요.</Tip>
-            </div>
-          </SectionCard>
-          <SectionCard title="AI WBS 초안 생성">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">AI 모드에서 WBS 초안 생성 시 AI 탭이 기본 표시됩니다:</p>
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['AI 생성', '프로젝트 설명을 기반으로 AI가 4단계(Phase→Activity→Task→Todo) WBS를 자동 생성합니다'],
-              ['검토 패널', 'AI가 생성한 작업 목록을 미리보기하고 선택적으로 적용할 수 있습니다'],
-              ['개별 선택', '각 작업을 선택/해제하여 원하는 항목만 적용 가능합니다'],
-            ]} />
-          </SectionCard>
-          <SectionCard title="AI 실적 제안">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">AI 모드 활성화 시 WBS 페이지에 실적 제안 패널이 표시됩니다:</p>
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['진행률 제안', 'AI가 현재 일정과 상태를 분석하여 각 작업의 실적 공정율을 제안합니다'],
-              ['상태 제안', '작업별 상태(대기/진행중/완료/보류) 변경을 함께 제안합니다'],
-              ['사유 표시', '각 제안의 근거(reasoning)를 함께 보여줍니다'],
-              ['개별 적용/해제', '각 제안을 개별적으로 수락하거나 무시할 수 있습니다'],
-              ['전체 적용', '모든 제안을 한 번에 적용하는 버튼을 제공합니다'],
-              ['새로고침', '제안을 다시 생성할 수 있습니다'],
-            ]} />
-          </SectionCard>
-          <Tip>AI 기능은 API Key가 설정된 경우에만 사용할 수 있습니다. 미설정 시 기존 수동 방식으로 동작합니다.</Tip>
+          <Tip>{t(`${s}.dkBot.contextTip`)}</Tip>
         </div>
       ),
     },
     {
       id: 'theme',
-      title: '테마 및 UI 설정',
+      title: t(`${s}.theme.title`),
       icon: <Palette className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="다크/라이트 모드">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              헤더 영역의 해/달 아이콘 버튼으로 테마를 전환할 수 있습니다. 다크 모드와 라이트 모드 간 즉시 전환되며, 설정은 브라우저에 저장됩니다. 로그인 화면에서도 테마를 전환할 수 있습니다.
-            </p>
+          <SectionCard title={t(`${s}.theme.darkLightMode`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.theme.darkLightModeDesc`)}</p>
           </SectionCard>
-          <SectionCard title="사이드바 접기/펼치기">
-            <InfoTable headers={['모드', '설명']} rows={[
-              ['펼침 모드', '프로젝트 목록, 메뉴, 워크스페이스 정보 전체 표시'],
-              ['접힘 모드', '아이콘만 표시 (화면 공간 확보)'],
-            ]} />
+          <SectionCard title={t(`${s}.theme.sidebarToggle`)}>
+            <InfoTable
+              headers={t(`${s}.theme.sidebarToggleHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.theme.sidebarToggleRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'shortcuts',
-      title: '키보드 단축키',
+      title: t(`${s}.shortcuts.title`),
       icon: <Keyboard className="h-5 w-5" />,
       content: (
         <SectionCard>
-          <InfoTable headers={['단축키', '기능', '페이지']} rows={[
-            ['Ctrl/⌘ + S', '수동 저장', 'WBS'],
-            ['Ctrl/⌘ + Z', '되돌리기 (Undo)', 'WBS'],
-            ['Ctrl/⌘ + Y', '다시하기 (Redo)', 'WBS'],
-            ['Enter', '셀 편집 확정', 'WBS / 간트'],
-            ['Escape', '셀 편집 취소', 'WBS / 간트'],
-            ['Shift + Enter', '텍스트 필드 줄바꿈', 'WBS'],
-          ]} />
+          <InfoTable
+            headers={t(`${s}.shortcuts.tableHeaders`, { returnObjects: true }) as string[]}
+            rows={t(`${s}.shortcuts.tableRows`, { returnObjects: true }) as string[][]}
+          />
         </SectionCard>
       ),
     },
     {
       id: 'data',
-      title: '데이터 관리',
+      title: t(`${s}.dataManagement.title`),
       icon: <Database className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="내보내기 기능">
-            <InfoTable headers={['기능', '위치', '형식']} rows={[
-              ['WBS 엑셀 내보내기', 'WBS 페이지 / 설정 페이지', '.xlsx'],
-              ['간트 차트 엑셀', '간트 차트 페이지', '.xlsx'],
-              ['현황 보고서', '대시보드 페이지', '.docx (Word) — 차트 이미지 자동 캡처 포함'],
-              ['주간보고 엑셀', 'WBS 페이지 → 주간보고 팝업', '.xlsx'],
-              ['주간보고 PPT', 'WBS 페이지 → 주간보고 팝업', '.pptx — 담당자 작성 슬라이드 포함'],
-            ]} />
+          <SectionCard title={t(`${s}.dataManagement.exportFeatures`)}>
+            <InfoTable
+              headers={t(`${s}.dataManagement.exportHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dataManagement.exportRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="가져오기 기능">
+          <SectionCard title={t(`${s}.dataManagement.importFeatures`)}>
             <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              설정 페이지 → 엑셀 가져오기 버튼으로 <code className="rounded-lg bg-[color:var(--bg-tertiary)] px-2 py-0.5 text-xs font-medium">.xlsx</code> 또는 <code className="rounded-lg bg-[color:var(--bg-tertiary)] px-2 py-0.5 text-xs font-medium">.xls</code> 파일을 업로드하여 WBS 데이터를 불러올 수 있습니다.
+              {t(`${s}.dataManagement.importFeaturesDesc`)}
             </p>
           </SectionCard>
-          <SectionCard title="자동 저장">
-            <InfoTable headers={['대상', '동작']} rows={[
-              ['WBS 작업', '변경 후 약 0.7초 뒤 자동 저장'],
-              ['멤버 정보', '변경 후 약 0.7초 뒤 자동 저장'],
-              ['프로젝트 설정', '저장 버튼 클릭 시 수동 저장'],
-            ]} />
-            <div className="mt-4">
-              <Tip>자동 저장 상태는 페이지 하단 상태바에 표시됩니다: 대기중 → 저장중 → 저장완료 (최종 저장 시간 포함)</Tip>
-            </div>
+          <SectionCard title={t(`${s}.dataManagement.autoSave`)}>
+            <InfoTable
+              headers={t(`${s}.dataManagement.autoSaveHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.dataManagement.autoSaveRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.dataManagement.autoSaveTip`)}</Tip></div>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'permissions',
-      title: '권한 체계',
+      title: t(`${s}.permissions.title`),
       icon: <ClipboardList className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="시스템 역할 vs 프로젝트 역할">
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">DK Flow는 두 가지 역할 체계를 사용합니다:</p>
-            <InfoTable headers={['구분', '범위', '역할']} rows={[
-              ['시스템 역할', '전체 시스템', 'admin (관리자) / user (일반)'],
-              ['프로젝트 역할', '개별 프로젝트', '소유자 / 관리자 / 멤버 / 뷰어'],
-            ]} />
+          <SectionCard title={t(`${s}.permissions.systemVsProject`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.systemVsProjectDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.permissions.systemVsProjectHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.permissions.systemVsProjectRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="시스템 관리자 전용 기능">
-            <InfoTable headers={['기능', '설명']} rows={[
-              ['사용자 관리 페이지', '가입 승인, 계정 정지/복원, 역할 변경'],
-              ['프로젝트 상태 수동 변경', '설정 페이지에서 수동 상태 고정/해제'],
-            ]} />
+          <SectionCard title={t(`${s}.permissions.adminOnlyFeatures`)}>
+            <InfoTable
+              headers={t(`${s}.permissions.adminOnlyHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.permissions.adminOnlyRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="프로젝트 역할별 권한">
-            <InfoTable headers={['기능', '소유자', '관리자', '멤버', '뷰어']} rows={[
-              ['작업 편집', 'O', 'O', 'O', 'X'],
-              ['멤버 관리', 'O', 'O', 'X', 'X'],
-              ['설정 변경', 'O', 'O', 'X', 'X'],
-              ['소유권 이전', 'O', 'X', 'X', 'X'],
-              ['프로젝트 삭제', 'O', 'X', 'X', 'X'],
-            ]} />
+          <SectionCard title={t(`${s}.permissions.projectRolePermissions`)}>
+            <InfoTable
+              headers={t(`${s}.permissions.projectRoleHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.permissions.projectRoleRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="감사 로그">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              프로젝트 설정 페이지에서 주요 변경 이력(멤버 역할 변경, 소유권 이전, 설정 변경, 태스크 삭제 등)을 시간순으로 조회할 수 있습니다. 변경 시 사용자, 작업 유형, 상세 내용이 자동으로 기록됩니다.
-            </p>
+          <SectionCard title={t(`${s}.permissions.auditLog`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.auditLogDesc`)}</p>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'account',
-      title: '계정 설정',
+      title: t(`${s}.accountSettings.title`),
       icon: <UserCog className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
-          <SectionCard title="계정 설정 접근">
-            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">
-              헤더 우측의 프로필 영역을 클릭한 후, 드롭다운 메뉴에서 "계정 설정"을 선택하면 접근할 수 있습니다.
-            </p>
+          <SectionCard title={t(`${s}.accountSettings.access`)}>
+            <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.accountSettings.accessDesc`)}</p>
           </SectionCard>
-          <SectionCard title="계정 정보">
-            <InfoTable headers={['항목', '설명']} rows={[
-              ['이름', '로그인된 사용자의 이름'],
-              ['이메일', '로그인된 사용자의 이메일'],
-              ['시스템 역할', 'admin (관리자) 또는 user (일반)'],
-              ['소유 프로젝트', '현재 사용자가 소유한 프로젝트 수'],
-            ]} />
+          <SectionCard title={t(`${s}.accountSettings.accountInfo`)}>
+            <InfoTable
+              headers={t(`${s}.accountSettings.accountInfoHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.accountSettings.accountInfoRows`, { returnObjects: true }) as string[][]}
+            />
           </SectionCard>
-          <SectionCard title="회원 탈퇴">
-            <StepList steps={[
-              '계정 설정 페이지 하단의 "회원 탈퇴" 버튼을 클릭합니다.',
-              '탈퇴 확인 모달에서 비밀번호를 입력합니다 (온라인 모드).',
-              '확인 텍스트로 "회원탈퇴"를 입력합니다.',
-              '"탈퇴하기" 버튼을 클릭하면 계정이 영구 삭제됩니다.',
-            ]} />
-            <div className="mt-4">
-              <Tip type="warning">회원 탈퇴 시 소유한 프로젝트와 관련 데이터가 모두 영구 삭제됩니다. 이 작업은 되돌릴 수 없으므로 중요한 데이터는 미리 백업하세요.</Tip>
-            </div>
+          <SectionCard title={t(`${s}.accountSettings.withdrawal`)}>
+            <StepList steps={t(`${s}.accountSettings.withdrawalSteps`, { returnObjects: true }) as string[]} />
+            <div className="mt-4"><Tip type="warning">{t(`${s}.accountSettings.withdrawalTip`)}</Tip></div>
           </SectionCard>
         </div>
       ),
     },
     {
       id: 'glossary',
-      title: '용어 정의',
+      title: t(`${s}.glossary.title`),
       icon: <BookText className="h-5 w-5" />,
       content: (
         <SectionCard>
-          <InfoTable headers={['용어', '설명']} rows={[
-            ['WBS', 'Work Breakdown Structure, 작업분류체계'],
-            ['Phase', '프로젝트 단계 (분석, 설계, 개발, 테스트 등)'],
-            ['Activity', '단계 내 활동'],
-            ['Task', '구체적 작업'],
-            ['Todo', '세부 실행 항목 (Level 4, 체크리스트 단위)'],
-            ['칸반', '작업을 카드로 시��화하여 상태/담당자/Phase별로 관리하는 보드 뷰'],
-            ['가중치', '작업의 상대적 중요도/비중 (숫자)'],
-            ['공정율', '작업 진행률 (0~100%)'],
-            ['계획 공정율', '계획 기준 공정 진행률'],
-            ['실적 공정율', '실제 수행 기준 공정 진행률'],
-            ['달성율', '계획 대비 실적 비율'],
-            ['진척기준일', '공정율 계산의 기준이 되는 날짜'],
-            ['리프 작업', '하위 작업이 없는 말단 작업 (실제 작업 단위)'],
-            ['선후행', '작업 간 순서 의존 관계 (선행 작업 완료 후 후행 작업 시작)'],
-            ['스냅샷', '특정 시점의 프로젝트 상태를 저장한 기록 (주간보고용)'],
-          ]} />
+          <InfoTable
+            headers={t(`${s}.glossary.tableHeaders`, { returnObjects: true }) as string[]}
+            rows={t(`${s}.glossary.tableRows`, { returnObjects: true }) as string[][]}
+          />
         </SectionCard>
       ),
     },
     {
       id: 'faq',
-      title: '자주 묻는 질문',
+      title: t(`${s}.faq.title`),
       icon: <HelpCircle className="h-5 w-5" />,
       content: (
         <div className="space-y-4">
-          {[
-            { q: '로컬 모드와 온라인 모드의 차이는?', a: '로컬 모드는 계정 없이 브라우저에 데이터가 저장됩니다. 온라인 모드(Supabase)에서는 이메일 계정이 필요하며, 서버에 데이터가 저장되어 멀티 사용자 및 동기화를 지원합니다.' },
-            { q: '회원가입 후 바로 사용할 수 없나요?', a: '온라인 모드에서는 시스템 관리자의 승인이 필요합니다. 가입 후 승인 대기 화면에서 자동으로 승인 여부를 확인하며, 승인 시 자동으로 홈 화면으로 이동합니다.' },
-            { q: '작업이 자동으로 저장되나요?', a: 'WBS와 멤버 페이지에서의 변경사항은 약 0.7초 후 자동 저장됩니다. 프로젝트 설정에서의 기본 정보 변경은 저장 버튼을 눌러야 합니다.' },
-            { q: '상위 작업의 공정율은 어떻게 계산되나요?', a: '상위 작업의 공정율은 하위 작업의 가중치와 공정율을 조합하여 자동 계산됩니다. 직접 수정해도 다음 저장 시 재계산됩니다.' },
-            { q: '프로젝트 상태를 수동으로 변경하려면?', a: '프로젝트 설정 > 프로젝트 상태 관리에서 "수동 상태 고정"을 선택한 후, 원하는 상태를 클릭합니다. 시스템 관리자 권한이 필요합니다.' },
-            { q: '엑셀 가져오기 시 기존 데이터는 어떻게 되나요?', a: '기존 작업이 있는 경우 덮어쓰기 확인 대화상자가 표시됩니다. "확인"을 클릭하면 기존 데이터가 교체됩니다.' },
-            { q: '프로젝트 삭제 후 복구할 수 있나요?', a: '아니요. 프로젝트 삭제는 영구적이며 되돌릴 수 없습니다. 삭제 전에 WBS 엑셀 내보내기로 데이터를 백업하세요.' },
-            { q: 'DK Bot은 AI인가요?', a: 'DK Bot은 프로젝트 데이터를 분석하는 키워드 기반 어시스턴트입니다. 외부 AI API를 사용하지 않으며, 현재 프로젝트의 작업/멤버/일정 데이터를 기반으로 응답합니다.' },
-            { q: '뷰어 역할은 어떤 제한이 있나요?', a: '뷰어는 모든 데이터를 조회할 수 있지만 작업 편집, 멤버 관리, 설정 변경은 할 수 없습니다. 대시보드와 간트 차트 조회, 보고서 다운로드는 가능합니다.' },
-            { q: '칸반 보드와 WBS의 차이는?', a: 'WBS는 테이블 형태의 상세 편집 뷰이고, 칸반 보드는 카드 형태의 시각적 현황 뷰입니다. 칸반에서도 카드를 클릭하여 작업을 편집할 수 있으며, Phase별/담당자별/상태별 그룹핑을 지원합니다.' },
-            { q: 'AI 모드를 사용하려면 무엇이 필요한가요?', a: 'AI 제공사(Claude 또는 OpenAI)의 API Key가 필요합니다. 프로젝트 설정 페이지에서 AI 설정을 완료한 후, 헤더의 AI/수동 토글로 AI 모드를 활성화할 수 있습니다.' },
-          ].map((item, i) => (
+          {(t(`${s}.faq.items`, { returnObjects: true }) as { q: string; a: string }[]).map((item, i) => (
             <SectionCard key={i}>
               <h4 className="flex items-start gap-2 text-base font-semibold text-[color:var(--text-primary)]">
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(15,118,110,0.1)] text-xs font-bold text-[color:var(--accent-primary)]">Q</span>
@@ -1074,10 +738,10 @@ export default function UserManual() {
   ];
 
   const filteredSections = searchQuery.trim()
-    ? sections.filter((s) => s.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? sections.filter((sec) => sec.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : sections;
 
-  const currentSection = sections.find((s) => s.id === activeSection) || sections[0];
+  const currentSection = sections.find((sec) => sec.id === activeSection) || sections[0];
 
   return (
     <div className="space-y-8">
@@ -1087,12 +751,11 @@ export default function UserManual() {
         <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(255,190,120,0.18),transparent_72%)] blur-3xl" />
         <div className="pointer-events-none absolute right-[25%] top-[20%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(245,158,11,0.12),transparent_70%)] blur-3xl" />
 
-        {/* ---- Floating decorative elements (right side) — 매뉴얼 가이드 북 테마 ---- */}
+        {/* ---- Floating decorative elements (right side) ---- */}
         <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
-          {/* Stat bubbles — manual guide metrics */}
           <FloatingStatBubble
             value="12"
-            label="섹션"
+            label={t('manual.heroLabel')}
             className="hero-float-1 h-[76px] w-[76px]"
             style={{ top: '8%', right: '11%' }}
           />
@@ -1108,14 +771,13 @@ export default function UserManual() {
             style={{ top: '20%', right: '26%' }}
           />
 
-          {/* Mini TOC card — special wider floating element */}
           <div
             className="hero-float-2 pointer-events-none absolute rounded-2xl border border-white/[0.12] bg-white/[0.08] backdrop-blur-md"
             style={{ top: '65%', right: '6%', width: '140px', padding: '10px 12px' }}
           >
             <div className="mb-2 flex items-center gap-1.5">
               <ListChecks className="h-3 w-3 text-amber-400/60" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">목차</span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50">{t('manual.tocLabel')}</span>
             </div>
             <div className="space-y-1.5">
               <div className="h-1 w-full rounded-full bg-white/15" />
@@ -1124,105 +786,54 @@ export default function UserManual() {
             </div>
           </div>
 
-          {/* Icon elements — documentation & learning icons */}
-          <FloatingElement
-            className="hero-float-4 h-11 w-11"
-            style={{ top: '5%', right: '22%' }}
-          >
+          <FloatingElement className="hero-float-4 h-11 w-11" style={{ top: '5%', right: '22%' }}>
             <BookOpen className="h-5 w-5 text-amber-400/50" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-2 h-10 w-10"
-            style={{ top: '54%', right: '12%' }}
-          >
+          <FloatingElement className="hero-float-2 h-10 w-10" style={{ top: '54%', right: '12%' }}>
             <Lightbulb className="h-4.5 w-4.5 text-amber-300/50" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-1 h-10 w-10"
-            style={{ top: '60%', right: '24%' }}
-          >
+          <FloatingElement className="hero-float-1 h-10 w-10" style={{ top: '60%', right: '24%' }}>
             <FileText className="h-4.5 w-4.5 text-teal-400/45" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-3 h-9 w-9"
-            style={{ top: '30%', right: '3%' }}
-          >
+          <FloatingElement className="hero-float-3 h-9 w-9" style={{ top: '30%', right: '3%' }}>
             <Bookmark className="h-4 w-4 text-orange-400/40" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-4 h-10 w-10"
-            style={{ top: '48%', right: '30%' }}
-          >
+          <FloatingElement className="hero-float-4 h-10 w-10" style={{ top: '48%', right: '30%' }}>
             <GraduationCap className="h-4.5 w-4.5 text-teal-300/45" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-1 h-9 w-9"
-            style={{ top: '78%', right: '18%' }}
-          >
+          <FloatingElement className="hero-float-1 h-9 w-9" style={{ top: '78%', right: '18%' }}>
             <Info className="h-4 w-4 text-white/30" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-2 h-11 w-11"
-            style={{ top: '12%', right: '38%' }}
-          >
+          <FloatingElement className="hero-float-2 h-11 w-11" style={{ top: '12%', right: '38%' }}>
             <Sparkles className="h-5 w-5 text-amber-400/40" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-3 h-9 w-9"
-            style={{ top: '72%', right: '34%' }}
-          >
+          <FloatingElement className="hero-float-3 h-9 w-9" style={{ top: '72%', right: '34%' }}>
             <Compass className="h-4 w-4 text-teal-300/40 hero-spin-slow" />
           </FloatingElement>
-          <FloatingElement
-            className="hero-float-4 h-10 w-10"
-            style={{ top: '82%', right: '4%' }}
-          >
+          <FloatingElement className="hero-float-4 h-10 w-10" style={{ top: '82%', right: '4%' }}>
             <Search className="h-4.5 w-4.5 text-white/30" />
           </FloatingElement>
 
-          {/* Decorative connecting gradient lines */}
-          <div
-            className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2"
-            style={{ top: '26%', right: '15%', transform: 'rotate(-20deg)' }}
-          />
-          <div
-            className="absolute h-px w-20 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent hero-float-3"
-            style={{ top: '50%', right: '18%', transform: 'rotate(15deg)' }}
-          />
-          <div
-            className="absolute h-px w-14 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-1"
-            style={{ top: '68%', right: '28%', transform: 'rotate(-10deg)' }}
-          />
+          <div className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2" style={{ top: '26%', right: '15%', transform: 'rotate(-20deg)' }} />
+          <div className="absolute h-px w-20 bg-gradient-to-r from-transparent via-amber-400/10 to-transparent hero-float-3" style={{ top: '50%', right: '18%', transform: 'rotate(15deg)' }} />
+          <div className="absolute h-px w-14 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-1" style={{ top: '68%', right: '28%', transform: 'rotate(-10deg)' }} />
 
-          {/* Decorative dots */}
-          <div
-            className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1"
-            style={{ top: '44%', right: '14%' }}
-          />
-          <div
-            className="absolute h-1 w-1 rounded-full bg-amber-400/30 hero-float-4"
-            style={{ top: '35%', right: '20%' }}
-          />
-          <div
-            className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-2"
-            style={{ top: '58%', right: '8%' }}
-          />
-          <div
-            className="absolute h-1.5 w-1.5 rounded-full bg-orange-400/25 hero-float-3"
-            style={{ top: '16%', right: '6%' }}
-          />
+          <div className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1" style={{ top: '44%', right: '14%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-amber-400/30 hero-float-4" style={{ top: '35%', right: '20%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-2" style={{ top: '58%', right: '8%' }} />
+          <div className="absolute h-1.5 w-1.5 rounded-full bg-orange-400/25 hero-float-3" style={{ top: '16%', right: '6%' }} />
         </div>
 
         <div className="relative z-10 max-w-2xl">
           <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
             <BookOpen className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-            User Manual v4.0
+            User Manual v3.0
           </div>
           <h1 className="mt-6 text-[clamp(2rem,4vw,3.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-white">
-            DK Flow<br />사용자 매뉴얼
+            DK Flow<br />{t('manual.pageTitle')}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-white/90 md:text-lg">
-            프로젝트 관리 시스템의 모든 기능을 안내합니다. 아래 목차에서 원하는 섹션을 선택하세요.
+            {t('manual.pageSubtitle')}
           </p>
         </div>
       </section>
@@ -1238,7 +849,7 @@ export default function UserManual() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="섹션 검색..."
+                placeholder={t('manual.searchPlaceholder')}
                 className="field-input !pl-9 py-2.5 text-sm"
               />
             </div>
@@ -1285,29 +896,29 @@ export default function UserManual() {
           <div className="mt-6 flex items-center justify-between">
             <button
               onClick={() => {
-                const idx = sections.findIndex((s) => s.id === activeSection);
+                const idx = sections.findIndex((sec) => sec.id === activeSection);
                 if (idx > 0) { setActiveSection(sections[idx - 1].id); window.scrollTo({ top: 0, behavior: 'smooth' }); }
               }}
-              disabled={sections.findIndex((s) => s.id === activeSection) === 0}
+              disabled={sections.findIndex((sec) => sec.id === activeSection) === 0}
               className="rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5 py-2.5 text-sm font-medium text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] disabled:opacity-40"
             >
-              ← 이전
+              {t('manual.previous')}
             </button>
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2.5 text-sm text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)]"
             >
-              <ArrowUp className="h-4 w-4" /> 맨 위로
+              <ArrowUp className="h-4 w-4" /> {t('manual.scrollToTop')}
             </button>
             <button
               onClick={() => {
-                const idx = sections.findIndex((s) => s.id === activeSection);
+                const idx = sections.findIndex((sec) => sec.id === activeSection);
                 if (idx < sections.length - 1) { setActiveSection(sections[idx + 1].id); window.scrollTo({ top: 0, behavior: 'smooth' }); }
               }}
-              disabled={sections.findIndex((s) => s.id === activeSection) === sections.length - 1}
+              disabled={sections.findIndex((sec) => sec.id === activeSection) === sections.length - 1}
               className="rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-5 py-2.5 text-sm font-medium text-[color:var(--text-secondary)] transition-all hover:bg-[color:var(--bg-tertiary)] disabled:opacity-40"
             >
-              다음 →
+              {t('manual.next')}
             </button>
           </div>
         </div>
