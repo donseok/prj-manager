@@ -32,7 +32,7 @@ const vi = {
 
     // ─── Header ─────────────────────────────────────────
     header: {
-      slogan: 'Thiết kế quy trình công việc',
+      slogan: 'Thay đổi cách làm việc',
       lightMode: 'Chế độ sáng',
       darkMode: 'Chế độ tối',
       aiAutoInput: 'AI Tự động nhập',
@@ -123,7 +123,7 @@ const vi = {
 
     // ─── Login ──────────────────────────────────────────
     login: {
-      brandTagline: 'Thiết kế quy trình công việc',
+      brandTagline: 'Thay đổi cách làm việc',
       brandDescription1: 'WBS, biểu đồ Gantt và quản lý nhóm trong một quy trình.',
       brandDescription2: 'Rõ ràng từ khởi đầu đến hoàn thành dự án.',
       wbsLabel: 'WBS',

@@ -32,7 +32,7 @@ const en = {
 
     // ─── Header ─────────────────────────────────────────
     header: {
-      slogan: 'Design the flow of work',
+      slogan: 'Change the way you work',
       lightMode: 'Light Mode',
       darkMode: 'Dark Mode',
       aiAutoInput: 'AI Auto Input',
@@ -123,7 +123,7 @@ const en = {
 
     // ─── Login ──────────────────────────────────────────
     login: {
-      brandTagline: 'Design the flow of work',
+      brandTagline: 'Change the way you work',
       brandDescription1: 'WBS, Gantt charts, and team management in one flow.',
       brandDescription2: 'Crystal clear from project start to completion.',
       wbsLabel: 'WBS',
