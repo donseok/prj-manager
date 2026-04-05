@@ -9,6 +9,8 @@ import {
   Clock3,
   CheckCircle2,
   ExternalLink,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/taskStore';
@@ -70,6 +72,7 @@ export default function Kanban() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
 
   const FILTER_OPTIONS: Array<{ value: FilterMode; label: string }> = [
     { value: 'all', label: t('kanban.filterAll') },
@@ -395,7 +398,7 @@ export default function Kanban() {
 
       {/* Hero Section */}
       <section
-        className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+        className="app-panel-dark relative overflow-hidden transition-all duration-300"
         style={{
           backgroundImage: `radial-gradient(circle at 86% 18%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
         }}
@@ -406,56 +409,71 @@ export default function Kanban() {
             background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)`,
           }}
         />
-        <div className="relative">
-          <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
-            {ToneIcon ? (
-              <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} />
-            ) : (
-              <LayoutGrid className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
-            )}
-            {projectTone?.label || 'Kanban Board'}
-          </div>
-          <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
-            {currentProject?.name || t('common.project')} {t('kanban.kanbanBoard')}
-          </h1>
-          {projectTone && (
-            <p
-              className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase"
-              style={{ color: projectTone.accent }}
-            >
-              {projectTone.note}
-            </p>
-          )}
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
-            {t('kanban.heroDescription')}
-          </p>
+        <div className={cn('relative p-6 md:p-8', summaryCollapsed && '!py-3 !px-6')}>
+          {!summaryCollapsed && (
+            <>
+              <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
+                {ToneIcon ? (
+                  <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} />
+                ) : (
+                  <LayoutGrid className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
+                )}
+                {projectTone?.label || 'Kanban Board'}
+              </div>
+              <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
+                {currentProject?.name || t('common.project')} {t('kanban.kanbanBoard')}
+              </h1>
+              {projectTone && (
+                <p
+                  className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase"
+                  style={{ color: projectTone.accent }}
+                >
+                  {projectTone.note}
+                </p>
+              )}
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
+                {t('kanban.heroDescription')}
+              </p>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-4">
-            <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.totalTasks')}</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{stats.total}</p>
-            </div>
-            <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-              <div className="flex items-center gap-1.5">
-                <Clock3 className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterInProgress')}</p>
+              <div className="mt-8 grid gap-4 md:grid-cols-4">
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.totalTasks')}</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{stats.total}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <Clock3 className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterInProgress')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{stats.inProgress}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterCompleted')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{stats.completed}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.overallProgress')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{stats.overallProgress}%</p>
+                </div>
               </div>
-              <p className="mt-2 text-3xl font-semibold text-white">{stats.inProgress}</p>
-            </div>
-            <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.filterCompleted')}</p>
-              </div>
-              <p className="mt-2 text-3xl font-semibold text-white">{stats.completed}</p>
-            </div>
-            <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
-              <div className="flex items-center gap-1.5">
-                <Target className="h-3 w-3 text-white/60" />
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.overallProgress')}</p>
-              </div>
-              <p className="mt-2 text-3xl font-semibold text-white">{stats.overallProgress}%</p>
-            </div>
+            </>
+          )}
+
+          {/* 요약 접기/펼치기 버튼 */}
+          <div className={cn('flex justify-center', !summaryCollapsed && 'mt-6')}>
+            <button
+              onClick={() => setSummaryCollapsed(!summaryCollapsed)}
+              className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/[0.1] px-4 py-1.5 text-xs font-semibold text-white/90 transition-colors hover:bg-white/[0.18]"
+            >
+              {summaryCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+              {summaryCollapsed ? t('kanban.expandSummary') : t('kanban.collapseSummary')}
+            </button>
           </div>
         </div>
       </section>
@@ -506,13 +524,13 @@ export default function Kanban() {
 
         {/* Right: Search */}
         <div className="relative ml-auto">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('kanban.searchPlaceholder')}
-            className="h-9 w-56 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+            className="h-9 w-56 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-11 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
           />
         </div>
       </section>
