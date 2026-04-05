@@ -79,6 +79,12 @@ export default function QuickProgressModal({
       actualStart: task?.actualStart || task?.planStart || today,
       updatedAt: new Date().toISOString(),
     });
+    // Clear local changes to prevent overwriting completed state on "Apply All"
+    setLocalChanges((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
   };
 
   const hasChanges = Object.keys(localChanges).some(
