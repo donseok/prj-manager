@@ -143,58 +143,34 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
     childrenMap.set(parentId, list);
   });
 
-  // Bottom-up: leaf부터 가중치 계산
-  const calculateBranch = (parentId: string | null): number => {
-    const children = childrenMap.get(parentId);
-    if (!children || children.length === 0) return 0;
-
-    const hasGrandchildren = children.some((c) => childrenMap.has(c.id));
-
-    if (!hasGrandchildren) {
-      // 모두 leaf → 기간 비례
-      const totalDuration = children.reduce((s, c) => s + (c.durationDays || 1), 0);
-      children.forEach((c) => {
-        const task = taskMap.get(c.id)!;
-        task.weight = totalDuration > 0
-          ? Math.round(((c.durationDays || 1) / totalDuration) * 100)
-          : Math.round(100 / children.length);
-      });
-      return children.reduce((s, c) => s + taskMap.get(c.id)!.weight, 0);
+  // 서브트리의 유효 기간 합산 (leaf의 durationDays 총합)
+  const getEffectiveDuration = (taskId: string): number => {
+    const children = childrenMap.get(taskId);
+    if (!children || children.length === 0) {
+      return taskMap.get(taskId)?.durationDays || 1;
     }
-
-    // 혼합: 재귀로 자식들의 가중치 합을 구한 후 parent에 반영
-    let totalChildWeight = 0;
-    children.forEach((c) => {
-      const childChildren = childrenMap.get(c.id);
-      if (childChildren && childChildren.length > 0) {
-        const branchWeight = calculateBranch(c.id);
-        taskMap.get(c.id)!.weight = Math.round(branchWeight);
-        totalChildWeight += branchWeight;
-      } else {
-        // leaf 사이의 비율은 기간 기반
-        const dur = c.durationDays || 1;
-        taskMap.get(c.id)!.weight = dur;
-        totalChildWeight += dur;
-      }
-    });
-
-    return totalChildWeight;
+    return children.reduce((sum, c) => sum + getEffectiveDuration(c.id), 0);
   };
 
-  calculateBranch(null);
+  // 같은 레벨 형제들의 유효 기간 비례로 가중치 배분
+  const calculateWeights = (parentId: string | null) => {
+    const children = childrenMap.get(parentId);
+    if (!children || children.length === 0) return;
 
-  // Phase 레벨에서 합이 100이 되도록 정규화
-  const phases = childrenMap.get(null) ?? [];
-  const totalPhaseWeight = phases.reduce((s, p) => s + taskMap.get(p.id)!.weight, 0);
+    const durations = children.map((c) => getEffectiveDuration(c.id));
+    const totalDuration = durations.reduce((s, d) => s + d, 0);
 
-  if (totalPhaseWeight > 0) {
-    // 모든 task의 가중치를 비율로 조정
-    const scale = 100 / totalPhaseWeight;
-    taskMap.forEach((task) => {
-      task.weight = Math.round(task.weight * scale);
+    children.forEach((c, i) => {
+      const task = taskMap.get(c.id)!;
+      task.weight = totalDuration > 0
+        ? Math.round((durations[i] / totalDuration) * 100)
+        : Math.round(100 / children.length);
       task.updatedAt = new Date().toISOString();
+      calculateWeights(c.id);
     });
-  }
+  };
+
+  calculateWeights(null);
 
   return tasks.map((t) => taskMap.get(t.id)!);
 }
