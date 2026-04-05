@@ -477,7 +477,7 @@ export default function Dashboard() {
       <section className="grid gap-6 xl:grid-cols-3">
         <QueueCard
           title={t('dashboard.delayedTasks')}
-          subtitle={`${delayedTasks.length}${t('dashboard.countDelayed')}`}
+          subtitle={t('dashboard.countDelayed', { count: delayedTasks.length })}
           icon={<AlertTriangle className="h-4 w-4" />}
           tone="danger"
         >
@@ -508,7 +508,7 @@ export default function Dashboard() {
 
         <QueueCard
           title={t('dashboard.thisWeekTasks')}
-          subtitle={`${thisWeekTasks.length}${t('dashboard.countScheduled')}`}
+          subtitle={t('dashboard.countScheduled', { count: thisWeekTasks.length })}
           icon={<Clock3 className="h-4 w-4" />}
           tone="primary"
         >
@@ -533,7 +533,7 @@ export default function Dashboard() {
 
         <QueueCard
           title={t('dashboard.nextWeekTasks')}
-          subtitle={`${nextWeekTasks.length}${t('dashboard.countScheduled')}`}
+          subtitle={t('dashboard.countScheduled', { count: nextWeekTasks.length })}
           icon={<ArrowRight className="h-4 w-4" />}
           tone="accent"
         >
@@ -655,8 +655,7 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">{t('dashboard.totalDays')}</p>
-                  <p className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{timeline.totalDays}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">{t('dashboard.totalDays', { days: timeline.totalDays })}</p>
                 </div>
                 <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4 text-center">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">{t('dashboard.elapsed')}</p>
@@ -757,7 +756,7 @@ export default function Dashboard() {
 
         <QueueCard
           title={t('dashboard.recentlyCompleted')}
-          subtitle={`${recentlyCompleted.length}${t('dashboard.countCompleted')}`}
+          subtitle={t('dashboard.countCompleted', { count: recentlyCompleted.length })}
           icon={<CheckCircle2 className="h-4 w-4" />}
           tone="primary"
         >
@@ -770,7 +769,7 @@ export default function Dashboard() {
                     <span className="rounded-full bg-[rgba(31,163,122,0.12)] px-2.5 py-1 font-semibold text-[color:var(--accent-success)]">
                       {t('dashboard.completed')}
                     </span>
-                    <span className="text-[color:var(--text-secondary)]">{t('dashboard.completedDate')}: {formatDate(task.actualEnd)}</span>
+                    <span className="text-[color:var(--text-secondary)]">{t('dashboard.completedDate', { date: formatDate(task.actualEnd) })}</span>
                   </div>
                 </li>
               ))}
@@ -785,7 +784,7 @@ export default function Dashboard() {
         {/* Weekly attendance */}
         <QueueCard
           title={t('dashboard.weekAttendance')}
-          subtitle={`${weekAttendanceSummary.total}${t('dashboard.countRegistered')}`}
+          subtitle={t('dashboard.countRegistered', { count: weekAttendanceSummary.total })}
           icon={<CalendarCheck className="h-4 w-4" />}
           tone="accent"
         >
