@@ -299,11 +299,11 @@ export function generateWeeklyReport({
       overallPlanProgress,
     },
     thisWeekActual: {
-      title: '금주 실적',
+      title: `금주 실적 (${format(weekStart, 'M/d', { locale: ko })}~${format(weekEnd, 'M/d', { locale: ko })})`,
       tasks: thisWeekActualTasks.map(toReportTask),
     },
     nextWeekPlan: {
-      title: '차주 계획',
+      title: `차주 계획 (${format(nextWeekStart, 'M/d', { locale: ko })}~${format(nextWeekEnd, 'M/d', { locale: ko })})`,
       tasks: nextWeekPlanTasks.map(toReportTask),
     },
     delayed: {
