@@ -101,6 +101,9 @@ export default function WeeklyReportModal({
       }
       setMemberDrafts(drafts);
       setMemberReportsLoaded(true);
+    }).catch((err) => {
+      console.error('Failed to load member reports:', err);
+      if (!cancelled) setMemberReportsLoaded(true);
     });
     return () => { cancelled = true; };
   }, [isOpen, projectId, weekStartStr]);
