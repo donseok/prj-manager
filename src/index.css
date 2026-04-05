@@ -663,6 +663,43 @@ select {
 .sticky-col-4 { left: 572px; }
 .sticky-col-5 { left: 692px; }
 
+.sticky-col-right {
+  background-color: var(--bg-secondary-solid);
+  border-left: 1px solid var(--border-color);
+}
+
+.app-table thead .sticky-col-right {
+  background: #fff8f1;
+}
+
+.dark .app-table thead .sticky-col-right {
+  background: #1b2340;
+}
+
+.dark .sticky-col-right {
+  background-color: var(--bg-secondary-solid);
+}
+
+.app-table tr.wbs-level-1 .sticky-col-right {
+  background-color: var(--wbs-sticky-bg-level1);
+}
+
+.app-table tbody tr:hover .sticky-col-right {
+  background-color: #f3f3ed;
+}
+
+.app-table tbody tr.wbs-level-1:hover .sticky-col-right {
+  background-color: #e2dfd2;
+}
+
+.dark .app-table tbody tr:hover .sticky-col-right {
+  background-color: #19242c;
+}
+
+.dark .app-table tbody tr.wbs-level-1:hover .sticky-col-right {
+  background-color: #28333c;
+}
+
 .sticky-col-5::after {
   content: "";
   position: absolute;
