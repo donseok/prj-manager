@@ -9,7 +9,64 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  PieChart as PieChartIcon,
+  Target,
+  Activity,
+  Layers,
+  Shield,
+  CheckCircle,
+  Globe,
+  Zap,
+  Settings,
 } from 'lucide-react';
+
+/* ------------------------------------------------------------------ */
+/*  Floating decorative element components                              */
+/* ------------------------------------------------------------------ */
+function FloatingElement({
+  children,
+  className = '',
+  style = {},
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm ${className}`}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FloatingStatBubble({
+  value,
+  label,
+  className = '',
+  style = {},
+}: {
+  value: string;
+  label?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute flex flex-col items-center justify-center rounded-[20px] border border-white/[0.1] bg-white/[0.07] backdrop-blur-md ${className}`}
+      style={style}
+    >
+      <span className="text-2xl font-bold text-white/90">{value}</span>
+      {label && (
+        <span className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/50">
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
 import {
   BarChart,
   Bar,
@@ -271,15 +328,99 @@ export default function Portfolio() {
     <div className="space-y-8">
       {/* Hero Section */}
       <section
-        className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+        className="app-panel-dark relative min-h-[420px] overflow-hidden p-6 md:p-8"
         style={{
           backgroundImage: `radial-gradient(circle at 86% 16%, rgba(15,118,110,0.19), transparent 26%), radial-gradient(circle at 18% 84%, rgba(15,118,110,0.10), transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
         }}
       >
+        {/* Background ambient glows */}
         <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(15,118,110,0.15), transparent 70%)' }} />
         <div className="pointer-events-none absolute bottom-[-8rem] left-[12%] h-72 w-72 rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(15,118,110,0.10), transparent 72%)' }} />
+        <div className="pointer-events-none absolute right-[20%] top-[30%] h-48 w-48 rounded-full blur-3xl" style={{ background: 'radial-gradient(circle, rgba(15,118,110,0.12), transparent 70%)' }} />
 
-        <div className="relative">
+        {/* ---- Floating decorative elements (right side) ---- */}
+        <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+          {/* Stat bubbles */}
+          <FloatingStatBubble
+            value="9"
+            label="사용자"
+            className="hero-float-1 h-[72px] w-[72px]"
+            style={{ top: '10%', right: '22%' }}
+          />
+          <FloatingStatBubble
+            value="0"
+            label="대기"
+            className="hero-float-3 h-[64px] w-[64px]"
+            style={{ top: '40%', right: '5%' }}
+          />
+          <FloatingStatBubble
+            value="85"
+            label="%"
+            className="hero-float-4 h-[76px] w-[76px]"
+            style={{ top: '65%', right: '20%' }}
+          />
+
+          {/* Special floating card */}
+          <div
+            className="pointer-events-none absolute hero-float-2 flex items-center gap-2 rounded-2xl border border-white/[0.1] bg-white/[0.07] px-4 py-2.5 backdrop-blur-md"
+            style={{ top: '72%', right: '6%' }}
+          >
+            <Shield className="h-4 w-4 text-teal-400/70" />
+            <span className="text-xs font-medium text-white/70">역할 관리</span>
+          </div>
+
+          {/* Icon elements */}
+          <FloatingElement className="hero-float-1 h-11 w-11" style={{ top: '8%', right: '12%' }}>
+            <PieChartIcon className="h-5 w-5 text-teal-400/50" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-2 h-10 w-10" style={{ top: '18%', right: '32%' }}>
+            <Target className="h-5 w-5 text-white/30" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-3 h-12 w-12" style={{ top: '35%', right: '14%' }}>
+            <Globe className="h-6 w-6 text-amber-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-4 h-9 w-9" style={{ top: '28%', right: '28%' }}>
+            <Activity className="h-4 w-4 text-emerald-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-2 h-11 w-11" style={{ top: '52%', right: '35%' }}>
+            <Layers className="h-5 w-5 text-cyan-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-1 h-10 w-10" style={{ top: '58%', right: '10%' }}>
+            <CheckCircle className="h-5 w-5 text-emerald-400/40" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-4 h-10 w-10" style={{ top: '48%', right: '26%' }}>
+            <Settings className="h-4.5 w-4.5 text-white/40 hero-spin-slow" />
+          </FloatingElement>
+          <FloatingElement className="hero-float-3 h-9 w-9" style={{ top: '80%', right: '30%' }}>
+            <Zap className="h-4 w-4 text-amber-400/40" />
+          </FloatingElement>
+
+          {/* Decorative gradient lines */}
+          <div
+            className="absolute h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent hero-float-2"
+            style={{ top: '22%', right: '12%', transform: 'rotate(-25deg)' }}
+          />
+          <div
+            className="absolute h-px w-20 bg-gradient-to-r from-transparent via-white/8 to-transparent hero-float-3"
+            style={{ top: '52%', right: '18%', transform: 'rotate(18deg)' }}
+          />
+          <div
+            className="absolute h-px w-14 bg-gradient-to-r from-transparent via-teal-400/10 to-transparent hero-float-1"
+            style={{ top: '75%', right: '15%', transform: 'rotate(-12deg)' }}
+          />
+
+          {/* Floating dots */}
+          <div className="absolute h-1.5 w-1.5 rounded-full bg-white/20 hero-float-1" style={{ top: '15%', right: '18%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-teal-400/30 hero-float-4" style={{ top: '38%', right: '10%' }} />
+          <div className="absolute h-2 w-2 rounded-full bg-white/10 hero-float-2" style={{ top: '60%', right: '32%' }} />
+          <div className="absolute h-1 w-1 rounded-full bg-emerald-400/20 hero-float-3" style={{ top: '82%', right: '22%' }} />
+
+          {/* Ring element */}
+          <div className="absolute h-6 w-6 rounded-full border border-white/[0.07] hero-float-2" style={{ top: '45%', right: '33%' }} />
+        </div>
+
+        {/* ---- Main content ---- */}
+        <div className="relative z-10">
           <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
             <Briefcase className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />
             Portfolio Overview
@@ -291,7 +432,7 @@ export default function Portfolio() {
             모든 프로젝트의 진행 현황을 한눈에 비교합니다
           </p>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid max-w-2xl gap-4 md:grid-cols-3">
             <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
               <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">전체 프로젝트</p>
               <p className="mt-2 text-3xl font-semibold text-white">{summary.total}</p>
