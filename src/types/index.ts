@@ -52,6 +52,7 @@ export interface ProjectSettings {
   statusMode?: 'auto' | 'manual';
   manualStatus?: ProjectStatus;
   ganttSummaryCollapsed?: boolean;
+  kanbanSummaryCollapsed?: boolean;
 }
 
 // 프로젝트 멤버 타입
