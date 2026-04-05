@@ -1204,18 +1204,16 @@ export default function WBS() {
         if (!taskEditable && !permissions.canCreateTask) return null;
         const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : task.level === 3 ? 'Todo' : null;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-center gap-0.5">
             {permissions.canCreateTask && childLabel && (
               <button
                 onClick={() => handleAddTask(task.id, task.level + 1)}
-                className="flex h-7 items-center gap-0.5 whitespace-nowrap rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
                 title={t('wbs.addChild', { label: childLabel })}
               >
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                {childLabel}
+                <Plus className="w-4 h-4" />
               </button>
             )}
-            <span className="mx-0.5 h-4 w-px bg-[var(--border-color)]" />
             <button
               onClick={() => setCommentTaskId(task.id)}
               className="relative flex h-7 w-7 items-center justify-center rounded-full text-[color:var(--text-muted)] transition-colors hover:bg-[rgba(15,118,110,0.08)] hover:text-[color:var(--accent-primary)]"
@@ -1338,9 +1336,8 @@ export default function WBS() {
       {
         key: 'actions',
         label: t('wbs.colActions'),
-        width: getResponsiveWidth(workspaceWidth * 0.12, 160, fullscreen ? 220 : 190),
+        width: getResponsiveWidth(workspaceWidth * 0.09, 120, fullscreen ? 160 : 140),
         className: 'text-center',
-        stickyRight: true,
       },
     ];
 
@@ -1364,16 +1361,11 @@ export default function WBS() {
           {layout.columns.map((column, index) => (
             <th
               key={column.key}
-              className={cn(
-                column.className,
-                column.sticky && `sticky-col sticky-col-${index}`,
-                column.stickyRight && 'sticky-col-right',
-              )}
+              className={cn(column.className, column.sticky && `sticky-col sticky-col-${index}`)}
               style={{
                 width: column.width,
                 minWidth: column.width,
                 ...(column.sticky ? { left: layout.stickyLefts[index] } : {}),
-                ...(column.stickyRight ? { position: 'sticky' as const, right: 0, zIndex: 12 } : {}),
               }}
             >
               {column.label}
@@ -1451,17 +1443,7 @@ export default function WBS() {
                   }
 
                   return (
-                    <td
-                      key={column.key}
-                      className={cn(
-                        cellClassName,
-                        column.stickyRight && 'sticky-col-right',
-                      )}
-                      style={{
-                        ...stickyStyle,
-                        ...(column.stickyRight ? { position: 'sticky' as const, right: 0, zIndex: 2 } : {}),
-                      }}
-                    >
+                    <td key={column.key} className={cellClassName} style={stickyStyle}>
                       {renderCell(task, column.key)}
                     </td>
                   );
