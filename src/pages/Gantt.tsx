@@ -78,9 +78,9 @@ export default function Gantt() {
   );
   const [showCriticalPath, setShowCriticalPath] = useState(false);
   const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
-  const [summaryCollapsed, setSummaryCollapsed] = useState(() => {
-    try { return localStorage.getItem('gantt_summary_collapsed') === 'true'; } catch { return false; }
-  });
+  const [summaryCollapsed, setSummaryCollapsed] = useState(
+    () => currentProject?.settings?.ganttSummaryCollapsed ?? false
+  );
   const isInPopup = window.location.pathname.startsWith('/popup/');
   const loadGanttComments = useCommentStore((s) => s.loadComments);
   const ganttComments = useCommentStore((s) => s.comments);
@@ -100,10 +100,18 @@ export default function Gantt() {
   const toggleSummary = useCallback(() => {
     setSummaryCollapsed(prev => {
       const next = !prev;
-      try { localStorage.setItem('gantt_summary_collapsed', String(next)); } catch {}
+      if (currentProject) {
+        const newSettings = { ...currentProject.settings, ganttSummaryCollapsed: next };
+        updateProject(currentProject.id, { settings: newSettings });
+      }
       return next;
     });
-  }, []);
+  }, [currentProject, updateProject]);
+
+  // 프로젝트 전환 시 설정 동기화
+  useEffect(() => {
+    setSummaryCollapsed(currentProject?.settings?.ganttSummaryCollapsed ?? false);
+  }, [currentProject?.id]);
 
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();

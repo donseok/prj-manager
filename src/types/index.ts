@@ -51,6 +51,7 @@ export interface ProjectSettings {
   defaultView?: 'week' | 'month';
   statusMode?: 'auto' | 'manual';
   manualStatus?: ProjectStatus;
+  ganttSummaryCollapsed?: boolean;
 }
 
 // 프로젝트 멤버 타입
