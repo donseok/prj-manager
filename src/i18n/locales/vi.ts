@@ -1111,6 +1111,8 @@ const vi = {
       noTasksToShow: 'Không có công việc để hiển thị',
       adjustFilterHint: 'Điều chỉnh bộ lọc hoặc thêm công việc trong WBS',
       openInNewWindow: 'Mở trong cửa sổ mới',
+      collapseSummary: 'Thu gọn',
+      expandSummary: 'Mở rộng',
     },
 
     // ─── Manual ─────────────────────────────────────────

@@ -1112,6 +1112,8 @@ const en = {
       noTasksToShow: 'No tasks to display',
       adjustFilterHint: 'Adjust filters or add tasks in WBS',
       openInNewWindow: 'Open in new window',
+      collapseSummary: 'Collapse',
+      expandSummary: 'Expand',
     },
 
     // ─── Manual ─────────────────────────────────────────

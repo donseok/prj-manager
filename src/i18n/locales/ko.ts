@@ -1124,6 +1124,8 @@ const ko = {
       noTasksToShow: '표시할 작업이 없습니다',
       adjustFilterHint: '필터 조건을 조정하거나 WBS에서 작업을 추가하세요',
       openInNewWindow: '새 창에서 열기',
+      collapseSummary: '요약 접기',
+      expandSummary: '요약 펼치기',
     },
     // ─── Manual (UserManual.tsx) ────────────────────────
     manual: {
