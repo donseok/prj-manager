@@ -54,7 +54,6 @@ function calculateAggregateProgress(tasks: Task[], field: 'planProgress' | 'actu
  * planned_progress = clamp(0, 100, (today - planStart) / (planEnd - planStart) * 100)
  */
 function calculateLeafPlanProgress(task: Task, today: Date): number {
-  if (task.status === 'completed') return 100;
   const start = parseDate(task.planStart);
   const end = parseDate(task.planEnd);
   if (!start || !end) return 0;
@@ -99,6 +98,9 @@ function applyParentAggregation(task: InternalTask, children: InternalTask[]) {
   task.planStart = getEarliestDate(children.map((child) => child.planStart)) ?? task.planStart ?? null;
   task.planEnd = getLatestDate(children.map((child) => child.planEnd)) ?? task.planEnd ?? null;
   task.actualStart = getEarliestDate(children.map((child) => child.actualStart)) ?? task.actualStart ?? null;
+  // 자식이 모두 완료되지 않으면 부모의 actualEnd를 null로 되돌린다.
+  // 자식이 in_progress로 되돌아가면 부모도 미완료 상태여야 하므로 이는 의도된 동작이다.
+  // 이전 actualEnd 값은 별도 보존하지 않는다 — 자식이 다시 모두 완료되면 재계산된다.
   task.actualEnd = allChildrenCompleted
     ? getLatestDate(children.map((child) => child.actualEnd)) ?? task.actualEnd ?? null
     : null;
@@ -121,6 +123,9 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
   });
 
   taskMap.forEach((task) => {
+    if (task.parentId && !taskMap.has(task.parentId)) {
+      console.warn('[normalizeTaskHierarchy] Task orphaned (parent not found):', task.id, 'parentId:', task.parentId);
+    }
     const parentId = task.parentId && taskMap.has(task.parentId) ? task.parentId : null;
     task.parentId = parentId;
     const siblings = childrenByParent.get(parentId) ?? [];

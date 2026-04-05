@@ -400,6 +400,7 @@ export default function WBS() {
         e.preventDefault();
         handleCellCommit();
         const colIdx = navigableColumns.indexOf(editingCell.columnId);
+        if (colIdx === -1) return;
         const taskIdx = flatTasks.findIndex((t) => t.id === editingCell.taskId);
         if (e.shiftKey) {
           // Shift+Tab: previous column or previous row last column

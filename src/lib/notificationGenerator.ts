@@ -1,5 +1,6 @@
 import type { Task } from '../types';
 import { useNotificationStore, type NotificationType } from '../store/notificationStore';
+import { parseDate } from './utils';
 
 /**
  * 중복 알림 방지: 같은 taskId + type 조합으로 24시간 내 중복 생성 방지
@@ -41,12 +42,12 @@ export function checkAndGenerateNotifications(
     const prev = prevMap.get(task.id);
 
     // 지연 작업 감지: planEnd < today && status !== 'completed'
+    const pe = parseDate(task.planEnd);
     if (
-      task.planEnd &&
+      pe &&
       task.status !== 'completed' &&
-      (() => { const [y,m,d] = task.planEnd!.split('-').map(Number); return new Date(y,m-1,d); })() < today
+      pe < today
     ) {
-      const pe = (() => { const [y,m,d] = task.planEnd!.split('-').map(Number); return new Date(y,m-1,d); })();
       const delayDays = Math.floor(
         (today.getTime() - pe.getTime()) / (1000 * 60 * 60 * 24)
       );

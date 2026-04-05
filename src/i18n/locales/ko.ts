@@ -41,6 +41,8 @@ const ko = {
       aiKeyRequired: 'Settings에서 AI API Key를 먼저 설정하세요',
       currentMode: '현재 모드',
       logout: '로그아웃',
+      roleAdmin: '관리자',
+      roleOperator: '운영자',
       userMenu: {
         loginAccount: '로그인 계정',
         userManagement: '사용자 관리',

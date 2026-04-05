@@ -54,7 +54,12 @@ export function useAutoSave<T>(
     }
   }, []);
 
-  const runSave = useCallback(async (payload: T) => {
+  const runSave = useCallback(async (payload: T, boundProjectId?: string | null) => {
+    // 프로젝트 전환 시 레이스 컨디션 방지: 예약 시점의 projectId와 현재 projectId가 다르면 무시
+    if (boundProjectId !== undefined && boundProjectId !== currentProjectIdRef.current) {
+      return;
+    }
+
     // 이미 저장 중이면 완료 후 재시도 예약
     if (isSavingRef.current) {
       pendingAfterSaveRef.current = true;
@@ -78,7 +83,7 @@ export function useAutoSave<T>(
       // 저장 중 새 변경이 있었으면 최신 데이터로 즉시 재저장
       if (pendingAfterSaveRef.current) {
         pendingAfterSaveRef.current = false;
-        void runSave(latestDataRef.current);
+        void runSave(latestDataRef.current, currentProjectIdRef.current);
       }
     }
   }, [clearPendingSave, clearMaxTimeout]);
@@ -88,8 +93,20 @@ export function useAutoSave<T>(
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasPendingSave.current) {
+      if (hasPendingSave.current || isSavingRef.current) {
+        // 미저장 데이터가 있으면 사용자에게 경고
         e.preventDefault();
+
+        // 페이지 이탈 전 동기적 플러시 시도
+        if (hasPendingSave.current && currentProjectIdRef.current && !isSavingRef.current) {
+          hasPendingSave.current = false;
+          try {
+            // saveFn이 동기일 수 있으므로 직접 호출 (비동기면 브라우저가 허용하는 범위까지 실행)
+            saveFnRef.current(latestDataRef.current);
+          } catch {
+            // beforeunload 시 에러 무시
+          }
+        }
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -132,10 +149,12 @@ export function useAutoSave<T>(
     });
 
     // 디바운스 타이머: 매 변경마다 리셋
+    // projectId를 클로저에 캡처하여 프로젝트 전환 시 레이스 컨디션 방지
+    const capturedProjectId = projectId;
     clearPendingSave();
     timeoutRef.current = setTimeout(() => {
       hasPendingSave.current = false;
-      void runSave(latestDataRef.current);
+      void runSave(latestDataRef.current, capturedProjectId);
     }, delay);
 
     // 최대 지연 타이머: 첫 변경 이후 maxDelay 내 반드시 저장 (이미 돌고 있으면 유지)
@@ -144,7 +163,7 @@ export function useAutoSave<T>(
         maxTimeoutRef.current = null;
         clearPendingSave();
         hasPendingSave.current = false;
-        void runSave(latestDataRef.current);
+        void runSave(latestDataRef.current, capturedProjectId);
       }, maxDelay);
     }
 
@@ -157,16 +176,21 @@ export function useAutoSave<T>(
   // 컴포넌트 언마운트 시 (세션 만료 등) 보류 중인 변경사항 즉시 저장
   useEffect(() => {
     return () => {
+      clearPendingSave();
+      clearMaxTimeout();
       if (hasPendingSave.current && currentProjectIdRef.current && !isSavingRef.current) {
         hasPendingSave.current = false;
         try {
+          // 언마운트 시 동기적으로 저장 시도. 비동기 saveFn의 경우 브라우저가
+          // 마이크로태스크까지는 처리하므로 localStorage 저장은 완료됨.
+          // Supabase 등 네트워크 저장은 beforeunload 핸들러에서 추가로 보호.
           saveFnRef.current(latestDataRef.current);
         } catch {
           // 언마운트 시 에러 무시
         }
       }
     };
-  }, []);
+  }, [clearPendingSave, clearMaxTimeout]);
 
   return {
     saveStatus,

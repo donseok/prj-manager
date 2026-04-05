@@ -47,8 +47,15 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// NOTE: AdminRoute performs client-side only authorization.
+// The isAdmin flag is derived from localStorage/Zustand state and can be tampered with.
+// For true security, all admin operations must be validated server-side (e.g., Supabase RLS policies).
 export function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, user, isAuthenticated } = useAuthStore();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -168,7 +175,7 @@ function App() {
           />
           <Route path="*" element={<NotFound />} />
         </Route>
-        <Route path="popup/projects/:projectId" element={<PopupProjectWrapper />}>
+        <Route path="popup/projects/:projectId" element={<ProtectedRoute><PopupProjectWrapper /></ProtectedRoute>}>
           <Route path="wbs" element={<WBS />} />
           <Route path="gantt" element={<Gantt />} />
           <Route path="kanban" element={<Kanban />} />

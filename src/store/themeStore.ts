@@ -59,7 +59,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 }));
 
 // 시스템 테마 변경 감지
-if (typeof window !== 'undefined') {
+let mediaListenerRegistered = false;
+if (typeof window !== 'undefined' && !mediaListenerRegistered) {
+  mediaListenerRegistered = true;
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   mediaQuery.addEventListener('change', () => {
     const { theme, setTheme } = useThemeStore.getState();

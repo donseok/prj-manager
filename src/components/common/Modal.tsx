@@ -57,11 +57,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       >
         <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.2),transparent_70%)] blur-3xl" />
 
-        {title && (
+        {(title || isFullscreen) && (
           <div className="relative flex items-center justify-between border-b border-[var(--border-color)] px-6 py-5">
             <div>
               <p className="page-kicker text-[0.62rem]">Workspace Dialog</p>
-              <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{title}</h2>
+              {title && <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{title}</h2>}
             </div>
             <button
               onClick={onClose}

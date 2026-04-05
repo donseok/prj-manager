@@ -212,10 +212,6 @@ function applySyncFromActualEnd(task: Task, actualEnd: string | null, updates: P
 // ── 계획시작/종료 → 계획공정율 ─────────────────────────────────
 
 function applySyncFromPlanDates(task: Task, updates: Partial<Task>) {
-  if (task.status === 'completed') {
-    updates.planProgress = 100;
-    return;
-  }
   const start = parseDate(task.planStart);
   const end = parseDate(task.planEnd);
   if (!start || !end) {

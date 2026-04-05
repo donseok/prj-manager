@@ -69,10 +69,10 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setCurrentProject: (project) => set({ currentProject: project }),
 
   setMembers: (members, projectId) =>
-    set((state) => ({
+    set({
       members,
-      membersLoadedProjectId: projectId ?? state.membersLoadedProjectId,
-    })),
+      membersLoadedProjectId: projectId ?? null,
+    }),
 
   addMember: (member) =>
     set((state) => ({

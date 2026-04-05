@@ -157,7 +157,7 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
       const task = taskMap.get(c.id);
       if (!task) return;
       if (i === children.length - 1) {
-        task.weight = remaining;
+        task.weight = Math.max(0, remaining);
       } else if (allHaveDuration) {
         const durations = children.map((ch) => taskMap.get(ch.id)?.durationDays || 1);
         const total = durations.reduce((s, d) => s + d, 0);

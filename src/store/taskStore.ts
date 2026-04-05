@@ -296,6 +296,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 onTasksUpdated((projectId, tasks) => {
   const { loadedProjectId } = useTaskStore.getState();
   if (loadedProjectId === projectId) {
-    useTaskStore.getState().setTasks(tasks, projectId, { _fromRemote: true, resetHistory: true });
+    useTaskStore.getState().setTasks(tasks, projectId, { _fromRemote: true, resetHistory: false });
   }
 });

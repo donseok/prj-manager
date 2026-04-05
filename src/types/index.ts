@@ -228,7 +228,7 @@ export const DEFAULT_WBS_COLUMNS: WBSColumn[] = [
   { id: 'weight', header: '가중치', width: 80, accessor: 'weight', type: 'number', editable: true },
   { id: 'planStart', header: '계획시작', width: 150, accessor: 'planStart', type: 'date', editable: true },
   { id: 'planEnd', header: '계획종료', width: 150, accessor: 'planEnd', type: 'date', editable: true },
-  { id: 'planProgress', header: '계획공정율', width: 90, accessor: 'planProgress', type: 'progress', editable: true },
+  { id: 'planProgress', header: '계획공정율', width: 90, accessor: 'planProgress', type: 'progress', editable: false },
   { id: 'actualStart', header: '실적시작', width: 150, accessor: 'actualStart', type: 'date', editable: true },
   { id: 'actualEnd', header: '실적종료', width: 150, accessor: 'actualEnd', type: 'date', editable: true },
   { id: 'actualProgress', header: '실적공정율', width: 90, accessor: 'actualProgress', type: 'progress', editable: true },

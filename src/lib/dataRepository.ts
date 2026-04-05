@@ -396,27 +396,29 @@ function toProjectMemberRow(member: ProjectMember): ProjectMemberRow {
   };
 }
 
+const safeNum = (v: unknown, def: number): number => { const n = Number(v); return Number.isNaN(n) ? def : n; };
+
 function mapTaskRow(row: TaskRow): Task {
   return {
     id: row.id,
     projectId: row.project_id,
     parentId: row.parent_id,
-    level: Number(row.level),
-    orderIndex: Number(row.order_index),
+    level: safeNum(row.level, 1),
+    orderIndex: safeNum(row.order_index, 0),
     name: row.name,
     description: row.description || undefined,
     output: row.output || undefined,
     assigneeId: row.assignee_id,
-    weight: Number(row.weight),
+    weight: safeNum(row.weight, 0),
     durationDays: row.duration_days ?? undefined,
     predecessorIds: row.predecessor_ids ?? undefined,
     taskSource: row.task_source ?? undefined,
     planStart: row.plan_start,
     planEnd: row.plan_end,
-    planProgress: Number(row.plan_progress),
+    planProgress: safeNum(row.plan_progress, 0),
     actualStart: row.actual_start,
     actualEnd: row.actual_end,
-    actualProgress: Number(row.actual_progress),
+    actualProgress: safeNum(row.actual_progress, 0),
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

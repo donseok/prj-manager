@@ -41,6 +41,8 @@ const en = {
       aiKeyRequired: 'Please set AI API Key in Settings first',
       currentMode: 'Current mode',
       logout: 'Logout',
+      roleAdmin: 'Admin',
+      roleOperator: 'Operator',
       userMenu: {
         loginAccount: 'Logged in as',
         userManagement: 'User Management',

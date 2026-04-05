@@ -186,7 +186,7 @@ export default function Header() {
               </div>
               <div className="hidden sm:block">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
-                  {isAdmin ? 'Admin' : 'Operator'}
+                  {isAdmin ? t('header.roleAdmin', '관리자') : t('header.roleOperator', '운영자')}
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">
                   {user?.name || t('header.userMenu.defaultUser')}

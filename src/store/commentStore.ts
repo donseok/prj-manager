@@ -29,27 +29,37 @@ export const useCommentStore = create<CommentState>((set, get) => ({
   },
 
   addComment: (comment) => {
+    const { loadedProjectId } = get();
+    if (!loadedProjectId || comment.projectId !== loadedProjectId) return;
     set((state) => {
       const updated = [comment, ...state.comments];
-      if (state.loadedProjectId) persist(state.loadedProjectId, updated);
+      persist(loadedProjectId, updated);
       return { comments: updated };
     });
   },
 
   updateComment: (id, content) => {
+    const { loadedProjectId } = get();
+    if (!loadedProjectId) return;
     set((state) => {
+      const target = state.comments.find((c) => c.id === id);
+      if (target && target.projectId !== loadedProjectId) return state;
       const updated = state.comments.map((c) =>
         c.id === id ? { ...c, content, updatedAt: new Date().toISOString() } : c
       );
-      if (state.loadedProjectId) persist(state.loadedProjectId, updated);
+      persist(loadedProjectId, updated);
       return { comments: updated };
     });
   },
 
   deleteComment: (id) => {
+    const { loadedProjectId } = get();
+    if (!loadedProjectId) return;
     set((state) => {
+      const target = state.comments.find((c) => c.id === id);
+      if (target && target.projectId !== loadedProjectId) return state;
       const updated = state.comments.filter((c) => c.id !== id);
-      if (state.loadedProjectId) persist(state.loadedProjectId, updated);
+      persist(loadedProjectId, updated);
       return { comments: updated };
     });
   },

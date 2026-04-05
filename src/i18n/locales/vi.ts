@@ -41,6 +41,8 @@ const vi = {
       aiKeyRequired: 'Vui lòng cài đặt AI API Key trong Cài đặt trước',
       currentMode: 'Chế độ hiện tại',
       logout: 'Đăng xuất',
+      roleAdmin: 'Quản trị viên',
+      roleOperator: 'Vận hành viên',
       userMenu: {
         loginAccount: 'Tài khoản đăng nhập',
         userManagement: 'Quản lý người dùng',

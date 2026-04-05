@@ -252,6 +252,8 @@ function writeHeaderRow(ws: ExcelJS.Worksheet, headers: string[]) {
 // ══════════════════════════════════════════════════════════════
 
 export async function exportWbsWorkbook({ projectName, tasks, members = [] }: ExportBaseOptions) {
+  // NOTE: tasks are assumed to be already normalized (parent dates/progress/status
+  // derived from children) by the caller via normalizeTaskHierarchy() before export.
   const displayName = projectName?.trim() || '프로젝트';
   const safeName = getSafeProjectName(projectName);
   const orderedRows = getOrderedTaskRows(tasks);
