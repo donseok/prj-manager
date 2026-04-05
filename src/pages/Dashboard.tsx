@@ -134,7 +134,10 @@ export default function Dashboard() {
     if (total === 0) return null;
     const delayed = leafTasks.filter((t) => {
       if (!t.planEnd || t.status === 'completed') return false;
-      return new Date() > new Date(t.planEnd);
+      const [y, m, d] = t.planEnd.split('-').map(Number);
+      const pe = new Date(y, m - 1, d);
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate()) > pe;
     }).length;
     const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
     const noPlan = leafTasks.filter((t) => !t.planStart || !t.planEnd).length;

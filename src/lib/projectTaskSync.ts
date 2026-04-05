@@ -13,7 +13,10 @@ function compareDateAsc(a: string | null | undefined, b: string | null | undefin
   if (!a && !b) return 0;
   if (!a) return 1;
   if (!b) return -1;
-  return parseDate(a)!.getTime() - parseDate(b)!.getTime();
+  const da = parseDate(a);
+  const db = parseDate(b);
+  if (!da || !db) return 0;
+  return da.getTime() - db.getTime();
 }
 
 function compareDateDesc(a: string | null | undefined, b: string | null | undefined) {
@@ -148,7 +151,10 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
     }
   });
 
+  const visited = new Set<string>();
   const buildBranch = (parentId: string | null, level: number): InternalTask[] => {
+    if (parentId && visited.has(parentId)) return [];
+    if (parentId) visited.add(parentId);
     const siblings = childrenByParent.get(parentId) ?? [];
     return siblings.map((task, index) => {
       task.level = level;

@@ -35,7 +35,11 @@ const STATUS_BAR_COLORS: Record<TaskStatus, string> = {
 
 function isOverdue(task: Task): boolean {
   if (task.status === 'completed' || !task.planEnd) return false;
-  return new Date(task.planEnd) < new Date();
+  const [y, m, d] = task.planEnd.split('-').map(Number);
+  const planEnd = new Date(y, m - 1, d);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return planEnd < today;
 }
 
 function getProgressColor(task: Task): string {

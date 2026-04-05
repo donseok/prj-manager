@@ -147,6 +147,7 @@ export function isWorkday(date: Date): boolean {
  * 특정 날짜 문자열('yyyy-MM-dd')이 근무일인지 확인합니다.
  */
 export function isWorkdayStr(dateStr: string): boolean {
-  const date = new Date(dateStr + 'T00:00:00');
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
   return isWorkday(date);
 }

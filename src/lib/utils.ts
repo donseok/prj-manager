@@ -208,15 +208,20 @@ export const storage = {
     try {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
-    } catch {
+    } catch (e) {
+      console.warn('[Storage] localStorage 파싱 실패, 기본값 사용:', key, e);
       return defaultValue;
     }
   },
   set<T>(key: string, value: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      console.error('Failed to save to localStorage');
+    } catch (e) {
+      if (e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError')) {
+        console.warn('[Storage] localStorage 용량 초과:', key);
+      } else {
+        console.error('[Storage] localStorage 저장 실패:', key, e);
+      }
     }
   },
   remove(key: string): void {

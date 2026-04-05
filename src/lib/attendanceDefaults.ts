@@ -36,8 +36,10 @@ export function generateDefaultAttendance(
   }
 
   const defaults: Attendance[] = [];
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd);
+  const [ey, em, ed] = endDate.split('-').map(Number);
+  const end = new Date(ey, em - 1, ed);
   const now = new Date().toISOString();
 
   let current = start;

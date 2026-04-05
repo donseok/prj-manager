@@ -509,7 +509,7 @@ export async function loadAttendances(projectId: string): Promise<Attendance[]> 
 
 export async function upsertAttendance(attendance: Attendance): Promise<Attendance> {
   const row = toAttendanceRow(attendance);
-  console.log('[attendance] upsert 요청:', row);
+  if (import.meta.env.DEV) console.log('[attendance] upsert 요청:', row);
 
   const { data, error } = await supabase
     .from('attendance')
@@ -522,7 +522,7 @@ export async function upsertAttendance(attendance: Attendance): Promise<Attendan
     throw new Error(`근태 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
   }
 
-  console.log('[attendance] upsert 성공:', data);
+  if (import.meta.env.DEV) console.log('[attendance] upsert 성공:', data);
   return mapAttendanceRow(data as AttendanceRow);
 }
 

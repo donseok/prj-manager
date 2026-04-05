@@ -30,7 +30,8 @@ function buildTree(tasks: Task[]): TreeNode[] {
   for (const task of tasks) {
     const node = taskMap.get(task.id)!;
     if (task.parentId && taskMap.has(task.parentId)) {
-      taskMap.get(task.parentId)!.children.push(node);
+      const parent = taskMap.get(task.parentId)!;
+      taskMap.set(task.parentId, { ...parent, children: [...parent.children, node] });
     } else {
       roots.push(node);
     }

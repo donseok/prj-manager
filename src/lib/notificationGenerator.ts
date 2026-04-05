@@ -44,10 +44,11 @@ export function checkAndGenerateNotifications(
     if (
       task.planEnd &&
       task.status !== 'completed' &&
-      new Date(task.planEnd) < today
+      (() => { const [y,m,d] = task.planEnd!.split('-').map(Number); return new Date(y,m-1,d); })() < today
     ) {
+      const pe = (() => { const [y,m,d] = task.planEnd!.split('-').map(Number); return new Date(y,m-1,d); })();
       const delayDays = Math.floor(
-        (today.getTime() - new Date(task.planEnd).getTime()) / (1000 * 60 * 60 * 24)
+        (today.getTime() - pe.getTime()) / (1000 * 60 * 60 * 24)
       );
       if (delayDays > 0) {
         addNotification(

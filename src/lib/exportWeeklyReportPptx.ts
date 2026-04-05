@@ -367,7 +367,8 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData): 
 
   // 주 시작일로부터 요일별 날짜 계산
   const getDayHeaders = (weekStartStr: string): string[] => {
-    const ws = new Date(weekStartStr + 'T00:00:00');
+    const [wy, wm, wd] = weekStartStr.split('-').map(Number);
+    const ws = new Date(wy, wm - 1, wd);
     const dayNames = ['월', '화', '수', '목', '금'];
     return dayNames.map((name, i) => {
       const d = new Date(ws);
@@ -377,7 +378,8 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData): 
   };
 
   const thisWeekDays = getDayHeaders(report.weekStart);
-  const nws = new Date(report.weekStart + 'T00:00:00');
+  const [ny, nm, nd] = report.weekStart.split('-').map(Number);
+  const nws = new Date(ny, nm - 1, nd);
   nws.setDate(nws.getDate() + 7);
   const nextWeekStartStr = `${nws.getFullYear()}-${String(nws.getMonth() + 1).padStart(2, '0')}-${String(nws.getDate()).padStart(2, '0')}`;
   const nextWeekDays = getDayHeaders(nextWeekStartStr);

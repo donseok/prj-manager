@@ -152,16 +152,22 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
 
     const allHaveDuration = children.every((c) => taskMap.get(c.id)?.durationDays != null);
 
+    let remaining = 100;
     children.forEach((c, i) => {
-      const task = taskMap.get(c.id)!;
-      if (allHaveDuration) {
-        const durations = children.map((ch) => taskMap.get(ch.id)!.durationDays || 1);
+      const task = taskMap.get(c.id);
+      if (!task) return;
+      if (i === children.length - 1) {
+        task.weight = remaining;
+      } else if (allHaveDuration) {
+        const durations = children.map((ch) => taskMap.get(ch.id)?.durationDays || 1);
         const total = durations.reduce((s, d) => s + d, 0);
         task.weight = total > 0
           ? Math.round((durations[i] / total) * 100)
           : Math.round(100 / children.length);
+        remaining -= task.weight;
       } else {
         task.weight = Math.round(100 / children.length);
+        remaining -= task.weight;
       }
       task.updatedAt = new Date().toISOString();
       calculateWeights(c.id);

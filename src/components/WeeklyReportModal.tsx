@@ -531,7 +531,8 @@ function OverviewTab({
               <tbody>
                 {attendanceSummary.map((s) => {
                   const dayMap = new Map(s.records.map((r) => {
-                    const dayOfWeek = new Date(r.date).getDay(); // 1=월 ~ 5=금
+                    const [y, m, d] = r.date.split('-').map(Number);
+                    const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0=일 1=월 2=화 3=수 4=목 5=금 6=토
                     return [dayOfWeek, r];
                   }));
                   return (

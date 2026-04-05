@@ -143,7 +143,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       tasks.filter((t) => t.parentId === parentId).forEach((t) => findChildren(t.id));
     };
     findChildren(id);
-    const newTasks = tasks.filter((t) => !idsToDelete.has(t.id));
+    const newTasks = tasks
+      .filter((t) => !idsToDelete.has(t.id))
+      .map((t) => ({
+        ...t,
+        predecessorIds: (t.predecessorIds || []).filter((pid) => !idsToDelete.has(pid)),
+      }));
     get().setTasks(autoCalculateWeights(newTasks), undefined, { recordHistory: true });
   },
 

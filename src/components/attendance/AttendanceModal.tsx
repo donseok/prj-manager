@@ -69,7 +69,8 @@ export default function AttendanceModal({
   // 공휴일 경고
   const holidayWarning = useMemo(() => {
     if (!date) return null;
-    const d = new Date(date + 'T00:00:00');
+    const [y, m, dd] = date.split('-').map(Number);
+    const d = new Date(y, m - 1, dd);
     const dayOfWeek = d.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) return '주말입니다.';
     if (isKoreanHoliday(d)) {
