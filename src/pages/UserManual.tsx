@@ -358,6 +358,14 @@ export default function UserManual() {
             <div><Tip>{t(`${s}.wbs.snapshotTip`)}</Tip></div>
           </SectionCard>
           <Tip>{t(`${s}.wbs.autoSaveTip`)}</Tip>
+          <SectionCard title={t(`${s}.wbs.planProgressAutoCalc`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.wbs.planProgressAutoCalcDesc`)}</p>
+            <InfoTable
+              headers={t(`${s}.wbs.planProgressAutoCalcHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.wbs.planProgressAutoCalcRows`, { returnObjects: true }) as string[][]}
+            />
+            <div className="mt-4"><Tip>{t(`${s}.wbs.planProgressAutoCalcTip`)}</Tip></div>
+          </SectionCard>
         </div>
       ),
     },
@@ -372,14 +380,6 @@ export default function UserManual() {
               headers={t(`${s}.gantt.screenLayoutHeaders`, { returnObjects: true }) as string[]}
               rows={t(`${s}.gantt.screenLayoutRows`, { returnObjects: true }) as string[][]}
             />
-          </SectionCard>
-          <SectionCard title={t(`${s}.gantt.focusCard`)}>
-            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.gantt.focusCardDesc`)}</p>
-            <InfoTable
-              headers={t(`${s}.gantt.focusCardHeaders`, { returnObjects: true }) as string[]}
-              rows={t(`${s}.gantt.focusCardRows`, { returnObjects: true }) as string[][]}
-            />
-            <div className="mt-4"><Tip>{t(`${s}.gantt.focusCardTip`)}</Tip></div>
           </SectionCard>
           <SectionCard title={t(`${s}.gantt.searchAndFilter`)}>
             <InfoTable
