@@ -49,7 +49,7 @@ import { autoScheduleTasks, buildSequentialDependencies } from '../lib/taskSched
 import { generateTasksFromPrompt } from '../lib/taskDraft';
 import { generateTasksFromTemplate, getTaskTemplate, listTaskTemplates } from '../lib/taskTemplates';
 import { syncTaskField, isSyncableField } from '../lib/taskFieldSync';
-import { autoFillTasks } from '../lib/taskAutoFill';
+import { autoFillTasks, autoCalculateWeights } from '../lib/taskAutoFill';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission, useCurrentMemberId } from '../hooks/useProjectPermission';
@@ -483,6 +483,8 @@ export default function WBS() {
   };
 
   const handleAddTaskAbove = (task: Task) => {
+    const parent = task.parentId ? tasks.find((t) => t.id === task.parentId) : null;
+    const inheritedProgress = parent ? (parent.actualProgress || 0) : 0;
     const newTask: Task = {
       id: generateId(),
       projectId: projectId!,
@@ -492,7 +494,7 @@ export default function WBS() {
       name: '',
       weight: 0,
       planProgress: 0,
-      actualProgress: 0,
+      actualProgress: inheritedProgress,
       status: 'pending',
       taskSource: 'manual',
       createdAt: new Date().toISOString(),
@@ -505,11 +507,13 @@ export default function WBS() {
         ? { ...t, orderIndex: t.orderIndex + 1 }
         : t
     );
-    setTasks([...updated, newTask], undefined, { recordHistory: true });
+    setTasks(autoCalculateWeights([...updated, newTask]), undefined, { recordHistory: true });
     setEditingCell({ taskId: newTask.id, columnId: 'name' });
   };
 
   const handleAddTaskBelow = (task: Task) => {
+    const parent = task.parentId ? tasks.find((t) => t.id === task.parentId) : null;
+    const inheritedProgress = parent ? (parent.actualProgress || 0) : 0;
     const newTask: Task = {
       id: generateId(),
       projectId: projectId!,
@@ -519,7 +523,7 @@ export default function WBS() {
       name: '',
       weight: 0,
       planProgress: 0,
-      actualProgress: 0,
+      actualProgress: inheritedProgress,
       status: 'pending',
       taskSource: 'manual',
       createdAt: new Date().toISOString(),
@@ -531,7 +535,7 @@ export default function WBS() {
         ? { ...t, orderIndex: t.orderIndex + 1 }
         : t
     );
-    setTasks([...updated, newTask], undefined, { recordHistory: true });
+    setTasks(autoCalculateWeights([...updated, newTask]), undefined, { recordHistory: true });
     setEditingCell({ taskId: newTask.id, columnId: 'name' });
   };
 
@@ -556,7 +560,7 @@ export default function WBS() {
         ? { ...t, orderIndex: t.orderIndex + 1 }
         : t
     );
-    setTasks([...updated, newTask], undefined, { recordHistory: true });
+    setTasks(autoCalculateWeights([...updated, newTask]), undefined, { recordHistory: true });
   };
 
   const handleMoveUp = (task: Task) => {
