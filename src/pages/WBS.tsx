@@ -1209,10 +1209,10 @@ export default function WBS() {
             {permissions.canCreateTask && childLabel && (
               <button
                 onClick={() => handleAddTask(task.id, task.level + 1)}
-                className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
+                className="flex h-7 items-center gap-0.5 whitespace-nowrap rounded-full px-2 text-xs text-[color:var(--accent-primary)] transition-colors hover:bg-[rgba(15,118,110,0.08)]"
                 title={t('wbs.addChild', { label: childLabel })}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 {childLabel}
               </button>
             )}
@@ -1348,7 +1348,7 @@ export default function WBS() {
       {
         key: 'actions',
         label: t('wbs.colActions'),
-        width: getResponsiveWidth(workspaceWidth * 0.09, 120, fullscreen ? 180 : 152),
+        width: getResponsiveWidth(workspaceWidth * 0.12, 160, fullscreen ? 220 : 190),
         className: 'text-center',
       },
     ];

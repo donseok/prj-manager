@@ -143,28 +143,26 @@ export function autoCalculateWeights(tasks: Task[]): Task[] {
     childrenMap.set(parentId, list);
   });
 
-  // 서브트리의 유효 기간 합산 (leaf의 durationDays 총합)
-  const getEffectiveDuration = (taskId: string): number => {
-    const children = childrenMap.get(taskId);
-    if (!children || children.length === 0) {
-      return taskMap.get(taskId)?.durationDays || 1;
-    }
-    return children.reduce((sum, c) => sum + getEffectiveDuration(c.id), 0);
-  };
-
-  // 같은 레벨 형제들의 유효 기간 비례로 가중치 배분
+  // 같은 레벨 형제들의 가중치 배분
+  // - 모든 형제가 명시적 durationDays를 가지면 기간 비례
+  // - 하나라도 durationDays가 없으면 균등 배분
   const calculateWeights = (parentId: string | null) => {
     const children = childrenMap.get(parentId);
     if (!children || children.length === 0) return;
 
-    const durations = children.map((c) => getEffectiveDuration(c.id));
-    const totalDuration = durations.reduce((s, d) => s + d, 0);
+    const allHaveDuration = children.every((c) => taskMap.get(c.id)?.durationDays != null);
 
     children.forEach((c, i) => {
       const task = taskMap.get(c.id)!;
-      task.weight = totalDuration > 0
-        ? Math.round((durations[i] / totalDuration) * 100)
-        : Math.round(100 / children.length);
+      if (allHaveDuration) {
+        const durations = children.map((ch) => taskMap.get(ch.id)!.durationDays || 1);
+        const total = durations.reduce((s, d) => s + d, 0);
+        task.weight = total > 0
+          ? Math.round((durations[i] / total) * 100)
+          : Math.round(100 / children.length);
+      } else {
+        task.weight = Math.round(100 / children.length);
+      }
       task.updatedAt = new Date().toISOString();
       calculateWeights(c.id);
     });
