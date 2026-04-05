@@ -442,10 +442,10 @@ export default function WBS() {
     const maxOrder = siblings.length > 0 ? Math.max(...siblings.map((t) => t.orderIndex)) : -1;
     const output = suggestOutput(parentId, level);
 
-    // 부모가 leaf(자식 없음)였으면 부모의 실적을 상속
+    // 부모의 현재 실적을 상속 (leaf→parent 전환 + 형제 추가 시 모두 적용)
     const parent = parentId ? tasks.find((t) => t.id === parentId) : null;
+    const inheritedProgress = parent ? (parent.actualProgress || 0) : 0;
     const parentWasLeaf = parent && !tasks.some((t) => t.parentId === parentId);
-    const inheritedProgress = parentWasLeaf ? (parent.actualProgress || 0) : 0;
     const inheritedStatus = parentWasLeaf && parent.status !== 'pending' ? parent.status : 'pending';
     const inheritedActualStart = parentWasLeaf ? parent.actualStart : undefined;
     const inheritedActualEnd = parentWasLeaf ? parent.actualEnd : undefined;
