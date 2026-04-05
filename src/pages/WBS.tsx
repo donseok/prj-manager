@@ -1203,7 +1203,6 @@ export default function WBS() {
       case 'actions': {
         if (!taskEditable && !permissions.canCreateTask) return null;
         const childLabel = task.level === 1 ? 'Activity' : task.level === 2 ? 'Task' : task.level === 3 ? 'Todo' : null;
-        const siblingLabel = task.level === 2 ? 'Activity' : task.level === 3 ? 'Task' : task.level === 4 ? 'Todo' : null;
         return (
           <div className="flex items-center gap-1">
             {permissions.canCreateTask && childLabel && (
@@ -1214,15 +1213,6 @@ export default function WBS() {
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" />
                 {childLabel}
-              </button>
-            )}
-            {permissions.canCreateTask && siblingLabel && (
-              <button
-                onClick={() => handleAddTask(task.parentId || undefined, task.level)}
-                className="flex h-7 items-center gap-0.5 rounded-full px-2 text-xs text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--text-primary)]"
-                title={t('wbs.addSameLevel', { label: siblingLabel })}
-              >
-                <Plus className="w-3.5 h-3.5" />
               </button>
             )}
             <span className="mx-0.5 h-4 w-px bg-[var(--border-color)]" />

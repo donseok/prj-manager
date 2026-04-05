@@ -70,7 +70,8 @@ export default function QuickProgressModal({
   };
 
   const handleMarkComplete = (taskId: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const task = tasks.find((t) => t.id === taskId);
     onUpdateTask(taskId, {
       actualProgress: 100,
@@ -87,9 +88,6 @@ export default function QuickProgressModal({
     });
   };
 
-  const hasChanges = Object.keys(localChanges).some(
-    (id) => Object.keys(localChanges[id]).length > 0
-  );
 
   const isDelayed = (task: Task) => {
     if (!task.planEnd) return false;
@@ -236,7 +234,7 @@ export default function QuickProgressModal({
           <Button variant="ghost" onClick={onClose}>
             {t('wbsComponents.quickProgress.close')}
           </Button>
-          <Button onClick={handleApplyAll} disabled={!hasChanges}>
+          <Button onClick={handleApplyAll}>
             {t('wbsComponents.quickProgress.applyAll')}
           </Button>
         </div>
