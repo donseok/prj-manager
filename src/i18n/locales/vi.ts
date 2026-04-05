@@ -333,6 +333,12 @@ const vi = {
       countRegistered: '{{count}} đã đăng ký',
       noData: 'Không có dữ liệu',
       unknown: 'Không xác định',
+      projectHealth: 'Sức khỏe dự án',
+      healthScore: 'Điểm sức khỏe',
+      delayRate: 'Tỷ lệ trễ',
+      completionRate: 'Hoàn thành',
+      unassignedTasks: 'Chưa giao',
+      noScheduleTasks: 'Chưa lịch',
     },
 
     // ─── Members ────────────────────────────────────────

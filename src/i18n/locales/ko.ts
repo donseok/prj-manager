@@ -334,6 +334,12 @@ const ko = {
       countRegistered: '{{count}}건 등록',
       noData: '데이터 없음',
       unknown: '알 수 없음',
+      projectHealth: '프로젝트 건강 지표',
+      healthScore: '건강 점수',
+      delayRate: '지연율',
+      completionRate: '완료율',
+      unassignedTasks: '미배정',
+      noScheduleTasks: '일정 미설정',
     },
 
     // ─── Members ────────────────────────────────────────

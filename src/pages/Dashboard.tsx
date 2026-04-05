@@ -18,6 +18,9 @@ import {
   FileDown,
   Loader2,
   Columns3,
+  ShieldCheck,
+  UserX,
+  CalendarX,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -43,6 +46,7 @@ import {
   calculateWeightDistribution,
   calculateTimeline,
   getRecentlyCompleted,
+  getLeafTasks,
 } from '../lib/taskAnalytics';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAttendances } from '../lib/dataRepository';
@@ -123,6 +127,23 @@ export default function Dashboard() {
     if (!currentProject?.startDate || !currentProject?.endDate) return null;
     return calculateTimeline(currentProject.startDate, currentProject.endDate);
   }, [currentProject]);
+
+  const healthMetrics = useMemo(() => {
+    const leafTasks = getLeafTasks(tasks);
+    const total = leafTasks.length;
+    if (total === 0) return null;
+    const delayed = leafTasks.filter((t) => {
+      if (!t.planEnd || t.status === 'completed') return false;
+      return new Date() > new Date(t.planEnd);
+    }).length;
+    const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
+    const noPlan = leafTasks.filter((t) => !t.planStart || !t.planEnd).length;
+    const completed = leafTasks.filter((t) => t.status === 'completed').length;
+    const delayRate = Math.round((delayed / total) * 100);
+    const completionRate = Math.round((completed / total) * 100);
+    const healthScore = Math.max(0, 100 - delayRate * 2 - Math.round((unassigned / total) * 50) - Math.round((noPlan / total) * 30));
+    return { total, delayed, unassigned, noPlan, completed, delayRate, completionRate, healthScore };
+  }, [tasks]);
 
   const WEIGHT_COLORS = ['#2BAAA0', '#5B8DEF', '#F0A167', '#34C997', '#E87C8A', '#A78BFA'];
   const weightData = useMemo(() => calculateWeightDistribution(tasks), [tasks]);
@@ -841,6 +862,87 @@ export default function Dashboard() {
             </div>
           )}
         </QueueCard>
+
+        {/* Project Health */}
+        <div className="app-panel p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="page-kicker">Project Health</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                {t('dashboard.projectHealth')}
+              </h2>
+            </div>
+            <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#059669,#34d399)] text-white shadow-[0_20px_40px_-24px_rgba(5,150,105,0.72)]' : quietSectionIconClassName}>
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </div>
+
+          {healthMetrics ? (
+            <div className="mt-6 space-y-5">
+              {/* Health Score */}
+              <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[color:var(--text-secondary)]">{t('dashboard.healthScore')}</span>
+                  <span className={`text-2xl font-bold ${healthMetrics.healthScore >= 70 ? 'text-[color:var(--accent-success)]' : healthMetrics.healthScore >= 40 ? 'text-[#F0A167]' : 'text-[color:var(--accent-danger)]'}`}>
+                    {healthMetrics.healthScore}
+                  </span>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
+                  <div
+                    className={`h-full rounded-full ${healthMetrics.healthScore >= 70 ? 'bg-[#2BAAA0]' : healthMetrics.healthScore >= 40 ? 'bg-[#F0A167]' : 'bg-[#E87C8A]'}`}
+                    style={{ width: `${healthMetrics.healthScore}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.18em]">{t('dashboard.delayRate')}</span>
+                  </div>
+                  <p className={`mt-2 text-xl font-semibold ${healthMetrics.delayRate > 20 ? 'text-[color:var(--accent-danger)]' : 'text-[color:var(--text-primary)]'}`}>
+                    {healthMetrics.delayRate}%
+                  </p>
+                  <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">{healthMetrics.delayed}/{healthMetrics.total}</p>
+                </div>
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.18em]">{t('dashboard.completionRate')}</span>
+                  </div>
+                  <p className="mt-2 text-xl font-semibold text-[color:var(--accent-success)]">
+                    {healthMetrics.completionRate}%
+                  </p>
+                  <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">{healthMetrics.completed}/{healthMetrics.total}</p>
+                </div>
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                    <UserX className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.18em]">{t('dashboard.unassignedTasks')}</span>
+                  </div>
+                  <p className={`mt-2 text-xl font-semibold ${healthMetrics.unassigned > 0 ? 'text-[#F0A167]' : 'text-[color:var(--text-primary)]'}`}>
+                    {healthMetrics.unassigned}
+                  </p>
+                </div>
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <div className="flex items-center gap-2 text-[color:var(--text-muted)]">
+                    <CalendarX className="h-3.5 w-3.5" />
+                    <span className="text-[11px] uppercase tracking-[0.18em]">{t('dashboard.noScheduleTasks')}</span>
+                  </div>
+                  <p className={`mt-2 text-xl font-semibold ${healthMetrics.noPlan > 0 ? 'text-[#F0A167]' : 'text-[color:var(--text-primary)]'}`}>
+                    {healthMetrics.noPlan}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state min-h-[14rem]">
+              <p>{t('dashboard.noData')}</p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 리소스 워크로드 */}

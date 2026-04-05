@@ -334,6 +334,12 @@ const en = {
       countRegistered: '{{count}} registered',
       noData: 'No data',
       unknown: 'Unknown',
+      projectHealth: 'Project Health',
+      healthScore: 'Health Score',
+      delayRate: 'Delay Rate',
+      completionRate: 'Completion',
+      unassignedTasks: 'Unassigned',
+      noScheduleTasks: 'No Schedule',
     },
 
     // ─── Members ────────────────────────────────────────
