@@ -53,6 +53,7 @@ export interface ProjectSettings {
   manualStatus?: ProjectStatus;
   ganttSummaryCollapsed?: boolean;
   kanbanSummaryCollapsed?: boolean;
+  wbsSummaryCollapsed?: boolean;
 }
 
 // 프로젝트 멤버 타입

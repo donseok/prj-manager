@@ -6,6 +6,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Undo2,
   Redo2,
   ExpandIcon,
@@ -25,6 +26,10 @@ import {
   MessageCircle,
   RefreshCw,
   BookmarkPlus,
+  Clock3,
+  AlertTriangle,
+  Target,
+  Users,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -41,7 +46,10 @@ import { getProjectVisualTone } from '../lib/projectVisuals';
 import {
   generateId,
   cn,
+  calculateOverallProgress,
+  getDelayedTasks,
 } from '../lib/utils';
+import { getLeafTasks, getAssigneeName } from '../lib/taskAnalytics';
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
 import { syncProjectMembers } from '../lib/dataRepository';
@@ -136,9 +144,36 @@ export default function WBS() {
   const currentMemberId = useCurrentMemberId();
   const authUser = useAuthStore((s) => s.user);
   const isInPopup = window.location.pathname.startsWith('/popup/');
+  const [wbsSummaryCollapsed, setWbsSummaryCollapsed] = useState(
+    () => currentProject?.settings?.wbsSummaryCollapsed ?? false
+  );
+  const toggleWbsSummary = useCallback(() => {
+    setWbsSummaryCollapsed((prev: boolean) => {
+      const next = !prev;
+      if (currentProject) {
+        updateProject(currentProject.id, { settings: { ...currentProject.settings, wbsSummaryCollapsed: next } });
+      }
+      return next;
+    });
+  }, [currentProject, updateProject]);
+  useEffect(() => {
+    setWbsSummaryCollapsed(currentProject?.settings?.wbsSummaryCollapsed ?? false);
+  }, [currentProject?.id]);
   const templates = listTaskTemplates();
   const customTemplates = loadCustomTemplates();
   const selectedTemplate = getTaskTemplate(selectedTemplateId) ?? templates[0];
+
+  // WBS Hero Section 통계
+  const wbsStats = useMemo(() => {
+    const leafTasks = getLeafTasks(tasks);
+    const total = leafTasks.length;
+    const inProgress = leafTasks.filter((t) => t.status === 'in_progress').length;
+    const completed = leafTasks.filter((t) => t.status === 'completed').length;
+    const delayed = getDelayedTasks(tasks).length;
+    const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
+    const overallProgress = calculateOverallProgress(tasks);
+    return { total, inProgress, completed, delayed, unassigned, overallProgress };
+  }, [tasks]);
 
   const commentCountMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -1477,6 +1512,146 @@ export default function WBS() {
           onClose={clearFeedback}
         />
       )}
+
+      {/* WBS Hero Section */}
+      {!isInPopup && (wbsSummaryCollapsed ? (
+        <div className="app-panel flex items-center justify-between gap-4 px-5 py-3">
+          <div className="flex items-center gap-4">
+            {ToneIcon && <ToneIcon className="h-5 w-5" style={{ color: projectTone?.accent }} />}
+            <h2 className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--text-primary)]">
+              {currentProject?.name || t('wbs.project')} WBS
+            </h2>
+            <div className="flex items-center gap-3 text-sm text-[color:var(--text-secondary)]">
+              <span>{t('wbs.heroTotal')}: <strong className="text-[color:var(--text-primary)]">{wbsStats.total}</strong></span>
+              <span className="h-3.5 w-px bg-[var(--border-color)]" />
+              <span>{t('wbs.heroInProgress')}: <strong className="text-[color:var(--text-primary)]">{wbsStats.inProgress}</strong></span>
+              <span className="h-3.5 w-px bg-[var(--border-color)]" />
+              <span>{t('wbs.heroDelayed')}: <strong className="text-[color:var(--accent-danger)]">{wbsStats.delayed}</strong></span>
+              <span className="h-3.5 w-px bg-[var(--border-color)]" />
+              <span>{t('wbs.heroProgress')}: <strong className="text-[color:var(--text-primary)]">{wbsStats.overallProgress}%</strong></span>
+            </div>
+          </div>
+          <button
+            onClick={toggleWbsSummary}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--border-color)] px-3 py-1.5 text-xs font-semibold text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            {t('wbs.expandSummary')}
+          </button>
+        </div>
+      ) : (
+        <section className="relative">
+          <button
+            onClick={toggleWbsSummary}
+            className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+            {t('wbs.collapseSummary')}
+          </button>
+          <div
+            className="app-panel-dark relative overflow-hidden p-6 md:p-8"
+            style={{
+              backgroundImage: `radial-gradient(circle at 86% 18%, ${(projectTone?.accent || '#18a79b')}30, transparent 26%), radial-gradient(circle at 18% 84%, ${(projectTone?.accent || '#18a79b')}18, transparent 32%), linear-gradient(165deg, rgba(17,20,26,0.98), rgba(10,12,16,0.94))`,
+            }}
+          >
+            <div className="pointer-events-none absolute right-[-6rem] top-[-6rem] h-64 w-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)` }} />
+            <div className="relative">
+              <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
+                {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <ClipboardList className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}
+                {projectTone?.label || 'WBS'}
+              </div>
+              <h1 className="mt-5 text-[clamp(2rem,4vw,3.6rem)] font-semibold tracking-[-0.06em] text-white">
+                {currentProject?.name || t('wbs.project')} WBS
+              </h1>
+              {projectTone && (
+                <p className="mt-3 text-sm font-semibold tracking-[0.18em] uppercase" style={{ color: projectTone.accent }}>
+                  {projectTone.note}
+                </p>
+              )}
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-base">
+                {t('wbs.heroDescription')}
+              </p>
+
+              <div className="mt-8 grid gap-4 md:grid-cols-4">
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroTotal')}</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{wbsStats.total}</p>
+                  <p className="mt-1 text-sm text-white/88">{t('wbs.heroTotalDesc')}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <Clock3 className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroInProgress')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{wbsStats.inProgress}</p>
+                  <p className="mt-1 text-sm text-white/88">{t('wbs.heroInProgressDesc')}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroDelayed')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{wbsStats.delayed}</p>
+                  <p className="mt-1 text-sm text-white/88">{t('wbs.heroDelayedDesc')}</p>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.12] p-4">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="h-3 w-3 text-white/60" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroProgress')}</p>
+                  </div>
+                  <p className="mt-2 text-3xl font-semibold text-white">{wbsStats.overallProgress}%</p>
+                  <p className="mt-1 text-sm text-white/88">{t('wbs.heroProgressDesc')}</p>
+                </div>
+              </div>
+
+              {/* 미배정 + 완료율 */}
+              <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-white/70" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroAssignee')}</p>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {(() => {
+                      const assigneeCounts = new Map<string, number>();
+                      getLeafTasks(tasks).forEach((tk) => {
+                        const name = tk.assigneeId ? getAssigneeName(tk, members) : t('wbs.heroUnassigned');
+                        assigneeCounts.set(name, (assigneeCounts.get(name) || 0) + 1);
+                      });
+                      const sorted = [...assigneeCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+                      const max = Math.max(...sorted.map(([, c]) => c), 1);
+                      return sorted.map(([name, count]) => (
+                        <div key={name} className="flex items-center gap-3">
+                          <span className="w-16 truncate text-xs text-white/70">{name}</span>
+                          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                            <div className="h-full rounded-full bg-[#2BAAA0]" style={{ width: `${(count / max) * 100}%` }} />
+                          </div>
+                          <span className="text-xs text-white/60">{count}{t('wbs.heroCount')}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+                <div className="rounded-[24px] border border-white/12 bg-white/[0.07] p-5">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-white/70" />
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroCompletion')}</p>
+                  </div>
+                  <div className="mt-4 flex items-end gap-4">
+                    <p className="text-4xl font-bold text-white">{wbsStats.completed}<span className="text-lg text-white/50">/{wbsStats.total}</span></p>
+                    <div className="flex-1">
+                      <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-[#22c55e]" style={{ width: `${wbsStats.total > 0 ? (wbsStats.completed / wbsStats.total) * 100 : 0}%` }} />
+                      </div>
+                      <p className="mt-1 text-right text-xs text-white/60">{wbsStats.total > 0 ? Math.round((wbsStats.completed / wbsStats.total) * 100) : 0}%</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ))}
 
       <section className="app-panel relative overflow-hidden px-5 py-4">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px opacity-80" style={{ backgroundColor: projectTone?.accent || 'var(--accent-primary)' }} />
