@@ -680,7 +680,7 @@ export default function ProjectList() {
             </h3>
             <p className="max-w-md text-sm leading-6 text-[color:var(--text-secondary)]">
               {searchQuery
-                ? t('projectList.noSearchResultsDesc')
+                ? t('projectList.noSearchResultsDesc', { query: searchQuery })
                 : t('projectList.noProjectsDesc')}
             </p>
             {!searchQuery && canCreateProject && (

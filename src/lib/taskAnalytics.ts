@@ -1,5 +1,6 @@
 import type { Task, ProjectMember, TaskStatus } from '../types';
 import { getDelayedTasks, getDelayDays, calculateOverallProgress } from './utils';
+import i18n from '../i18n';
 
 // ─── Leaf task filtering ─────────────────────────────────────
 // 자식이 없는 말단 작업만 추출 (통계/차트 계산에 공통 사용)
@@ -64,18 +65,18 @@ export interface StatusDataItem {
   color: string;
 }
 
-const STATUS_CHART_CONFIG: Array<{ status: TaskStatus; name: string; color: string }> = [
-  { status: 'pending', name: '대기', color: '#8B95A5' },
-  { status: 'in_progress', name: '진행중', color: '#2BAAA0' },
-  { status: 'completed', name: '완료', color: '#34C997' },
-  { status: 'on_hold', name: '보류', color: '#F0A167' },
+const STATUS_CHART_CONFIG: Array<{ status: TaskStatus; nameKey: string; color: string }> = [
+  { status: 'pending', nameKey: 'labels.taskStatus.pending', color: '#8B95A5' },
+  { status: 'in_progress', nameKey: 'labels.taskStatus.in_progress', color: '#2BAAA0' },
+  { status: 'completed', nameKey: 'labels.taskStatus.completed', color: '#34C997' },
+  { status: 'on_hold', nameKey: 'labels.taskStatus.on_hold', color: '#F0A167' },
 ];
 
 export function calculateStatusDistribution(tasks: Task[]): StatusDataItem[] {
   const leafTasks = getLeafTasks(tasks);
   return STATUS_CHART_CONFIG
-    .map(({ status, name, color }) => ({
-      name,
+    .map(({ status, nameKey, color }) => ({
+      name: i18n.t(nameKey),
       value: leafTasks.filter((t) => t.status === status).length,
       color,
     }))
