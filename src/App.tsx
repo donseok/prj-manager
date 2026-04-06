@@ -21,7 +21,7 @@ import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
 import { useTaskStore } from './store/taskStore';
 import { ensureSupabaseSession, subscribeToSupabaseAuthChanges, isSupabaseConfigured, ensureMigrations } from './lib/supabase';
-import { loadInitialProjects, loadProjectMembers, loadProjectTasks, loadProjectsForUser } from './lib/dataRepository';
+import { loadProjectMembers, loadProjectTasks, loadProjectsForUser } from './lib/dataRepository';
 import { useSystemSettingsStore } from './store/systemSettingsStore';
 
 // 인증 라우트 가드
@@ -93,8 +93,6 @@ function App() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        // Ensure sample data is loaded, then filter by membership
-        await loadInitialProjects();
         const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
         if (!isCancelled) setProjects(projects);
         return;
@@ -117,7 +115,12 @@ function App() {
         setLoading(false);
       }
 
+      // 초기 로드 직후 onAuthStateChange가 즉시 fire되므로 중복 로드 방지
+      let initialSkip = true;
+      setTimeout(() => { initialSkip = false; }, 2000);
+
       unsubscribe = subscribeToSupabaseAuthChanges((nextUser) => {
+        if (initialSkip) return;
         if (nextUser) {
           setUser(nextUser);
           void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'admin').then((projects) => {
@@ -302,7 +305,6 @@ function PopupProjectWrapper() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        await loadInitialProjects();
         const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
         if (!isCancelled) {
           setProjects(loadedProjects);
