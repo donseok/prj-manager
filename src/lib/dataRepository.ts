@@ -531,6 +531,8 @@ function toAttendanceRow(a: Attendance): AttendanceRow {
 }
 
 export async function loadAttendances(projectId: string): Promise<Attendance[]> {
+  console.log('[attendance] load 요청:', projectId);
+
   const { data, error } = await supabase
     .from('attendance')
     .select('*')
@@ -539,16 +541,17 @@ export async function loadAttendances(projectId: string): Promise<Attendance[]> 
 
   if (error) {
     if (isAuthError(error)) { handleSessionExpired(); return []; }
-    console.error('Failed to load attendance:', error);
+    console.error('[attendance] load 실패:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
     return [];
   }
 
+  console.log('[attendance] load 성공:', data?.length ?? 0, '건');
   return (data as AttendanceRow[]).map(mapAttendanceRow);
 }
 
 export async function upsertAttendance(attendance: Attendance): Promise<Attendance> {
   const row = toAttendanceRow(attendance);
-  if (import.meta.env.DEV) console.log('[attendance] upsert 요청:', row);
+  console.log('[attendance] upsert 요청:', row);
 
   const { data, error } = await supabase
     .from('attendance')
@@ -557,11 +560,17 @@ export async function upsertAttendance(attendance: Attendance): Promise<Attendan
     .single();
 
   if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.'); }
     console.error('[attendance] upsert 실패:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
     throw new Error(`근태 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
   }
 
-  if (import.meta.env.DEV) console.log('[attendance] upsert 성공:', data);
+  if (!data) {
+    console.error('[attendance] upsert 결과 없음 (RLS 차단 가능성)');
+    throw new Error('근태 저장 실패: 권한이 없거나 데이터가 반환되지 않았습니다.');
+  }
+
+  console.log('[attendance] upsert 성공:', data);
   return mapAttendanceRow(data as AttendanceRow);
 }
 
