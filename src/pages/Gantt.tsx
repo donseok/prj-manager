@@ -367,7 +367,7 @@ export default function Gantt() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder={t('gantt.searchPlaceholder')}
-              className="h-9 w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+              className="h-9 w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-12 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
