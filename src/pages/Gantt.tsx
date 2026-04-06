@@ -359,90 +359,92 @@ export default function Gantt() {
     return (
       <div className="flex h-full flex-col">
         {/* 컴팩트 툴바 */}
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2">
-          <div className="relative flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col gap-2 border-b border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('common.search')}
-              className="h-8 w-48 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
+              placeholder={t('gantt.searchPlaceholder')}
+              className="h-8 w-full rounded-full border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] pl-10 pr-3 text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)] focus:border-[rgba(15,118,110,0.34)]"
             />
           </div>
-          {FILTER_OPTIONS.map((option) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setFilterMode(option.value)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                  filterMode === option.value
+                    ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+            <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+            {VIEW_OPTIONS.map((weeks) => (
+              <button
+                key={weeks}
+                onClick={() => setWeeksToShow(weeks)}
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                  weeksToShow === weeks
+                    ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+                )}
+              >
+                {weeks === 0 ? t('gantt.viewAll', { defaultValue: '전체' }) : t('gantt.weeksUnit', { count: weeks })}
+              </button>
+            ))}
+            <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
+            {DENSITY_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setDensity(option.value)}
+                className={cn(
+                  'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                  density === option.value
+                    ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+                )}
+              >
+                {t(option.labelKey)}
+              </button>
+            ))}
             <button
-              key={option.value}
-              onClick={() => setFilterMode(option.value)}
-              className={cn(
-                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                filterMode === option.value
-                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
-                  : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
-          {VIEW_OPTIONS.map((weeks) => (
-            <button
-              key={weeks}
-              onClick={() => setWeeksToShow(weeks)}
+              onClick={() => setHighlightWeekends((prev) => !prev)}
               className={cn(
                 'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-                weeksToShow === weeks
-                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                highlightWeekends
+                  ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
               )}
             >
-              {weeks === 0 ? t('gantt.viewAll', { defaultValue: '전체' }) : t('gantt.weeksUnit', { count: weeks })}
+              {t('gantt.weekends')}
             </button>
-          ))}
-          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
-          {DENSITY_OPTIONS.map((option) => (
+            <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
             <button
-              key={option.value}
-              onClick={() => setDensity(option.value)}
+              onClick={() => setShowCriticalPath((prev) => !prev)}
               className={cn(
-                'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-                density === option.value
-                  ? 'bg-[rgba(15,118,110,0.14)] text-[color:var(--accent-primary)]'
+                'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                showCriticalPath
+                  ? 'bg-[rgba(203,75,95,0.12)] text-[#CB4B5F]'
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
               )}
             >
-              {t(option.labelKey)}
+              <Zap className="h-3 w-3" />
+              크리티컬 패스
             </button>
-          ))}
-          <button
-            onClick={() => setHighlightWeekends((prev) => !prev)}
-            className={cn(
-              'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-              highlightWeekends
-                ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
-                : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
+            {showCriticalPath && criticalPathResult.criticalTasks.length > 0 && (
+              <span className="rounded-full bg-[rgba(203,75,95,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#CB4B5F]">
+                {criticalPathResult.criticalTasks.length}개 작업, 총 {criticalPathResult.totalDuration}일
+              </span>
             )}
-          >
-            {t('gantt.weekends')}
-          </button>
-          <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
-          <button
-            onClick={() => setShowCriticalPath((prev) => !prev)}
-            className={cn(
-              'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
-              showCriticalPath
-                ? 'bg-[rgba(203,75,95,0.12)] text-[#CB4B5F]'
-                : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
-            )}
-          >
-            <Zap className="h-3 w-3" />
-            크리티컬 패스
-          </button>
-          {showCriticalPath && criticalPathResult.criticalTasks.length > 0 && (
-            <span className="rounded-full bg-[rgba(203,75,95,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#CB4B5F]">
-              {criticalPathResult.criticalTasks.length}개 작업, 총 {criticalPathResult.totalDuration}일
-            </span>
-          )}
+          </div>
         </div>
 
         {/* 간트 차트 (좌측 작업목록 + 우측 차트) */}
