@@ -573,6 +573,12 @@ export async function exportGanttWorkbook({
 // Import (kept using xlsx for robust parsing)
 // ══════════════════════════════════════════════════════════════
 
+/** UUID v4 형식인지 검증 (tasks.assignee_id FK 보호) */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(v: string | null | undefined): v is string {
+  return typeof v === 'string' && UUID_RE.test(v.trim());
+}
+
 export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Task[] {
   const workbook = XLSX.read(new Uint8Array(data), { type: 'array' });
   const sheetName =
@@ -581,7 +587,13 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
     workbook.SheetNames[0];
 
   const worksheet = workbook.Sheets[sheetName];
-  const jsonRows = parseSheetWithHeaderDetection(worksheet);
+  const jsonRows = parseSheetWithHeaderDetection(worksheet)
+    .filter((row) => {
+      // Skip empty rows (no WBS code AND no task name)
+      const code = getStringValue(row, ['WBS코드', 'WBS 코드']);
+      const name = getStringValue(row, ['작업명', '이름', 'Task Name']);
+      return code !== '' || name !== '';
+    });
   const codeToId = new Map<string, string>();
   const orderCounter = new Map<string, number>();
 
@@ -602,7 +614,11 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
       id: taskId, projectId, parentId, level, orderIndex,
       name: getStringValue(row, ['작업명', '이름', 'Task Name']),
       output: getOptionalStringValue(row, ['산출물', 'Output']) || undefined,
-      assigneeId: getOptionalStringValue(row, ['담당자ID', '담당자', 'Assignee ID', 'assigneeId']),
+      assigneeId: (() => {
+        // 담당자ID 컬럼에서 UUID만 허용 — 이름 문자열은 FK 위반 방지를 위해 무시
+        const rawId = getOptionalStringValue(row, ['담당자ID', 'Assignee ID', 'assigneeId']);
+        return isValidUUID(rawId) ? rawId.trim() : null;
+      })(),
       weight: parseNumberValue(row['가중치']),
       durationDays: parseNumberValue(row['기간일수']) || parseNumberValue(row['계획기간일수']) || null,
       predecessorIds: getStringValue(row, ['선행작업', '선행 작업', 'predecessorIds'])

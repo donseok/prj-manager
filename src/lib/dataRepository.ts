@@ -455,7 +455,13 @@ function mapTaskRow(row: TaskRow): Task {
   };
 }
 
+/** UUID v4 형식 검증 (assignee_id FK 보호) */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function toTaskRow(task: Task) {
+  // assignee_id는 반드시 유효한 UUID여야 한다 (FK → auth.users)
+  const safeAssigneeId = task.assigneeId && UUID_RE.test(task.assigneeId) ? task.assigneeId : null;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const row: Record<string, any> = {
     id: task.id,
@@ -466,7 +472,7 @@ function toTaskRow(task: Task) {
     name: task.name,
     description: task.description || null,
     output: task.output || null,
-    assignee_id: task.assigneeId || null,
+    assignee_id: safeAssigneeId,
     weight: task.weight,
     plan_start: task.planStart || null,
     plan_end: task.planEnd || null,
