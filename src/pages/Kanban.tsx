@@ -141,9 +141,8 @@ export default function Kanban() {
 
   // Filtering
   const filteredTasks = useMemo(() => {
-    const baseTasks = groupBy === 'phase'
-      ? tasks.filter((tk) => tk.level === 3 || (tk.level === 2 && !tasks.some((c) => c.parentId === tk.id)))
-      : leafTasks;
+    // phase 그룹 시에도 leafTasks를 사용하여 모든 실제 작업을 표시
+    const baseTasks = leafTasks;
 
     let result = baseTasks;
 

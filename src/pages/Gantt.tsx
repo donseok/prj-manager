@@ -38,7 +38,7 @@ import { calculateCriticalPath } from '../lib/criticalPath';
 type FilterMode = 'all' | 'active' | 'delayed' | 'completed';
 type DensityMode = 'compact' | 'comfortable';
 
-const VIEW_OPTIONS = [4, 8, 12] as const;
+const VIEW_OPTIONS = [4, 8, 12, 0] as const;
 const DENSITY_OPTIONS: Array<{ value: DensityMode; labelKey: string }> = [
   { value: 'compact', labelKey: 'gantt.densityCompact' },
   { value: 'comfortable', labelKey: 'gantt.densityComfortable' },
@@ -61,7 +61,7 @@ export default function Gantt() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(8);
+  const [weeksToShow, setWeeksToShow] = useState<(typeof VIEW_OPTIONS)[number]>(0);
   const [density, setDensity] = useState<DensityMode>('comfortable');
   const [highlightWeekends, setHighlightWeekends] = useState(true);
   const [viewportWidth, setViewportWidth] = useState(() =>
@@ -217,6 +217,25 @@ export default function Gantt() {
   const leafTasks = useMemo(() => getLeafTasks(tasks), [tasks]);
   const delayedCount = leafTasks.filter((task) => getDelayDays(task) > 0).length;
   const activeCount = leafTasks.filter((task) => task.status !== 'completed').length;
+
+  // 전체 보기: 프로젝트 전체 기간을 주 단위로 자동 계산
+  const effectiveWeeksToShow = useMemo(() => {
+    if (weeksToShow !== 0) return weeksToShow;
+    // 모든 작업의 날짜를 수집
+    const allDates = tasks
+      .flatMap((t) => [t.planStart, t.planEnd, t.actualStart, t.actualEnd])
+      .filter(Boolean)
+      .map((d) => parseISO(d!).getTime());
+    // 프로젝트 시작/종료일도 포함
+    if (currentProject?.startDate) allDates.push(parseISO(currentProject.startDate).getTime());
+    if (currentProject?.endDate) allDates.push(parseISO(currentProject.endDate).getTime());
+    if (allDates.length < 2) return 12;
+    const minMs = Math.min(...allDates);
+    const maxMs = Math.max(...allDates);
+    const diffDays = differenceInCalendarDays(new Date(maxMs), new Date(minMs));
+    // 앞뒤 2주 여유 포함
+    return Math.max(4, Math.ceil((diffDays + 28) / 7));
+  }, [weeksToShow, tasks, currentProject]);
 
   const criticalPathResult = useMemo(() => calculateCriticalPath(tasks), [tasks]);
   const criticalTaskIds = useMemo(
@@ -377,7 +396,7 @@ export default function Gantt() {
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
               )}
             >
-              {t('gantt.weeksUnit', { count: weeks })}
+              {weeks === 0 ? t('gantt.viewAll', { defaultValue: '전체' }) : t('gantt.weeksUnit', { count: weeks })}
             </button>
           ))}
           <div className="mx-1 h-4 w-px bg-[var(--border-color)]" />
@@ -509,7 +528,7 @@ export default function Gantt() {
               allTasks={tasks}
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
-              weeksToShow={weeksToShow}
+              weeksToShow={effectiveWeeksToShow}
               dayWidth={mainDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}
@@ -753,7 +772,7 @@ export default function Gantt() {
                     : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)]'
                 )}
               >
-                {t('gantt.weeksUnit', { count: weeks })}
+                {weeks === 0 ? t('gantt.viewAll', { defaultValue: '전체' }) : t('gantt.weeksUnit', { count: weeks })}
               </button>
             ))}
           </div>
@@ -909,7 +928,7 @@ export default function Gantt() {
               allTasks={tasks}
               selectedTaskId={resolvedSelectedTaskId}
               onTaskClick={(task) => setSelectedTaskId(task.id)}
-              weeksToShow={weeksToShow}
+              weeksToShow={effectiveWeeksToShow}
               dayWidth={mainDayWidth}
               rowHeight={rowHeight}
               highlightWeekends={highlightWeekends}

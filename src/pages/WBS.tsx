@@ -300,8 +300,9 @@ export default function WBS() {
     },
     [currentProject, projectId, updateProject]
   );
+  // 팝업 모드에서는 자동 저장 비활성화 (수동 저장만 허용)
   const { saveStatus, lastSavedAt, saveNow } = useAutoSave(tasks, saveTasks, {
-    projectId,
+    projectId: isInPopup ? null : projectId,
     loadedProjectId,
   });
 
