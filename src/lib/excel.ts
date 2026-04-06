@@ -581,7 +581,7 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
     workbook.SheetNames[0];
 
   const worksheet = workbook.Sheets[sheetName];
-  const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+  const jsonRows = parseSheetWithHeaderDetection(worksheet);
   const codeToId = new Map<string, string>();
   const orderCounter = new Map<string, number>();
 
@@ -602,7 +602,7 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
       id: taskId, projectId, parentId, level, orderIndex,
       name: getStringValue(row, ['작업명', '이름', 'Task Name']),
       output: getOptionalStringValue(row, ['산출물', 'Output']) || undefined,
-      assigneeId: getOptionalStringValue(row, ['담당자ID', 'Assignee ID', 'assigneeId']),
+      assigneeId: getOptionalStringValue(row, ['담당자ID', '담당자', 'Assignee ID', 'assigneeId']),
       weight: parseNumberValue(row['가중치']),
       durationDays: parseNumberValue(row['기간일수']) || parseNumberValue(row['계획기간일수']) || null,
       predecessorIds: getStringValue(row, ['선행작업', '선행 작업', 'predecessorIds'])
@@ -625,6 +625,48 @@ export function parseTasksFromWorkbook(data: ArrayBuffer, projectId: string): Ta
 }
 
 // ── Import helpers ─────────────────────────────────────────────
+
+/** Known header keys the parser expects – used to auto-detect the real header row. */
+const KNOWN_HEADERS = ['WBS코드', 'WBS 코드', '작업명', '이름', 'Task Name', '구분', '레벨', 'Level'];
+
+/**
+ * Detect the actual header row in sheets that may have a description row above
+ * the real headers (e.g. the DK Flow template puts column descriptions in Row 1
+ * and column names in Row 2).  Falls back to default `sheet_to_json` behaviour.
+ */
+function parseSheetWithHeaderDetection(worksheet: XLSX.WorkSheet): Record<string, unknown>[] {
+  // Read all rows as raw arrays first
+  const rawRows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: '' });
+  if (rawRows.length === 0) return [];
+
+  // Find the row that contains known header keys (check first 5 rows)
+  let headerRowIndex = -1;
+  for (let i = 0; i < Math.min(5, rawRows.length); i++) {
+    const row = rawRows[i];
+    if (!Array.isArray(row)) continue;
+    const cells = row.map((c) => String(c ?? '').trim());
+    const matchCount = cells.filter((c) => KNOWN_HEADERS.includes(c)).length;
+    if (matchCount >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  if (headerRowIndex >= 0) {
+    // Use the detected row as header keys
+    const headers = (rawRows[headerRowIndex] as unknown[]).map((c) => String(c ?? '').trim());
+    const dataRows = rawRows.slice(headerRowIndex + 1);
+    return dataRows.map((raw) => {
+      const row: Record<string, unknown> = {};
+      const arr = raw as unknown[];
+      headers.forEach((h, i) => { if (h) row[h] = arr[i] ?? ''; });
+      return row;
+    });
+  }
+
+  // Fallback: default behaviour (Row 0 = header)
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+}
 
 function getStringValue(row: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
