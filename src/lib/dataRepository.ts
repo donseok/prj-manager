@@ -143,8 +143,8 @@ export async function upsertProject(project: Project): Promise<Project> {
     throw new Error(`프로젝트 저장 실패 [${updateError?.code}]: ${updateError?.message}${updateError?.hint ? ` (${updateError.hint})` : ''}`);
   }
 
-  console.error('Failed to insert project:', { code: insertError.code, message: insertError.message, details: insertError.details, hint: insertError.hint });
-  throw new Error(`프로젝트 생성 실패 [${insertError.code}]: ${insertError.message}${insertError.hint ? ` (${insertError.hint})` : ''}`);
+  console.error('Failed to insert project:', { code: insertError?.code, message: insertError?.message, details: insertError?.details, hint: insertError?.hint });
+  throw new Error(`프로젝트 생성 실패 [${insertError?.code}]: ${insertError?.message}${insertError?.hint ? ` (${insertError.hint})` : ''}`);
 }
 
 export async function deleteProjectById(projectId: string) {
