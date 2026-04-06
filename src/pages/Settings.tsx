@@ -262,12 +262,18 @@ export default function Settings() {
 
   const applyImportedTasks = useCallback(
     async (importedTasks: Task[]) => {
-      if (!currentProject || !projectId) return;
+      if (!currentProject || !projectId) {
+        console.warn('[Import] No currentProject or projectId', { currentProject: !!currentProject, projectId });
+        return;
+      }
 
       try {
+        console.log('[Import] Starting with', importedTasks.length, 'tasks');
         const { project, tasks: normalizedTasks } = await syncProjectWorkspace(currentProject, importedTasks);
+        console.log('[Import] Normalized:', normalizedTasks.length, 'tasks');
         setTasks(normalizedTasks, projectId);
         updateProject(project.id, project);
+        console.log('[Import] Done successfully');
         showFeedback({
           tone: 'success',
           title: t('settings.importSuccess'),
