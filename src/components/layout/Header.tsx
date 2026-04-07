@@ -59,7 +59,9 @@ export default function Header() {
     logout();
     setShowUserMenu(false);
     navigate('/login');
-    void signOutSupabase();
+    // Supabase 세션 정리를 지연하여 컴포넌트 언마운트 시
+    // 보류 중인 자동 저장이 유효한 세션 토큰으로 완료되도록 보장
+    setTimeout(() => void signOutSupabase(), 500);
   };
 
   useEffect(() => {

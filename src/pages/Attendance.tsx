@@ -182,6 +182,45 @@ export default function Attendance() {
           }}
         >
           <div className="pointer-events-none absolute right-[-5rem] top-[-5rem] h-56 w-56 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${(projectTone?.accent || '#18a79b')}24, transparent 70%)` }} />
+
+          {/* Floating Time Particles */}
+          <style>{`
+            @keyframes float-up-1 {
+              0% { transform: translateY(0) translateX(0); opacity: 0; }
+              10% { opacity: 0.12; }
+              90% { opacity: 0.08; }
+              100% { transform: translateY(-180px) translateX(20px); opacity: 0; }
+            }
+            @keyframes float-up-2 {
+              0% { transform: translateY(0) translateX(0); opacity: 0; }
+              15% { opacity: 0.1; }
+              85% { opacity: 0.06; }
+              100% { transform: translateY(-200px) translateX(-15px); opacity: 0; }
+            }
+            @keyframes float-up-3 {
+              0% { transform: translateY(0) translateX(0); opacity: 0; }
+              12% { opacity: 0.15; }
+              88% { opacity: 0.05; }
+              100% { transform: translateY(-160px) translateX(25px); opacity: 0; }
+            }
+            @keyframes timeline-fade {
+              0% { transform: scaleX(0); opacity: 0; }
+              20% { transform: scaleX(1); opacity: 0.1; }
+              80% { transform: scaleX(1); opacity: 0.08; }
+              100% { transform: scaleX(0); opacity: 0; }
+            }
+          `}</style>
+          {/* Floating dots */}
+          <div className="pointer-events-none absolute" style={{ left: '12%', bottom: '10%', width: 4, height: 4, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-1 18s ease-in-out infinite', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '30%', bottom: '5%', width: 3, height: 3, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-2 22s ease-in-out infinite 3s', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '55%', bottom: '15%', width: 5, height: 5, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-3 16s ease-in-out infinite 1s', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '72%', bottom: '8%', width: 3, height: 3, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-1 25s ease-in-out infinite 5s', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '88%', bottom: '20%', width: 4, height: 4, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-2 20s ease-in-out infinite 8s', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '42%', bottom: '0%', width: 3, height: 3, borderRadius: '50%', background: projectTone?.accent || '#18a79b', animation: 'float-up-3 28s ease-in-out infinite 6s', willChange: 'transform' }} />
+          {/* Timeline marker lines */}
+          <div className="pointer-events-none absolute" style={{ left: '65%', top: '35%', width: 40, height: 1, background: projectTone?.accent || '#18a79b', transformOrigin: 'left center', animation: 'timeline-fade 20s ease-in-out infinite 2s', willChange: 'transform' }} />
+          <div className="pointer-events-none absolute" style={{ left: '78%', top: '60%', width: 30, height: 1, background: projectTone?.accent || '#18a79b', transformOrigin: 'left center', animation: 'timeline-fade 24s ease-in-out infinite 7s', willChange: 'transform' }} />
+
           <div className="relative">
             <div className="surface-badge border-white/12 bg-white/[0.14] text-white/90">
               {ToneIcon ? <ToneIcon className="h-3.5 w-3.5" style={{ color: projectTone?.accent }} /> : <CalendarCheck className="h-3.5 w-3.5 text-[color:var(--accent-secondary)]" />}

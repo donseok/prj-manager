@@ -38,7 +38,7 @@ export default function PendingApproval() {
 
   const handleLogout = () => {
     logout();
-    void signOutSupabase();
+    setTimeout(() => void signOutSupabase(), 500);
   };
 
   const handleManualCheck = async () => {
