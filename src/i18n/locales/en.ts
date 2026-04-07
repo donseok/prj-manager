@@ -473,6 +473,7 @@ const en = {
       aiModeDesc: 'When AI mode is enabled, you can use features like WBS auto-generation and performance suggestions. Toggle AI/Manual mode in the header.',
       aiClaudeDesc: 'Claude Sonnet 4.5, etc.',
       aiOpenaiDesc: 'GPT-4o, etc.',
+      aiGeminiDesc: 'Gemini 2.0 Flash, etc.',
       selected: 'Selected',
       dataManagement: 'Data Management',
       dataManagementDesc: 'Export or import WBS data to reorganize the current project structure.',

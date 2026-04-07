@@ -472,6 +472,7 @@ const vi = {
       aiModeDesc: 'Khi chế độ AI được bật, bạn có thể sử dụng các tính năng như tự động tạo WBS và gợi ý hiệu suất. Chuyển đổi chế độ AI/Thủ công ở tiêu đề.',
       aiClaudeDesc: 'Claude Sonnet 4.5, v.v.',
       aiOpenaiDesc: 'GPT-4o, v.v.',
+      aiGeminiDesc: 'Gemini 2.0 Flash, v.v.',
       selected: 'Đã chọn',
       dataManagement: 'Quản lý dữ liệu',
       dataManagementDesc: 'Xuất hoặc nhập dữ liệu WBS để tổ chức lại cấu trúc dự án hiện tại.',

@@ -35,6 +35,7 @@ import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import AuditLogPanel from '../components/common/AuditLogPanel';
+import MeetingImport from '../components/settings/MeetingImport';
 import { logAuditEvent } from '../lib/auditLog';
 import type { AIProvider, ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
@@ -601,6 +602,22 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* 회의록 임포트 */}
+          {projectId && (
+            <MeetingImport
+              projectId={projectId}
+              tasks={tasks}
+              members={members}
+              onTasksAdded={(message) => {
+                showFeedback({
+                  tone: 'success',
+                  title: '회의록 임포트 완료',
+                  message,
+                });
+              }}
+            />
+          )}
+
           <div className="app-panel p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#7c3aed,#a78bfa)] text-white shadow-[0_18px_36px_-22px_rgba(124,58,237,0.7)]">
@@ -625,10 +642,11 @@ export default function Settings() {
             <div className="mt-5 space-y-4">
               <div>
                 <label className="field-label">AI Provider</label>
-                <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="mt-2 grid grid-cols-3 gap-3">
                   {([
                     { key: 'claude' as const, label: 'Claude (Anthropic)', desc: t('settings.aiClaudeDesc') },
                     { key: 'openai' as const, label: 'OpenAI', desc: t('settings.aiOpenaiDesc') },
+                    { key: 'gemini' as const, label: 'Gemini (Google)', desc: t('settings.aiGeminiDesc') },
                   ]).map((provider) => {
                     const isSelected = aiSettings.provider === provider.key;
                     return (

@@ -4,7 +4,7 @@ const STORAGE_KEY = 'dk_flow_ai_settings';
 
 function getEnvProvider(): AIProvider | null {
   const val = import.meta.env.VITE_AI_PROVIDER as string | undefined;
-  if (val === 'claude' || val === 'openai') return val;
+  if (val === 'claude' || val === 'openai' || val === 'gemini') return val;
   return null;
 }
 
@@ -51,5 +51,7 @@ export function isAIConfigured(): boolean {
 }
 
 export function getDefaultModel(provider: AIProvider): string {
-  return provider === 'claude' ? 'claude-sonnet-4-5-20250929' : 'gpt-4o';
+  if (provider === 'claude') return 'claude-sonnet-4-5-20250929';
+  if (provider === 'gemini') return 'gemini-2.0-flash';
+  return 'gpt-4o';
 }

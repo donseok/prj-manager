@@ -481,6 +481,7 @@ const ko = {
       aiModeDesc: 'AI 모드가 활성화되면 WBS 자동 생성, 실적 자동 제안 등의 기능을 사용할 수 있습니다. 헤더의 AI/수동 토글로 모드를 전환하세요.',
       aiClaudeDesc: 'Claude Sonnet 4.5 등',
       aiOpenaiDesc: 'GPT-4o 등',
+      aiGeminiDesc: 'Gemini 2.0 Flash 등',
       selected: '선택됨',
       // Data Management
       dataManagement: '데이터 관리',

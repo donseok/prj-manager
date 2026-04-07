@@ -90,9 +90,58 @@ async function callOpenAI(settings: AISettings, messages: AIMessage[]): Promise<
   }
 }
 
+async function callGemini(settings: AISettings, messages: AIMessage[]): Promise<AIResponse> {
+  const model = settings.model || getDefaultModel('gemini');
+  const systemMsg = messages.find((m) => m.role === 'system');
+  const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+
+  // Gemini 형식으로 메시지 변환
+  const contents = nonSystemMessages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const body: Record<string, unknown> = {
+    contents,
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.7 },
+  };
+  if (systemMsg) {
+    body.systemInstruction = { parts: [{ text: systemMsg.content }] };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return { content: text };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function callAI(settings: AISettings, messages: AIMessage[]): Promise<AIResponse> {
   if (settings.provider === 'claude') {
     return callClaude(settings, messages);
+  }
+  if (settings.provider === 'gemini') {
+    return callGemini(settings, messages);
   }
   return callOpenAI(settings, messages);
 }

@@ -252,7 +252,7 @@ export interface WeeklyTask {
 }
 
 // AI 관련 타입
-export type AIProvider = 'claude' | 'openai';
+export type AIProvider = 'claude' | 'openai' | 'gemini';
 
 export interface AISettings {
   provider: AIProvider;
@@ -315,6 +315,17 @@ export interface CustomTemplate {
   taskCount: number;
   tasks: Omit<Task, 'projectId' | 'createdAt' | 'updatedAt'>[];
   createdAt: string;
+}
+
+// 회의록 분석 결과 타입
+export interface MeetingTask {
+  name: string;              // 업무명
+  description?: string;      // 상세 내용 (회의록 원문 발췌)
+  assigneeName?: string;     // 담당자명 (텍스트 — 사용자가 수동 매칭)
+  startDate?: string;        // YYYY-MM-DD
+  endDate?: string;          // YYYY-MM-DD
+  level: 1 | 2 | 3 | 4;     // WBS 레벨 (1=Phase, 2=Activity, 3=Task, 4=Todo)
+  selected: boolean;         // 등록 여부 (기본 true)
 }
 
 // 담당자별 주간보고 메모
