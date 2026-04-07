@@ -467,218 +467,106 @@ export default function Settings() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="app-panel p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_22px_44px_-26px_rgba(15,118,110,0.76)]">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="page-kicker">Core Information</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
-                {t('settings.coreInfo')}
-              </h2>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-5">
-            <div>
-              <label className="field-label">{t('settings.projectName')}</label>
-              <input
-                type="text"
-                value={resolvedFormData.name}
-                onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                disabled={!canEditProject}
-                maxLength={100}
-                className={cn(
-                  'field-input',
-                  !canEditProject && 'cursor-not-allowed opacity-60',
-                  nameError && formData.name !== undefined && 'border-[rgba(203,75,95,0.4)]'
-                )}
-              />
-              {nameError && formData.name !== undefined && (
-                <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">{nameError}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="field-label">{t('settings.descriptionLabel')}</label>
-              <textarea
-                value={resolvedFormData.description}
-                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                disabled={!canEditProject}
-                className={cn('field-textarea', !canEditProject && 'cursor-not-allowed opacity-60')}
-                rows={5}
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="field-label">{t('settings.startDate')}</label>
-                <input
-                  type="date"
-                  value={resolvedFormData.startDate}
-                  onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
-                  disabled={!canEditProject}
-                  className={cn(
-                    'field-input',
-                    !canEditProject && 'cursor-not-allowed opacity-60',
-                    dateError && 'border-[rgba(203,75,95,0.4)]'
-                  )}
-                />
-              </div>
-              <div>
-                <label className="field-label">{t('settings.endDate')}</label>
-                <input
-                  type="date"
-                  value={resolvedFormData.endDate}
-                  onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
-                  disabled={!canEditProject}
-                  className={cn(
-                    'field-input',
-                    !canEditProject && 'cursor-not-allowed opacity-60',
-                    dateError && 'border-[rgba(203,75,95,0.4)]'
-                  )}
-                />
-              </div>
-            </div>
-            {dateError && (
-              <p className="text-xs text-[color:var(--accent-danger)]">{dateError}</p>
-            )}
-
-            <div>
-              <label className="field-label">{t('settings.baseDate')}</label>
-              <input
-                type="date"
-                value={resolvedFormData.baseDate}
-                onChange={(event) => setFormData({ ...formData, baseDate: event.target.value })}
-                disabled={!canEditProject}
-                className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
-              />
-              <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-                {t('settings.baseDateDesc')}
-              </p>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
-                <Save className="w-4 h-4" />
-                {t('common.save')}
-              </Button>
-            </div>
-          </div>
-        </div>
-
         <div className="space-y-6">
           <div className="app-panel p-6">
-            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
-              {t('settings.statusManagement')}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              {t('settings.statusDesc')}
-            </p>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {([
-                {
-                  key: 'auto' as const,
-                  title: t('settings.autoSync'),
-                  description: t('settings.autoSyncDesc'),
-                },
-                {
-                  key: 'manual' as const,
-                  title: t('settings.manualFix'),
-                  description: t('settings.manualFixDesc'),
-                },
-              ]).map((mode) => {
-                const isCurrentMode = statusMode === mode.key;
-                return (
-                  <button
-                    key={mode.key}
-                    type="button"
-                    onClick={() => void handleStatusModeChange(mode.key)}
-                    disabled={!isAdmin || isCurrentMode || isStatusModeSaving}
-                    data-testid={`settings-status-mode-${mode.key}`}
-                    className={`rounded-[22px] border p-4 text-left transition-all duration-200 ${
-                      isCurrentMode
-                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
-                        : !isAdmin
-                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
-                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
-                    }`}
-                  >
-                    <p className="font-medium text-[color:var(--text-primary)]">
-                      {mode.title}
-                      {isCurrentMode && (
-                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentPolicy')}</span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{mode.description}</p>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[image:var(--gradient-primary)] text-white shadow-[0_22px_44px_-26px_rgba(15,118,110,0.76)]">
+                <CalendarDays className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="page-kicker">Core Information</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  {t('settings.coreInfo')}
+                </h2>
+              </div>
             </div>
 
-            <div className="mt-4 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-              {isManualStatus
-                ? t('settings.manualFixActiveDesc')
-                : t('settings.autoSyncActiveDesc')}
-            </div>
+            <div className="mt-6 space-y-5">
+              <div>
+                <label className="field-label">{t('settings.projectName')}</label>
+                <input
+                  type="text"
+                  value={resolvedFormData.name}
+                  onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+                  disabled={!canEditProject}
+                  maxLength={100}
+                  className={cn(
+                    'field-input',
+                    !canEditProject && 'cursor-not-allowed opacity-60',
+                    nameError && formData.name !== undefined && 'border-[rgba(203,75,95,0.4)]'
+                  )}
+                />
+                {nameError && formData.name !== undefined && (
+                  <p className="mt-1.5 text-xs text-[color:var(--accent-danger)]">{nameError}</p>
+                )}
+              </div>
 
-            <div className="mt-5 space-y-3">
-              {([
-                { status: 'preparing' as ProjectStatus, icon: <Clock3 className="w-4 h-4" />, desc: t('settings.statusPreparing') },
-                { status: 'active' as ProjectStatus, icon: <Play className="w-4 h-4" />, desc: t('settings.statusActive') },
-                { status: 'completed' as ProjectStatus, icon: <CheckCircle2 className="w-4 h-4" />, desc: t('settings.statusCompleted') },
-              ]).map((item) => {
-                const isCurrent = currentProject?.status === item.status;
-                return (
-                  <button
-                    key={item.status}
-                    onClick={() => !isCurrent && isAdmin && isManualStatus && handleChangeStatus(item.status)}
-                    disabled={isCurrent || !isAdmin || !isManualStatus}
-                    data-testid={`settings-project-status-${item.status}`}
-                    className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
-                      isCurrent
-                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
-                        : !isAdmin || !isManualStatus
-                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
-                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
-                    }`}
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: `${PROJECT_STATUS_COLORS[item.status]}18`,
-                        color: PROJECT_STATUS_COLORS[item.status],
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-[color:var(--text-primary)]">
-                        {PROJECT_STATUS_LABELS[item.status]}
-                        {isCurrent && (
-                          <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentStatus')}</span>
-                        )}
-                      </p>
-                      <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">{item.desc}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            {!isAdmin && (
-              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.adminOnlyStatus')}</p>
-            )}
-            {isAdmin && !isManualStatus && (
-              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.enableManualHint')}</p>
-            )}
+              <div>
+                <label className="field-label">{t('settings.descriptionLabel')}</label>
+                <textarea
+                  value={resolvedFormData.description}
+                  onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                  disabled={!canEditProject}
+                  className={cn('field-textarea', !canEditProject && 'cursor-not-allowed opacity-60')}
+                  rows={3}
+                />
+              </div>
 
-            {currentProject?.completedAt && (
-              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
-                {t('settings.completedDate')}: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
-              </p>
-            )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="field-label">{t('settings.startDate')}</label>
+                  <input
+                    type="date"
+                    value={resolvedFormData.startDate}
+                    onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
+                    disabled={!canEditProject}
+                    className={cn(
+                      'field-input',
+                      !canEditProject && 'cursor-not-allowed opacity-60',
+                      dateError && 'border-[rgba(203,75,95,0.4)]'
+                    )}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">{t('settings.endDate')}</label>
+                  <input
+                    type="date"
+                    value={resolvedFormData.endDate}
+                    onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
+                    disabled={!canEditProject}
+                    className={cn(
+                      'field-input',
+                      !canEditProject && 'cursor-not-allowed opacity-60',
+                      dateError && 'border-[rgba(203,75,95,0.4)]'
+                    )}
+                  />
+                </div>
+              </div>
+              {dateError && (
+                <p className="text-xs text-[color:var(--accent-danger)]">{dateError}</p>
+              )}
+
+              <div>
+                <label className="field-label">{t('settings.baseDate')}</label>
+                <input
+                  type="date"
+                  value={resolvedFormData.baseDate}
+                  onChange={(event) => setFormData({ ...formData, baseDate: event.target.value })}
+                  disabled={!canEditProject}
+                  className={cn('field-input', !canEditProject && 'cursor-not-allowed opacity-60')}
+                />
+                <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+                  {t('settings.baseDateDesc')}
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSave} isLoading={isSaving} disabled={!canEditProject || !!nameError || !!dateError}>
+                  <Save className="w-4 h-4" />
+                  {t('common.save')}
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="app-panel p-6">
@@ -817,6 +705,120 @@ export default function Settings() {
                 {t('settings.aiModeDesc')}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="app-panel p-6">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+              {t('settings.statusManagement')}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {t('settings.statusDesc')}
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {([
+                {
+                  key: 'auto' as const,
+                  title: t('settings.autoSync'),
+                  description: t('settings.autoSyncDesc'),
+                },
+                {
+                  key: 'manual' as const,
+                  title: t('settings.manualFix'),
+                  description: t('settings.manualFixDesc'),
+                },
+              ]).map((mode) => {
+                const isCurrentMode = statusMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => void handleStatusModeChange(mode.key)}
+                    disabled={!isAdmin || isCurrentMode || isStatusModeSaving}
+                    data-testid={`settings-status-mode-${mode.key}`}
+                    className={`rounded-[22px] border p-4 text-left transition-all duration-200 ${
+                      isCurrentMode
+                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                        : !isAdmin
+                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
+                    }`}
+                  >
+                    <p className="font-medium text-[color:var(--text-primary)]">
+                      {mode.title}
+                      {isCurrentMode && (
+                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentPolicy')}</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{mode.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {isManualStatus
+                ? t('settings.manualFixActiveDesc')
+                : t('settings.autoSyncActiveDesc')}
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {([
+                { status: 'preparing' as ProjectStatus, icon: <Clock3 className="w-4 h-4" />, desc: t('settings.statusPreparing') },
+                { status: 'active' as ProjectStatus, icon: <Play className="w-4 h-4" />, desc: t('settings.statusActive') },
+                { status: 'completed' as ProjectStatus, icon: <CheckCircle2 className="w-4 h-4" />, desc: t('settings.statusCompleted') },
+              ]).map((item) => {
+                const isCurrent = currentProject?.status === item.status;
+                return (
+                  <button
+                    key={item.status}
+                    onClick={() => !isCurrent && isAdmin && isManualStatus && handleChangeStatus(item.status)}
+                    disabled={isCurrent || !isAdmin || !isManualStatus}
+                    data-testid={`settings-project-status-${item.status}`}
+                    className={`flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-all duration-200 ${
+                      isCurrent
+                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                        : !isAdmin || !isManualStatus
+                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
+                    }`}
+                  >
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: `${PROJECT_STATUS_COLORS[item.status]}18`,
+                        color: PROJECT_STATUS_COLORS[item.status],
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-[color:var(--text-primary)]">
+                        {PROJECT_STATUS_LABELS[item.status]}
+                        {isCurrent && (
+                          <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentStatus')}</span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">{item.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {!isAdmin && (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.adminOnlyStatus')}</p>
+            )}
+            {isAdmin && !isManualStatus && (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.enableManualHint')}</p>
+            )}
+
+            {currentProject?.completedAt && (
+              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
+                {t('settings.completedDate')}: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
+              </p>
+            )}
           </div>
 
           {canDeleteProject && (
