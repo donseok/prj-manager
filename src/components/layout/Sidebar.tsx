@@ -171,59 +171,68 @@ export default function Sidebar() {
 
   if (sidebarCollapsed) {
     return (
-      <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[68px] lg:self-start transition-all duration-300">
-        <div className="app-panel-dark flex overflow-hidden">
+      <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:max-h-[calc(100vh-9.75rem)] lg:w-[68px] lg:self-start transition-all duration-300">
+        <div className="app-panel-dark flex overflow-hidden lg:h-full">
           <div className="flex w-full flex-col items-center p-3 gap-3">
-            <button
-              onClick={toggleSidebar}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
-              title={t('sidebar.expandSidebar')}
-            >
-              <PanelLeftOpen className="h-4 w-4" />
-            </button>
-
-            <div className="w-full border-t border-white/10" />
-
-            <div className="space-y-2">
-              {visibleProjects.map((project) => (
-                <NavLink
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200',
-                      isActive
-                        ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
-                        : 'border-transparent bg-white/[0.08] text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
-                    )
-                  }
-                  title={project.name}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </NavLink>
-              ))}
-              {hasMoreProjects && (
-                <NavLink
-                  to="/projects"
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent bg-white/[0.08] text-xs font-medium text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
-                  title={t('sidebar.moreProjects', { count: projects.length - MAX_VISIBLE_PROJECTS })}
-                >
-                  +{projects.length - MAX_VISIBLE_PROJECTS}
-                </NavLink>
-              )}
+            {/* Fixed top: toggle button */}
+            <div className="shrink-0">
+              <button
+                onClick={toggleSidebar}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
+                title={t('sidebar.expandSidebar')}
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
             </div>
 
-            <div className="w-full border-t border-white/10" />
+            {/* Scrollable middle */}
+            <div className="flex-1 overflow-y-auto overscroll-contain sidebar-scroll w-full flex flex-col items-center gap-3">
+              <div className="w-full border-t border-white/10" />
 
-            <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
+              <div className="space-y-2">
+                {visibleProjects.map((project) => (
+                  <NavLink
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200',
+                        isActive
+                          ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
+                          : 'border-transparent bg-white/[0.08] text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
+                      )
+                    }
+                    title={project.name}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </NavLink>
+                ))}
+                {hasMoreProjects && (
+                  <NavLink
+                    to="/projects"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent bg-white/[0.08] text-xs font-medium text-white/80 hover:border-white/12 hover:bg-white/[0.12] hover:text-white transition-all duration-200"
+                    title={t('sidebar.moreProjects', { count: projects.length - MAX_VISIBLE_PROJECTS })}
+                  >
+                    +{projects.length - MAX_VISIBLE_PROJECTS}
+                  </NavLink>
+                )}
+              </div>
 
-            <NavLink
-              to="/projects/new"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
-              title={t('sidebar.newProject')}
-            >
-              <Plus className="w-4 h-4" />
-            </NavLink>
+              <div className="w-full border-t border-white/10" />
+
+              <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
+            </div>
+
+            {/* Fixed bottom: new project button */}
+            <div className="shrink-0">
+              <NavLink
+                to="/projects/new"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
+                title={t('sidebar.newProject')}
+              >
+                <Plus className="w-4 h-4" />
+              </NavLink>
+            </div>
           </div>
         </div>
       </aside>
@@ -231,10 +240,11 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[310px] lg:self-start transition-all duration-300">
-      <div className="app-panel-dark flex overflow-hidden">
+    <aside className="w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:max-h-[calc(100vh-9.75rem)] lg:w-[310px] lg:self-start transition-all duration-300">
+      <div className="app-panel-dark flex overflow-hidden lg:h-full">
         <div className="flex w-full flex-col p-4">
-          <div className="flex items-center justify-between mb-4">
+          {/* Fixed top: toggle button */}
+          <div className="shrink-0 flex items-center justify-between mb-4">
             <div />
             <button
               onClick={toggleSidebar}
@@ -245,107 +255,111 @@ export default function Sidebar() {
             </button>
           </div>
 
-          <div className="rounded-[26px] border border-white/12 bg-white/[0.08] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/86">Workspace</p>
-            <h2 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
-              Planning cockpit
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-white/82">
-              {t('sidebar.workspaceDescription')}
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Projects</p>
-                <p className="mt-1 text-2xl font-semibold text-white">{projects.length}</p>
-              </div>
-              <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Active</p>
-                <p className="mt-1 text-2xl font-semibold text-white">{activeProjects}</p>
+          {/* Scrollable middle */}
+          <div className="flex-1 overflow-y-auto overscroll-contain sidebar-scroll" aria-label={t('sidebar.menu')}>
+            <div className="rounded-[26px] border border-white/12 bg-white/[0.08] p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-white/86">Workspace</p>
+              <h2 className="mt-3 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
+                Planning cockpit
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-white/82">
+                {t('sidebar.workspaceDescription')}
+              </p>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Projects</p>
+                  <p className="mt-1 text-2xl font-semibold text-white">{projects.length}</p>
+                </div>
+                <div className="rounded-2xl border border-white/12 bg-white/[0.1] p-3">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/82">Active</p>
+                  <p className="mt-1 text-2xl font-semibold text-white">{activeProjects}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/12 bg-white/[0.06] p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">{t('sidebar.projects')}</h3>
-              <NavLink
-                to="/projects"
-                className="text-xs font-medium text-white/80 transition-colors hover:text-white"
-              >
-                {t('common.viewAll')}
-              </NavLink>
-            </div>
-            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-              {visibleProjects.map((project) => (
-                <NavLink
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className={({ isActive }) =>
-                    cn(
-                      'group flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-all duration-200',
-                      isActive
-                        ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
-                        : 'border-transparent bg-white/[0.08] text-white/82 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
-                    )
-                  }
-                >
-                  <div className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
-                    project.id === projectId
-                      ? 'bg-white/14'
-                      : 'bg-white/[0.1] group-hover:bg-white/14'
-                  )}>
-                    <FolderOpen className={cn(
-                      'h-4 w-4 transition-colors',
-                      project.id === projectId ? 'text-white' : 'text-white/84 group-hover:text-white'
-                    )} />
-                  </div>
-                  <div className="min-w-0 flex-1" title={project.name}>
-                    <p className="truncate font-medium">{project.name}</p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-white/84">
-                      <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: PROJECT_STATUS_COLORS[project.status] }} />
-                      {t(`sidebar.projectStatus.${project.status === 'active' ? 'active' : project.status === 'completed' ? 'completed' : 'preparing'}`)}
-                    </p>
-                  </div>
-                  <ChevronRight className={cn(
-                    'h-4 w-4 transition-all duration-200',
-                    project.id === projectId ? 'translate-x-0 text-white' : '-translate-x-1 text-white/0 group-hover:translate-x-0 group-hover:text-white/82'
-                  )} />
-                </NavLink>
-              ))}
-              {hasMoreProjects && (
+            <div className="mt-4 rounded-[24px] border border-white/12 bg-white/[0.06] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">{t('sidebar.projects')}</h3>
                 <NavLink
                   to="/projects"
-                  className="flex items-center justify-center rounded-2xl border border-dashed border-white/12 px-3 py-2.5 text-xs font-medium text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+                  className="text-xs font-medium text-white/80 transition-colors hover:text-white"
                 >
-                  {t('sidebar.moreProjects', { count: projects.length - MAX_VISIBLE_PROJECTS })}
+                  {t('common.viewAll')}
                 </NavLink>
-              )}
-              {projects.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/12 px-4 py-8 text-center">
-                  <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/40" />
-                  <p className="text-sm text-white/82">{t('sidebar.noProjects')}</p>
-                </div>
-              )}
+              </div>
+              <div className="space-y-2.5">
+                {visibleProjects.map((project) => (
+                  <NavLink
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-all duration-200',
+                        isActive
+                          ? 'border-white/14 bg-white/10 text-white shadow-[0_18px_40px_-28px_rgba(255,255,255,0.4)]'
+                          : 'border-transparent bg-white/[0.08] text-white/82 hover:border-white/12 hover:bg-white/[0.12] hover:text-white'
+                      )
+                    }
+                  >
+                    <div className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-2xl transition-colors',
+                      project.id === projectId
+                        ? 'bg-white/14'
+                        : 'bg-white/[0.1] group-hover:bg-white/14'
+                    )}>
+                      <FolderOpen className={cn(
+                        'h-4 w-4 transition-colors',
+                        project.id === projectId ? 'text-white' : 'text-white/84 group-hover:text-white'
+                      )} />
+                    </div>
+                    <div className="min-w-0 flex-1" title={project.name}>
+                      <p className="truncate font-medium">{project.name}</p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-white/84">
+                        <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: PROJECT_STATUS_COLORS[project.status] }} />
+                        {t(`sidebar.projectStatus.${project.status === 'active' ? 'active' : project.status === 'completed' ? 'completed' : 'preparing'}`)}
+                      </p>
+                    </div>
+                    <ChevronRight className={cn(
+                      'h-4 w-4 transition-all duration-200',
+                      project.id === projectId ? 'translate-x-0 text-white' : '-translate-x-1 text-white/0 group-hover:translate-x-0 group-hover:text-white/82'
+                    )} />
+                  </NavLink>
+                ))}
+                {hasMoreProjects && (
+                  <NavLink
+                    to="/projects"
+                    className="flex items-center justify-center rounded-2xl border border-dashed border-white/12 px-3 py-2.5 text-xs font-medium text-white/80 transition-colors hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {t('sidebar.moreProjects', { count: projects.length - MAX_VISIBLE_PROJECTS })}
+                  </NavLink>
+                )}
+                {projects.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-white/12 px-4 py-8 text-center">
+                    <FolderOpen className="mx-auto mb-3 h-8 w-8 text-white/40" />
+                    <p className="text-sm text-white/82">{t('sidebar.noProjects')}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-3 flex items-center justify-between px-1">
+                <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">{t('sidebar.menu')}</p>
+                <NavLink
+                  to="/projects/new"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
+                  title={t('sidebar.newProject')}
+                >
+                  <Plus className="w-4 h-4" />
+                </NavLink>
+              </div>
+
+              <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
             </div>
           </div>
 
-          <div className="mt-4">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/86">{t('sidebar.menu')}</p>
-              <NavLink
-                to="/projects/new"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.1] text-white/82 transition-colors hover:bg-white/14 hover:text-white"
-                title={t('sidebar.newProject')}
-              >
-                <Plus className="w-4 h-4" />
-              </NavLink>
-            </div>
-
-            <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
-          </div>
-
-          <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">
+          {/* Fixed bottom: Workflow Hint */}
+          <div className="shrink-0 mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/80">Workflow Hint</p>
             <p className="mt-2 text-sm font-medium text-white">{getWorkflowHint(location.pathname, t)}</p>
           </div>
