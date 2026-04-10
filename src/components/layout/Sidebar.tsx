@@ -171,8 +171,8 @@ export default function Sidebar() {
 
   if (sidebarCollapsed) {
     return (
-      <aside className="z-30 w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[68px] lg:self-start transition-all duration-300">
-        <div className="app-panel-dark flex overflow-hidden lg:max-h-[calc(100vh-9.75rem)] lg:overflow-y-auto overscroll-contain sidebar-scroll">
+      <aside className="hidden shrink-0 lg:flex lg:w-[68px] transition-all duration-300">
+        <div className="app-panel-dark flex w-full overflow-y-auto overscroll-contain sidebar-scroll">
           <div className="flex w-full flex-col items-center p-3 gap-3">
             <div className="sticky top-0 z-10 w-full flex justify-center pb-3" style={{ background: 'var(--gradient-dark)' }}>
               <button
@@ -233,8 +233,8 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="z-30 w-full shrink-0 lg:sticky lg:top-[6.75rem] lg:w-[310px] lg:self-start transition-all duration-300">
-      <div className="app-panel-dark flex overflow-hidden lg:max-h-[calc(100vh-9.75rem)] lg:overflow-y-auto overscroll-contain sidebar-scroll">
+    <aside className="hidden shrink-0 lg:flex lg:w-[310px] transition-all duration-300">
+      <div className="app-panel-dark flex w-full overflow-y-auto overscroll-contain sidebar-scroll">
         <div className="flex w-full flex-col p-4">
           <div className="sticky top-0 z-10 flex items-center justify-between pb-4" style={{ background: 'var(--gradient-dark)' }}>
             <div />
