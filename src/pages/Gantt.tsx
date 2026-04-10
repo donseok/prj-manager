@@ -542,7 +542,7 @@ export default function Gantt() {
 
   // ── 일반 모드: 전체 대시보드 레이아웃 ──
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-6">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}
@@ -817,7 +817,7 @@ export default function Gantt() {
         </div>
       </section>
 
-      <div className="app-panel relative flex min-h-0 flex-1 overflow-hidden">
+      <div className="app-panel relative flex overflow-hidden" style={{ height: 'calc(100vh - 260px)', minHeight: '500px' }}>
         {currentProject && (
           <button
             onClick={() => openPopup({ projectId: currentProject.id, page: 'gantt' })}
