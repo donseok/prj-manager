@@ -1547,7 +1547,7 @@ export default function WBS() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}
@@ -1855,7 +1855,7 @@ export default function WBS() {
         />
       )}
 
-      <div className="app-panel relative flex-1 overflow-hidden">
+      <div className="app-panel relative overflow-hidden">
         {!isInPopup && projectId && (
           <button
             onClick={() => openPopup({ projectId, page: 'wbs' })}
@@ -1865,7 +1865,7 @@ export default function WBS() {
             <ExternalLink className="h-4 w-4" />
           </button>
         )}
-        <div ref={tableScrollRef} className="h-full overflow-auto scrollbar-visible">
+        <div ref={tableScrollRef} className="overflow-auto scrollbar-visible">
           {renderWbsTable(baseWbsLayout)}
 
           {flatTasks.length === 0 && (
