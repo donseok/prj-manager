@@ -89,7 +89,7 @@ export default function Header() {
   }, [showUserMenu]);
 
   return (
-    <header className="sticky top-0 z-40 px-4 pt-4 lg:px-6">
+    <header className="shrink-0 z-40 px-4 pt-4 lg:px-6">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" className="group flex items-center gap-3.5">
