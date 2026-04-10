@@ -744,7 +744,7 @@ export default function UserManual() {
   const currentSection = sections.find((sec) => sec.id === activeSection) || sections[0];
 
   return (
-    <div className="space-y-8">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-8">
       {/* Hero */}
       <section className="app-panel-dark relative min-h-[320px] overflow-hidden p-6 md:p-8 lg:min-h-[360px]">
         <div className="pointer-events-none absolute right-[-6rem] top-[-7rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18),transparent_70%)] blur-3xl" />

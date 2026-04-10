@@ -86,7 +86,7 @@ export default function Home() {
   const completedProjects = projects.filter((project) => project.status === 'completed').length;
 
   return (
-    <div className="space-y-8">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-8">
       {/* ============================================================ */}
       {/*  HERO — full width immersive panel                           */}
       {/* ============================================================ */}

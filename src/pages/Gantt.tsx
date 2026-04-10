@@ -542,7 +542,7 @@ export default function Gantt() {
 
   // ── 일반 모드: 전체 대시보드 레이아웃 ──
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex flex-1 min-h-0 flex-col gap-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}

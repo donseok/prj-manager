@@ -1547,7 +1547,7 @@ export default function WBS() {
   );
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}

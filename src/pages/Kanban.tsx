@@ -403,7 +403,7 @@ export default function Kanban() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex flex-1 min-h-0 flex-col gap-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}
@@ -565,7 +565,7 @@ export default function Kanban() {
       </section>
 
       {/* Kanban Board */}
-      <section className="relative flex-1 overflow-x-auto overflow-y-hidden px-1">
+      <section className="relative min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-1">
         {currentProject && (
           <button
             onClick={() => openPopup({ projectId: currentProject.id, page: 'kanban' })}

@@ -325,7 +325,7 @@ export default function Portfolio() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-8">
       {/* Hero Section */}
       <section
         className="app-panel-dark relative min-h-[420px] overflow-hidden p-6 md:p-8"

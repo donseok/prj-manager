@@ -83,7 +83,7 @@ export default function AccountSettings() {
   if (!user) return null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-6">
+    <div className="flex-1 min-h-0 overflow-y-auto mx-auto max-w-3xl space-y-8 px-4 py-6">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}

@@ -287,7 +287,7 @@ export default function Members() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="flex-1 min-h-0 overflow-y-auto space-y-8">
       {feedback && (
         <FeedbackNotice
           tone={feedback.tone}

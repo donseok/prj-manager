@@ -65,7 +65,7 @@ export default function KanbanColumn({
       </div>
 
       {/* Card list */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3 max-h-[calc(100vh-240px)]">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 space-y-3">
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-sm text-[var(--text-muted)]">
             {t('kanbanComponents.noTasks')}

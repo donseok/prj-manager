@@ -16,7 +16,7 @@ export default function Layout() {
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:flex-row">
           <Sidebar />
           <main className="min-w-0 flex-1">
-            <div className="app-panel-strong h-full overflow-y-auto p-0 md:p-7 lg:p-8">
+            <div className="app-panel-strong flex h-full flex-col overflow-hidden p-0 md:p-7 lg:p-8">
               <Outlet />
             </div>
           </main>
