@@ -90,7 +90,7 @@ export default function Header() {
 
   return (
     <header className="shrink-0 z-40 px-4 pt-4 lg:px-6">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
+      <div className="flex items-center justify-between gap-4 rounded-[28px] border border-[var(--border-strong)] bg-[color:var(--bg-secondary)] px-4 py-3 shadow-[0_28px_72px_-40px_rgba(17,24,39,0.42)] backdrop-blur-2xl sm:px-5">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" className="group flex items-center gap-3.5">
             <div className="relative rounded-[12px] overflow-hidden shadow-[0_20px_40px_-20px_rgba(15,118,110,0.7)] ring-1 ring-white/10 transition-all duration-500 ease-out group-hover:-translate-y-0.5 group-hover:shadow-[0_24px_48px_-20px_rgba(15,118,110,0.85)] group-hover:ring-white/20 dark:shadow-[0_20px_40px_-20px_rgba(50,182,171,0.35)] dark:ring-white/5 dark:group-hover:shadow-[0_24px_48px_-20px_rgba(50,182,171,0.5)]">
