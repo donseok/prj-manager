@@ -38,7 +38,7 @@ export default function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex flex-col min-w-[320px] rounded-2xl',
+        'flex flex-col min-w-[320px] w-[320px] flex-shrink-0 rounded-2xl',
         'bg-[var(--bg-secondary-solid)]',
         'border border-[var(--border-color)]'
       )}
