@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useProjectStore } from '../store/projectStore';
-import { getProjectPermissions, getSystemAdminReadOnlyPermissions, type ProjectPermissions } from '../lib/permissions';
+import { getProjectPermissions, getSystemAdminPermissions, type ProjectPermissions } from '../lib/permissions';
 
 export function useProjectPermission(): ProjectPermissions {
   const user = useAuthStore((state) => state.user);
@@ -14,13 +14,9 @@ export function useProjectPermission(): ProjectPermissions {
 
     const member = members.find((m) => m.userId === user.id);
 
-    // System admin who is also a project member → use their assigned role (no auto-elevate)
+    // System admin → full superuser access on every project, regardless of membership
     if (user.systemRole === 'admin') {
-      if (member) {
-        return { ...getProjectPermissions(member.role), isSystemAdmin: true };
-      }
-      // System admin who is NOT a member → read-only access
-      return getSystemAdminReadOnlyPermissions();
+      return getSystemAdminPermissions();
     }
 
     return getProjectPermissions(member?.role ?? null);

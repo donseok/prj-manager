@@ -159,24 +159,24 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
   }
 }
 
-export function getSystemAdminReadOnlyPermissions(): ProjectPermissions {
+export function getSystemAdminPermissions(): ProjectPermissions {
   return {
     role: null,
     isSystemAdmin: true,
-    canEditProject: false,
-    canDeleteProject: false,
-    canManageMembers: false,
-    canCreateTask: false,
-    canEditTask: false,
-    canDeleteTask: false,
+    canEditProject: true,
+    canDeleteProject: true,
+    canManageMembers: true,
+    canCreateTask: true,
+    canEditTask: true,
+    canDeleteTask: true,
     canExport: true,
     canViewAttendance: true,
-    canEditOwnAttendance: false,
-    canEditAllAttendance: false,
-    canEditAllTasks: false,
+    canEditOwnAttendance: true,
+    canEditAllAttendance: true,
+    canEditAllTasks: true,
     canEditOwnTasksOnly: false,
-    canTransferOwnership: false,
-    isReadOnly: true,
+    canTransferOwnership: true,
+    isReadOnly: false,
   };
 }
 
