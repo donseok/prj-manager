@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown, Activity } from 'lucide-react';
+import { Plus, Trash2, UserCircle, Edit2, Check, X, ShieldCheck, Users, Save, Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ListPlus, Crown, Activity, Search } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useTaskStore } from '../store/taskStore';
 import Button from '../components/common/Button';
@@ -12,6 +12,7 @@ import { getProjectVisualTone } from '../lib/projectVisuals';
 import { cn, generateId } from '../lib/utils';
 import { syncProjectMembers, upsertProject } from '../lib/dataRepository';
 import { logAuditEvent } from '../lib/auditLog';
+import { loadAllProfiles } from '../lib/supabase';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
@@ -78,6 +79,41 @@ export default function Members() {
 
   const [pendingDuplicateName, setPendingDuplicateName] = useState<string | null>(null);
 
+  // 승인된 사용자 목록 (멤버 추가 시 선택용)
+  const [activeProfiles, setActiveProfiles] = useState<Array<{ id: string; email: string; name: string }>>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // 모달 열릴 때 승인된 사용자 목록 로드
+  useEffect(() => {
+    if (!showAddModal) return;
+    setProfilesLoading(true);
+    void loadAllProfiles().then((profiles) => {
+      const active = profiles.filter((p) => p.accountStatus === 'active');
+      setActiveProfiles(active);
+      setProfilesLoading(false);
+    });
+  }, [showAddModal]);
+
+  // 이미 프로젝트에 추가된 사용자 제외
+  const availableProfiles = useMemo(() => {
+    const existingUserIds = new Set(members.map((m) => m.userId).filter(Boolean));
+    const existingNames = new Set(members.map((m) => m.name));
+    return activeProfiles.filter(
+      (p) => !existingUserIds.has(p.id) && !existingNames.has(p.name)
+    );
+  }, [activeProfiles, members]);
+
+  // 검색 필터링
+  const filteredProfiles = useMemo(() => {
+    if (!userSearchQuery.trim()) return availableProfiles;
+    const q = userSearchQuery.toLowerCase();
+    return availableProfiles.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)
+    );
+  }, [availableProfiles, userSearchQuery]);
+
   const roleLabels: Record<ProjectMember['role'], string> = {
     owner: t('members.roles.owner'),
     admin: t('members.roles.admin'),
@@ -87,10 +123,11 @@ export default function Members() {
     viewer: t('members.roles.viewer'),
   };
 
-  const executeSingleAdd = (name: string) => {
+  const executeSingleAdd = (name: string, userId?: string) => {
     addMember({
       id: generateId(),
       projectId: projectId!,
+      userId,
       name,
       role: singleRole,
       createdAt: new Date().toISOString(),
@@ -111,11 +148,22 @@ export default function Members() {
       message: t('members.addSuccessMsg', { name }),
     });
     setSingleName('');
+    setSelectedUserId(null);
+    setUserSearchQuery('');
     setPendingDuplicateName(null);
-    requestAnimationFrame(() => singleNameRef.current?.focus());
   };
 
   const handleSingleAdd = () => {
+    // 승인된 사용자 선택 모드
+    if (selectedUserId) {
+      const profile = activeProfiles.find((p) => p.id === selectedUserId);
+      if (profile) {
+        executeSingleAdd(profile.name, profile.id);
+      }
+      return;
+    }
+
+    // 직접 입력 모드 (폴백)
     const trimmed = singleName.trim();
     if (!trimmed) return;
 
@@ -619,30 +667,66 @@ export default function Members() {
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">{t('members.nameLabel')}</label>
-                <input
-                  ref={singleNameRef}
-                  type="text"
-                  value={singleName}
-                  onChange={(e) => setSingleName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSingleAdd();
-                    }
-                  }}
-                  className="field-input w-full py-2.5"
-                  placeholder={t('members.namePlaceholder')}
-                  autoFocus
-                  data-testid="member-name-input"
-                />
+                {profilesLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-[color:var(--text-muted)]" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 검색 입력 */}
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+                      <input
+                        ref={singleNameRef}
+                        type="text"
+                        value={userSearchQuery}
+                        onChange={(e) => { setUserSearchQuery(e.target.value); setSelectedUserId(null); }}
+                        className="field-input w-full py-2.5 pl-9"
+                        placeholder="이름 또는 이메일로 검색..."
+                        autoFocus
+                        data-testid="member-name-input"
+                      />
+                    </div>
+                    {/* 사용자 목록 */}
+                    <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--border-color)] bg-[color:var(--bg-tertiary)]">
+                      {filteredProfiles.length === 0 ? (
+                        <p className="px-4 py-6 text-center text-sm text-[color:var(--text-muted)]">
+                          {availableProfiles.length === 0 ? '추가 가능한 사용자가 없습니다' : '검색 결과가 없습니다'}
+                        </p>
+                      ) : (
+                        filteredProfiles.map((profile) => (
+                          <button
+                            key={profile.id}
+                            onClick={() => { setSelectedUserId(profile.id); setUserSearchQuery(profile.name); }}
+                            className={cn(
+                              'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-[color:var(--bg-elevated)]',
+                              selectedUserId === profile.id && 'bg-[color:var(--bg-elevated)] ring-1 ring-inset ring-[color:var(--accent-primary)]'
+                            )}
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-primary)] text-xs font-bold text-white">
+                              {profile.name.charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-[color:var(--text-primary)]">{profile.name}</p>
+                              <p className="truncate text-xs text-[color:var(--text-muted)]">{profile.email}</p>
+                            </div>
+                            {selectedUserId === profile.id && (
+                              <Check className="h-4 w-4 shrink-0 text-[color:var(--accent-primary)]" />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-4">
-                <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); }}>
+                <Button variant="ghost" onClick={() => { setShowAddModal(false); resetBulkForm(); setUserSearchQuery(''); setSelectedUserId(null); }}>
                   {t('common.close')}
                 </Button>
                 <Button
                   onClick={handleSingleAdd}
-                  disabled={!singleName.trim()}
+                  disabled={!selectedUserId}
                   data-testid="members-confirm-add-button"
                 >
                   <Plus className="h-4 w-4" />
