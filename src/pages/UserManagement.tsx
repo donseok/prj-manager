@@ -65,9 +65,9 @@ function FloatingStatBubble({
 }
 
 const STATUS_BADGE_CLASS: Record<AccountStatus, string> = {
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  suspended: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  pending: 'bg-amber-200 text-amber-900 dark:bg-amber-900/30 dark:text-amber-400',
+  active: 'bg-green-200 text-green-900 dark:bg-green-900/30 dark:text-green-400',
+  suspended: 'bg-red-200 text-red-900 dark:bg-red-900/30 dark:text-red-400',
 };
 
 export default function UserManagement() {
@@ -462,12 +462,12 @@ export default function UserManagement() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
                         {profile.systemRole === 'superadmin' ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-900 dark:bg-violet-900/30 dark:text-violet-400">
                             <ShieldCheck className="h-3.5 w-3.5" />
                             슈퍼관리자
                           </span>
                         ) : isSelf ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-900 dark:bg-teal-900/30 dark:text-teal-400">
                             <ShieldCheck className="h-3.5 w-3.5" />
                             {t('userManagement.roleAdmin')}
                           </span>
@@ -482,8 +482,8 @@ export default function UserManagement() {
                             disabled={isUpdatingThis}
                             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.5 disabled:opacity-50 ${
                               profile.systemRole === 'admin'
-                                ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/30 dark:text-teal-400'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400'
+                                ? 'bg-teal-200 text-teal-900 hover:bg-teal-300 dark:bg-teal-900/30 dark:text-teal-400'
+                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-800/40 dark:text-gray-400'
                             }`}
                           >
                             {isUpdatingThis ? (
@@ -509,7 +509,7 @@ export default function UserManagement() {
                             <button
                               onClick={() => void handleStatusChange(profile.id, 'active')}
                               disabled={isUpdatingThis}
-                              className="inline-flex items-center gap-1 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 transition-all hover:-translate-y-0.5 hover:bg-green-200 disabled:opacity-50 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                              className="inline-flex items-center gap-1 rounded-lg bg-green-200 px-3 py-1.5 text-xs font-semibold text-green-900 transition-all hover:-translate-y-0.5 hover:bg-green-300 disabled:opacity-50 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
                             >
                               {isUpdatingThis ? (
                                 <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
@@ -521,7 +521,7 @@ export default function UserManagement() {
                             <button
                               onClick={() => void handleStatusChange(profile.id, 'suspended')}
                               disabled={isUpdatingThis}
-                              className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 transition-all hover:-translate-y-0.5 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-200 px-3 py-1.5 text-xs font-semibold text-red-900 transition-all hover:-translate-y-0.5 hover:bg-red-300 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                             >
                               {isUpdatingThis ? (
                                 <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
@@ -532,7 +532,7 @@ export default function UserManagement() {
                             </button>
                             <button
                               onClick={() => setDeleteTarget(profile)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-800 transition-all hover:-translate-y-0.5 hover:bg-red-200 hover:text-red-900 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                               title="계정 삭제"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -543,7 +543,7 @@ export default function UserManagement() {
                             <button
                               onClick={() => void handleStatusChange(profile.id, 'suspended')}
                               disabled={isUpdatingThis}
-                              className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 transition-all hover:-translate-y-0.5 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-200 px-3 py-1.5 text-xs font-semibold text-red-900 transition-all hover:-translate-y-0.5 hover:bg-red-300 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                             >
                               {isUpdatingThis ? (
                                 <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
@@ -554,7 +554,7 @@ export default function UserManagement() {
                             </button>
                             <button
                               onClick={() => setDeleteTarget(profile)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-800 transition-all hover:-translate-y-0.5 hover:bg-red-200 hover:text-red-900 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                               title="계정 삭제"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -565,7 +565,7 @@ export default function UserManagement() {
                             <button
                               onClick={() => void handleStatusChange(profile.id, 'active')}
                               disabled={isUpdatingThis}
-                              className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-200 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                              className="inline-flex items-center gap-1 rounded-lg bg-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-900 transition-all hover:-translate-y-0.5 hover:bg-blue-300 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
                             >
                               {isUpdatingThis ? (
                                 <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
@@ -576,7 +576,7 @@ export default function UserManagement() {
                             </button>
                             <button
                               onClick={() => setDeleteTarget(profile)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-800 transition-all hover:-translate-y-0.5 hover:bg-red-200 hover:text-red-900 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                               title="계정 삭제"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -596,7 +596,7 @@ export default function UserManagement() {
       {/* Project creation policy */}
       <div className="mt-8 rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-200 text-teal-900 dark:bg-teal-900/30 dark:text-teal-400">
             <Settings className="h-5 w-5" />
           </div>
           <div>
