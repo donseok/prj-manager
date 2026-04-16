@@ -98,12 +98,12 @@ function App() {
           id: 'local-user',
           email: 'local@localhost',
           name: '로컬 사용자',
-          systemRole: 'admin' as const,
+          systemRole: 'superadmin' as const,
           accountStatus: 'active' as const,
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
+        const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin');
         if (!isCancelled) setProjects(projects);
         return;
       }
@@ -118,7 +118,7 @@ function App() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const projects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'admin');
+        const projects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin');
         if (isCancelled) return;
         setProjects(projects);
       } else {
@@ -133,7 +133,7 @@ function App() {
         if (initialSkip) return;
         if (nextUser) {
           setUser(nextUser);
-          void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'admin').then((projects) => {
+          void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'superadmin').then((projects) => {
             if (!isCancelled) setProjects(projects);
           });
         } else {
@@ -334,12 +334,12 @@ function PopupProjectWrapper() {
           id: 'local-user',
           email: 'local@localhost',
           name: '로컬 사용자',
-          systemRole: 'admin' as const,
+          systemRole: 'superadmin' as const,
           accountStatus: 'active' as const,
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'admin');
+        const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin');
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);
@@ -356,7 +356,7 @@ function PopupProjectWrapper() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const loadedProjects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'admin');
+        const loadedProjects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin');
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);

@@ -131,7 +131,7 @@ export default function Sidebar() {
   const { projectId } = useParams();
   const location = useLocation();
   const { projects } = useProjectStore();
-  const { isAdmin } = useAuthStore();
+  const { isSuperAdmin } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const activeProjects = projects.filter((project) => project.status === 'active').length;
   const [pendingCount, setPendingCount] = useState(0);
@@ -151,12 +151,12 @@ export default function Sidebar() {
   const hasMoreProjects = projects.length > MAX_VISIBLE_PROJECTS;
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const fetchCount = () => void loadPendingCount().then(setPendingCount);
     fetchCount();
     const interval = setInterval(fetchCount, 30_000);
     return () => clearInterval(interval);
-  }, [isAdmin]);
+  }, [isSuperAdmin]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -217,7 +217,7 @@ export default function Sidebar() {
 
             <div className="w-full border-t border-white/10" />
 
-            <SidebarNav items={navItems} collapsed={true} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
+            <SidebarNav items={navItems} collapsed={true} isAdmin={isSuperAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
 
             <NavLink
               to="/projects/new"
@@ -344,7 +344,7 @@ export default function Sidebar() {
               </NavLink>
             </div>
 
-            <SidebarNav items={navItems} collapsed={false} isAdmin={isAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
+            <SidebarNav items={navItems} collapsed={false} isAdmin={isSuperAdmin} navLinkClass={navLinkClass} projectId={projectId} t={t} />
           </div>
 
           <div className="mt-4 rounded-[24px] border border-white/12 bg-[linear-gradient(135deg,rgba(15,118,110,0.24),rgba(203,109,55,0.16))] p-4">

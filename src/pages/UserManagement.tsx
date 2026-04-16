@@ -461,7 +461,12 @@ export default function UserManagement() {
                     {/* System role toggle */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
-                        {isSelf ? (
+                        {profile.systemRole === 'superadmin' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            슈퍼관리자
+                          </span>
+                        ) : isSelf ? (
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
                             <ShieldCheck className="h-3.5 w-3.5" />
                             {t('userManagement.roleAdmin')}

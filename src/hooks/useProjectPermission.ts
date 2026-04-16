@@ -15,7 +15,7 @@ export function useProjectPermission(): ProjectPermissions {
     const member = members.find((m) => m.userId === user.id);
 
     // System admin → full superuser access on every project, regardless of membership
-    if (user.systemRole === 'admin') {
+    if (user.systemRole === 'superadmin') {
       return getSystemAdminPermissions();
     }
 

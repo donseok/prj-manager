@@ -22,7 +22,7 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 export default function AccountSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, isAdmin, logout } = useAuthStore();
+  const { user, isSuperAdmin, isAdmin, logout } = useAuthStore();
   const { projects } = useProjectStore();
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const CONFIRM_TEXT = t('account.confirmText');
@@ -134,8 +134,8 @@ export default function AccountSettings() {
                 {t('account.roleLabel')}
               </p>
               <p className="mt-1 flex items-center gap-1.5 font-medium text-[color:var(--text-primary)]">
-                {isAdmin && <ShieldCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />}
-                {isAdmin ? t('account.admin') : t('account.normalUser')}
+                {(isSuperAdmin || isAdmin) && <ShieldCheck className="h-4 w-4 text-[color:var(--accent-primary)]" />}
+                {isSuperAdmin ? t('account.superAdmin', '슈퍼관리자') : isAdmin ? t('account.admin') : t('account.normalUser')}
               </p>
             </div>
           </div>

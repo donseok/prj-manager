@@ -13,7 +13,7 @@ interface ManagedProject {
 }
 
 export default function ProjectAdminHome() {
-  const { user, isAdmin } = useAuthStore();
+  const { user } = useAuthStore();
   const projects = useProjectStore((s) => s.projects);
   const [managed, setManaged] = useState<ManagedProject[]>([]);
   const [otherProjects, setOtherProjects] = useState<Project[]>([]);
@@ -36,11 +36,8 @@ export default function ProjectAdminHome() {
           results.push({ project, myRole: 'owner' });
           continue;
         }
-        // admin 여부는 멤버 로드 필요. 시스템 admin이면 전부 관리 가능으로 취급.
-        if (isAdmin) {
-          results.push({ project, myRole: 'admin' });
-          continue;
-        }
+        // 프로젝트 관리자 모드에서는 슈퍼관리자 권한과 무관하게
+        // 실제 프로젝트 멤버 역할만으로 판단한다.
         const members = await loadProjectMembers(project.id);
         const me = members.find((m) => m.userId === user.id);
         if (me && (me.role === 'owner' || me.role === 'admin')) {
@@ -59,7 +56,7 @@ export default function ProjectAdminHome() {
 
     void run();
     return () => { cancelled = true; };
-  }, [projects, user, isAdmin]);
+  }, [projects, user]);
 
   const roleBadge = useMemo(
     () => ({
@@ -145,7 +142,7 @@ export default function ProjectAdminHome() {
         )}
       </section>
 
-      {!isAdmin && otherProjects.length > 0 && (
+      {otherProjects.length > 0 && (
         <section className="app-panel p-6">
           <header className="mb-4">
             <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">타 프로젝트 열람 요청</h2>

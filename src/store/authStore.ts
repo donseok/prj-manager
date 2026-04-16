@@ -8,7 +8,8 @@ interface AuthState {
   isLoading: boolean;
 
   // Computed-like
-  isAdmin: boolean;
+  isSuperAdmin: boolean;  // systemRole === 'superadmin'
+  isAdmin: boolean;       // systemRole === 'superadmin' || 'admin' (하위 호환)
   accountStatus: AccountStatus | null;
   isPending: boolean;
   isSuspended: boolean;
@@ -19,12 +20,21 @@ interface AuthState {
   logout: () => void;
 }
 
+function deriveAdminFlags(user: User | null) {
+  const role = user?.systemRole;
+  return {
+    isSuperAdmin: role === 'superadmin',
+    isAdmin: role === 'superadmin' || role === 'admin',
+  };
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isSuperAdmin: false,
       isAdmin: false,
       accountStatus: null,
       isPending: false,
@@ -34,7 +44,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user,
           isAuthenticated: !!user,
-          isAdmin: user?.systemRole === 'admin',
+          ...deriveAdminFlags(user),
           accountStatus: user?.accountStatus ?? null,
           isPending: user?.accountStatus === 'pending',
           isSuspended: user?.accountStatus === 'suspended',
@@ -47,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           isAuthenticated: false,
+          isSuperAdmin: false,
           isAdmin: false,
           accountStatus: null,
           isPending: false,
@@ -65,7 +76,7 @@ export const useAuthStore = create<AuthState>()(
           ...nextState,
           user,
           isAuthenticated: !!user,
-          isAdmin: user?.systemRole === 'admin',
+          ...deriveAdminFlags(user),
           accountStatus: user?.accountStatus ?? null,
           isPending: user?.accountStatus === 'pending',
           isSuspended: user?.accountStatus === 'suspended',

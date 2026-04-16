@@ -27,7 +27,7 @@ import { loadPendingCount, signOutSupabase } from '../../lib/supabase';
 
 export default function Header() {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin, logout } = useAuthStore();
+  const { user, isSuperAdmin, isAdmin, logout } = useAuthStore();
   const { currentProject } = useProjectStore();
   const { isDark, toggleTheme } = useThemeStore();
   const { inputMode, setInputMode } = useUIStore();
@@ -46,14 +46,14 @@ export default function Header() {
   }).format(new Date());
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
 
     const fetchCount = () => void loadPendingCount().then(setPendingCount);
     fetchCount();
 
     const interval = setInterval(fetchCount, 30_000);
     return () => clearInterval(interval);
-  }, [isAdmin]);
+  }, [isSuperAdmin]);
 
   const handleLogout = () => {
     logout();
@@ -188,7 +188,7 @@ export default function Header() {
               </div>
               <div className="hidden sm:block">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
-                  {isAdmin ? t('header.roleSuperAdmin', '슈퍼관리자') : t('header.roleOperator', '운영자')}
+                  {isSuperAdmin ? t('header.roleSuperAdmin', '슈퍼관리자') : isAdmin ? t('header.roleAdmin', '관리자') : t('header.roleOperator', '운영자')}
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">
                   {user?.name || t('header.userMenu.defaultUser')}
@@ -203,10 +203,16 @@ export default function Header() {
                     <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/82">
                       {t('header.userMenu.loginAccount')}
                     </p>
-                    {isAdmin && (
+                    {isSuperAdmin && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                         <ShieldCheck className="h-3 w-3" />
                         Super Admin
+                      </span>
+                    )}
+                    {!isSuperAdmin && isAdmin && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                        <ShieldCheck className="h-3 w-3" />
+                        Admin
                       </span>
                     )}
                   </div>
@@ -218,7 +224,7 @@ export default function Header() {
                   </p>
                 </div>
 
-                {isAdmin && (
+                {isSuperAdmin && (
                   <Link
                     to="/admin/super"
                     className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"

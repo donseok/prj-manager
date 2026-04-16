@@ -1,5 +1,5 @@
 // 사용자 타입
-export type SystemRole = 'admin' | 'user';
+export type SystemRole = 'superadmin' | 'admin' | 'user';
 export type AccountStatus = 'pending' | 'active' | 'suspended';
 
 export interface User {
