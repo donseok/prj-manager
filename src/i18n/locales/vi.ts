@@ -44,6 +44,7 @@ const vi = {
       currentMode: 'Chế độ hiện tại',
       logout: 'Đăng xuất',
       roleAdmin: 'Quản trị viên',
+      roleSuperAdmin: 'Siêu quản trị viên',
       roleOperator: 'Vận hành viên',
       userMenu: {
         loginAccount: 'Tài khoản đăng nhập',

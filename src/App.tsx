@@ -14,6 +14,16 @@ import Attendance from './pages/Attendance';
 import Login from './pages/Login';
 import PendingApproval from './pages/PendingApproval';
 import UserManagement from './pages/UserManagement';
+import SuperAdminLayout from './pages/admin/SuperAdminLayout';
+import SuperAdminDashboard from './pages/admin/super/SuperAdminDashboard';
+import SuperProjectsPage from './pages/admin/super/SuperProjectsPage';
+import SuperAccessRequestsPage from './pages/admin/super/SuperAccessRequestsPage';
+import SystemSettingsPage from './pages/admin/super/SystemSettingsPage';
+import ProjectAdminLayout from './pages/admin/ProjectAdminLayout';
+import ProjectAdminHome from './pages/admin/project/ProjectAdminHome';
+import MyAccessRequestsPage from './pages/admin/project/MyAccessRequestsPage';
+import SuperAdminRoute from './components/common/SuperAdminRoute';
+import ProjectAdminRoute from './components/common/ProjectAdminRoute';
 import UserManual from './pages/UserManual';
 import Portfolio from './pages/Portfolio';
 import AccountSettings from './pages/AccountSettings';
@@ -168,14 +178,38 @@ function App() {
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="account" element={<AccountSettings />} />
           <Route path="manual" element={<UserManual />} />
+          {/* 하위 호환: 기존 /admin/users 경로를 슈퍼관리자 사용자 관리로 영구 리다이렉트 */}
+          <Route path="admin/users" element={<Navigate to="/admin/super/users" replace />} />
+
+          {/* 슈퍼관리자 콘솔 */}
           <Route
-            path="admin/users"
+            path="admin/super"
             element={
-              <AdminRoute>
-                <UserManagement />
-              </AdminRoute>
+              <SuperAdminRoute>
+                <SuperAdminLayout />
+              </SuperAdminRoute>
             }
-          />
+          >
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="projects" element={<SuperProjectsPage />} />
+            <Route path="access-requests" element={<SuperAccessRequestsPage />} />
+            <Route path="settings" element={<SystemSettingsPage />} />
+          </Route>
+
+          {/* 프로젝트 관리자 허브 */}
+          <Route
+            path="admin/project"
+            element={
+              <ProjectAdminRoute>
+                <ProjectAdminLayout />
+              </ProjectAdminRoute>
+            }
+          >
+            <Route index element={<ProjectAdminHome />} />
+            <Route path="requests" element={<MyAccessRequestsPage />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="popup/projects/:projectId" element={<ProtectedRoute><PopupProjectWrapper /></ProtectedRoute>}>

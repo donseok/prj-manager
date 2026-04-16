@@ -328,6 +328,26 @@ export interface MeetingTask {
   selected: boolean;         // 등록 여부 (기본 true)
 }
 
+// 교차 프로젝트 열람 요청 (프로젝트 관리자가 타 프로젝트를 열람/관리하고 싶을 때 슈퍼관리자 승인 대상)
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+export type AccessRequestScope = 'read' | 'manage';
+
+export interface ProjectAccessRequest {
+  id: string;
+  requesterId: string;           // 요청자 user id
+  requesterName: string;         // 표시용 (슈퍼관리자가 사용자 프로필 조회 없이 식별 가능하도록)
+  projectId: string;             // 대상 프로젝트
+  projectName: string;           // 표시용
+  scope: AccessRequestScope;     // 'read' → viewer, 'manage' → editor 로 승인 시 부여
+  reason: string;
+  status: AccessRequestStatus;
+  requestedAt: string;
+  decidedAt?: string;
+  decidedBy?: string;            // 결정한 슈퍼관리자 id
+  decidedByName?: string;
+  grantedMemberId?: string;      // 승인 시 추가한 ProjectMember.id (revoke 시 제거 대상)
+}
+
 // 담당자별 주간보고 메모
 export interface MemberWeeklyNote {
   memberId: string;

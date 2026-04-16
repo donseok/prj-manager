@@ -44,6 +44,7 @@ const ko = {
       currentMode: '현재 모드',
       logout: '로그아웃',
       roleAdmin: '관리자',
+      roleSuperAdmin: '슈퍼관리자',
       roleOperator: '운영자',
       userMenu: {
         loginAccount: '로그인 계정',

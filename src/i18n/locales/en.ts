@@ -44,6 +44,7 @@ const en = {
       currentMode: 'Current mode',
       logout: 'Logout',
       roleAdmin: 'Admin',
+      roleSuperAdmin: 'Super Admin',
       roleOperator: 'Operator',
       userMenu: {
         loginAccount: 'Logged in as',

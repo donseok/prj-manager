@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings, UserCog, Fingerprint, KeyRound, ShieldAlert, Activity, Lock } from 'lucide-react';
+import { Shield, ShieldCheck, Search, Users, UserCheck, UserX, RefreshCw, Clock, Settings, UserCog, Fingerprint, KeyRound, ShieldAlert, Activity, Lock, Trash2 } from 'lucide-react';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { usePageFeedback } from '../hooks/usePageFeedback';
-import { loadAllProfiles, updateUserSystemRole, updateAccountStatus } from '../lib/supabase';
+import { loadAllProfiles, updateUserSystemRole, updateAccountStatus, adminDeleteUser } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { useSystemSettingsStore } from '../store/systemSettingsStore';
+import { deleteAllOwnedProjects, removeUserFromAllProjects } from '../lib/dataRepository';
 import type { AccountStatus, SystemRole } from '../types';
 
 interface ProfileItem {
@@ -80,6 +81,8 @@ export default function UserManagement() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [tab, setTab] = useState<TabFilter>('all');
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProfileItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +166,27 @@ export default function UserManagement() {
     } finally {
       setSavingPolicy(false);
     }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await adminDeleteUser(deleteTarget.id, {
+      deleteAllOwned: deleteAllOwnedProjects,
+      removeFromAll: removeUserFromAllProjects,
+    });
+    if (!error) {
+      setProfiles((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      showFeedback({
+        tone: 'success',
+        title: '사용자 삭제 완료',
+        message: `${deleteTarget.name} (${deleteTarget.email}) 계정이 삭제되었습니다.`,
+      });
+    } else {
+      showFeedback({ tone: 'error', title: '삭제 실패', message: error });
+    }
+    setDeleting(false);
+    setDeleteTarget(null);
   };
 
   const tabs: { key: TabFilter; label: string; count?: number }[] = [
@@ -501,33 +525,58 @@ export default function UserManagement() {
                               )}
                               {t('userManagement.reject')}
                             </button>
+                            <button
+                              onClick={() => setDeleteTarget(profile)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              title="계정 삭제"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
                           </>
                         ) : profile.accountStatus === 'active' ? (
-                          <button
-                            onClick={() => void handleStatusChange(profile.id, 'suspended')}
-                            disabled={isUpdatingThis}
-                            className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 transition-all hover:-translate-y-0.5 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
-                          >
-                            {isUpdatingThis ? (
-                              <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
-                            ) : (
-                              <UserX className="h-3 w-3" />
-                            )}
-                            {t('userManagement.suspend')}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => void handleStatusChange(profile.id, 'suspended')}
+                              disabled={isUpdatingThis}
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 transition-all hover:-translate-y-0.5 hover:bg-red-200 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                            >
+                              {isUpdatingThis ? (
+                                <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
+                              ) : (
+                                <UserX className="h-3 w-3" />
+                              )}
+                              {t('userManagement.suspend')}
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(profile)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              title="계정 삭제"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </>
                         ) : (
-                          <button
-                            onClick={() => void handleStatusChange(profile.id, 'active')}
-                            disabled={isUpdatingThis}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-200 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                          >
-                            {isUpdatingThis ? (
-                              <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
-                            ) : (
-                              <RefreshCw className="h-3 w-3" />
-                            )}
-                            {t('userManagement.restore')}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => void handleStatusChange(profile.id, 'active')}
+                              disabled={isUpdatingThis}
+                              className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-200 disabled:opacity-50 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                            >
+                              {isUpdatingThis ? (
+                                <div className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
+                              ) : (
+                                <RefreshCw className="h-3 w-3" />
+                              )}
+                              {t('userManagement.restore')}
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(profile)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:-translate-y-0.5 hover:bg-red-100 hover:text-red-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              title="계정 삭제"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -580,6 +629,45 @@ export default function UserManagement() {
         </div>
       </div>
     </section>
+
+      {/* 삭제 확인 모달 */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-primary)] p-6 shadow-2xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+              <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">사용자 계정 삭제</h3>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+              <strong>{deleteTarget.name}</strong> ({deleteTarget.email}) 계정을 삭제하시겠습니까?
+            </p>
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+              이 작업은 되돌릴 수 없습니다. 해당 사용자의 소유 프로젝트와 멤버 참여 내역이 모두 삭제됩니다.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="rounded-lg border border-[var(--border-color)] px-4 py-2 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)] disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => void handleDeleteUser()}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

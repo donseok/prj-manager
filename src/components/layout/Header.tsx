@@ -4,6 +4,7 @@ import {
   Bot,
   CalendarDays,
   ChevronRight,
+  FolderKanban,
   Hand,
   LogOut,
   Moon,
@@ -12,7 +13,6 @@ import {
   Sparkles,
   Sun,
   User,
-  Users,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import DKFlowLogo from '../common/DKFlowLogo';
@@ -188,7 +188,7 @@ export default function Header() {
               </div>
               <div className="hidden sm:block">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--text-secondary)]">
-                  {isAdmin ? t('header.roleAdmin', '관리자') : t('header.roleOperator', '운영자')}
+                  {isAdmin ? t('header.roleSuperAdmin', '슈퍼관리자') : t('header.roleOperator', '운영자')}
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--text-primary)]">
                   {user?.name || t('header.userMenu.defaultUser')}
@@ -206,7 +206,7 @@ export default function Header() {
                     {isAdmin && (
                       <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                         <ShieldCheck className="h-3 w-3" />
-                        Admin
+                        Super Admin
                       </span>
                     )}
                   </div>
@@ -220,12 +220,12 @@ export default function Header() {
 
                 {isAdmin && (
                   <Link
-                    to="/admin/users"
+                    to="/admin/super"
                     className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
                     onClick={() => setShowUserMenu(false)}
                   >
-                    <Users className="h-4 w-4" />
-                    {t('header.userMenu.userManagement')}
+                    <ShieldCheck className="h-4 w-4" />
+                    슈퍼관리자 페이지
                     {pendingCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--accent-danger)] px-1.5 text-[11px] font-bold text-white">
                         {pendingCount}
@@ -233,6 +233,15 @@ export default function Header() {
                     )}
                   </Link>
                 )}
+
+                <Link
+                  to="/admin/project"
+                  className="mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-elevated)]"
+                  onClick={() => setShowUserMenu(false)}
+                >
+                  <FolderKanban className="h-4 w-4" />
+                  프로젝트 관리자 페이지
+                </Link>
 
                 <Link
                   to={settingsLink}

@@ -522,6 +522,56 @@ export async function deleteUserAccount(
   }
 }
 
+/**
+ * 슈퍼관리자가 타 사용자 계정을 삭제.
+ * 1) 소유 프로젝트 일괄 삭제
+ * 2) 멤버 참여 내역 제거
+ * 3) 프로필 삭제
+ * (auth.users 삭제는 service_role 권한이 필요하므로, RPC로 처리)
+ */
+export async function adminDeleteUser(
+  targetUserId: string,
+  cascadeFns: {
+    deleteAllOwned: (uid: string) => Promise<void>;
+    removeFromAll: (uid: string) => Promise<void>;
+  }
+): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) {
+    return { error: 'Supabase가 설정되지 않았습니다.' };
+  }
+
+  try {
+    // 1) 소유 프로젝트 일괄 삭제
+    await cascadeFns.deleteAllOwned(targetUserId);
+
+    // 2) 다른 프로젝트에서 멤버 참여 내역 제거
+    await cascadeFns.removeFromAll(targetUserId);
+
+    // 3) 프로필 삭제
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', targetUserId);
+
+    if (profileError) {
+      console.error('Failed to delete profile:', profileError);
+      return { error: `프로필 삭제 실패: ${profileError.message}` };
+    }
+
+    // 4) auth.users 삭제 시도 (RPC — service_role 권한 필요)
+    const { error: rpcError } = await supabase.rpc('admin_delete_auth_user', { target_user_id: targetUserId });
+    if (rpcError) {
+      console.warn('[adminDeleteUser] auth.users 삭제 실패 (RPC 미설치 가능):', rpcError.message);
+      // 프로필은 이미 삭제됨 — auth.users에 잔여 레코드가 남을 수 있지만 로그인 불가
+    }
+
+    return { error: null };
+  } catch (err) {
+    console.error('Admin user deletion failed:', err);
+    return { error: err instanceof Error ? err.message : '사용자 삭제 처리 중 오류가 발생했습니다.' };
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 // 단기 캐시: 로그인 직후 onAuthStateChange에서 중복 profiles 쿼리 방지
