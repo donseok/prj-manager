@@ -359,11 +359,27 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.S
 }
 
 // ── 근태현황 슬라이드 (금주 + 차주 통합) ─────────────────────
+// 출근(present)을 제외하고 휴가·반차·병가·출장·지각·조퇴·결근 등만 표시
+function filterNonPresentAttendance(
+  summary: import('./weeklyReport').WeeklyAttendanceSummary[],
+): import('./weeklyReport').WeeklyAttendanceSummary[] {
+  return summary
+    .map((member) => {
+      const filtered = member.records.filter((r) => r.type !== 'present');
+      const stats: Record<string, number> = {};
+      for (const r of filtered) {
+        stats[r.typeLabel] = (stats[r.typeLabel] || 0) + 1;
+      }
+      return { ...member, records: filtered, stats };
+    })
+    .filter((member) => member.records.length > 0);
+}
+
 function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.Slide[] {
   const slide = pptx.addSlide();
 
-  const thisWeek = report.attendanceSummary || [];
-  const nextWeek = report.nextWeekAttendanceSummary || [];
+  const thisWeek = filterNonPresentAttendance(report.attendanceSummary || []);
+  const nextWeek = filterNonPresentAttendance(report.nextWeekAttendanceSummary || []);
 
   // 주 시작일로부터 요일별 날짜 계산
   const getDayHeaders = (weekStartStr: string): string[] => {
@@ -444,7 +460,7 @@ function addAttendanceCombinedSlide(pptx: PptxGenJS, report: WeeklyReportData): 
 
     if (summary.length === 0) {
       rows.push([{
-        text: '근태 기록 없음',
+        text: '특이 근태 없음 (전원 출근)',
         options: cellOpts({ color: C.gray400, fill: { color: C.gray50 }, colspan: 7 }),
       }]);
     }
