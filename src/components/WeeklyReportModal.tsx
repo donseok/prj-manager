@@ -227,7 +227,14 @@ export default function WeeklyReportModal({
     }
 
     const memberNameById = new Map(members.map((m) => [m.id, m.name]));
-    exportWeeklyReportExcel(report, { template, allTasks: tasks, memberNameById });
+    await exportWeeklyReportExcel(report, {
+      template,
+      allTasks: tasks,
+      memberNameById,
+      projectStart: project?.startDate,
+      projectEnd: project?.endDate,
+      snapshots: getSnapshots(projectId),
+    });
   };
 
   const handleExportPptx = async () => {
