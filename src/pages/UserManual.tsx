@@ -657,6 +657,33 @@ export default function UserManual() {
       icon: <ClipboardList className="h-5 w-5" />,
       content: (
         <div className="space-y-6">
+          {/* 사용자 데이터 분리 구조 */}
+          <SectionCard title={t(`${s}.permissions.dataSeparation`)}>
+            <p className="mb-5 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.dataSeparationDesc`)}</p>
+            <div className="space-y-3">
+              {[
+                { title: t(`${s}.permissions.dataSeparationStep1Title`), desc: t(`${s}.permissions.dataSeparationStep1Desc`), color: '#60a5fa', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.15)' },
+                { title: t(`${s}.permissions.dataSeparationStep2Title`), desc: t(`${s}.permissions.dataSeparationStep2Desc`), color: '#fbbf24', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.15)' },
+                { title: t(`${s}.permissions.dataSeparationStep3Title`), desc: t(`${s}.permissions.dataSeparationStep3Desc`), color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)' },
+              ].map((step, i) => (
+                <div key={i} className="rounded-xl p-4" style={{ backgroundColor: step.bg, border: `1px solid ${step.border}` }}>
+                  <p className="text-sm font-semibold mb-1" style={{ color: step.color }}>{step.title}</p>
+                  <p className="text-xs leading-5 text-[color:var(--text-secondary)]">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <Tip>{t(`${s}.permissions.dataSeparationCorePrinciple`)}</Tip>
+            </div>
+          </SectionCard>
+          <SectionCard title={t(`${s}.permissions.dataSeparationExampleTitle`)}>
+            <InfoTable
+              headers={t(`${s}.permissions.dataSeparationExampleHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.permissions.dataSeparationExampleRows`, { returnObjects: true }) as string[][]}
+            />
+          </SectionCard>
+
+          {/* 시스템 역할 vs 프로젝트 역할 */}
           <SectionCard title={t(`${s}.permissions.systemVsProject`)}>
             <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.systemVsProjectDesc`)}</p>
             <InfoTable
@@ -670,12 +697,22 @@ export default function UserManual() {
               rows={t(`${s}.permissions.adminOnlyRows`, { returnObjects: true }) as string[][]}
             />
           </SectionCard>
+
+          {/* 프로젝트 역할별 상세 권한 */}
           <SectionCard title={t(`${s}.permissions.projectRolePermissions`)}>
+            <p className="mb-4 text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.projectRoleDesc`)}</p>
             <InfoTable
               headers={t(`${s}.permissions.projectRoleHeaders`, { returnObjects: true }) as string[]}
               rows={t(`${s}.permissions.projectRoleRows`, { returnObjects: true }) as string[][]}
             />
           </SectionCard>
+          <SectionCard title={t(`${s}.permissions.projectRoleDetailTitle`)}>
+            <InfoTable
+              headers={t(`${s}.permissions.projectRoleDetailHeaders`, { returnObjects: true }) as string[]}
+              rows={t(`${s}.permissions.projectRoleDetailRows`, { returnObjects: true }) as string[][]}
+            />
+          </SectionCard>
+
           <SectionCard title={t(`${s}.permissions.auditLog`)}>
             <p className="text-sm leading-6 text-[color:var(--text-secondary)]">{t(`${s}.permissions.auditLogDesc`)}</p>
           </SectionCard>
