@@ -54,6 +54,42 @@ export interface ProjectSettings {
   ganttSummaryCollapsed?: boolean;
   kanbanSummaryCollapsed?: boolean;
   wbsSummaryCollapsed?: boolean;
+  /** 주간보고 엑셀 양식 (프로젝트 수명 동안 고정) */
+  reportTemplate?: WeeklyReportTemplate;
+}
+
+/**
+ * 주간보고 엑셀 양식 메타데이터
+ *
+ * 최초 다운로드 시점에 프로젝트명/phase 목록을 시드로 생성되어
+ * 프로젝트가 완료될 때까지 동일한 양식이 유지된다.
+ */
+export interface WeeklyReportTemplate {
+  /** 양식 버전 (스키마 변경 시 증가) */
+  version: number;
+  /** 생성/고정 일시 */
+  createdAt: string;
+  /** 공정보고 제목 접두 (예: "1. 스마트물류시스템 2단계 구축") */
+  titlePrefix: string;
+  /** 테마 HEX 컬러 (6자, # 제외) */
+  themeColor: string;
+  /** 공정 진도 항목 — 최초 생성 시 프로젝트 phase 이름들로 고정 */
+  progressCategories: Array<{
+    /** 구분 */
+    section: string;
+    /** 항목 */
+    item: string;
+    /** 점유율 (가중치) */
+    weight: number;
+  }>;
+  /** 고정 섹션 라벨 */
+  labels: {
+    progressSection: string;
+    planSection: string;
+    wbsSheet: string;
+    devSheet: string;
+    reportSheet: string;
+  };
 }
 
 // 프로젝트 멤버 타입

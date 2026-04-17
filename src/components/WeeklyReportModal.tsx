@@ -40,8 +40,10 @@ import {
   getSnapshotByWeek,
   getSnapshots,
 } from '../lib/weeklySnapshot';
-import { loadWeeklyMemberReports, upsertWeeklyMemberReport } from '../lib/dataRepository';
+import { loadWeeklyMemberReports, upsertProject, upsertWeeklyMemberReport } from '../lib/dataRepository';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { ensureReportTemplate } from '../lib/weeklyReportTemplate';
+import { useProjectStore } from '../store/projectStore';
 import { addWeeks, startOfWeek, format } from 'date-fns';
 import type { Task, ProjectMember, Attendance } from '../types';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
@@ -202,8 +204,30 @@ export default function WeeklyReportModal({
     return compareSnapshots(report, previousSnapshot?.data ?? null);
   }, [report, previousSnapshot]);
 
-  const handleExport = () => {
-    exportWeeklyReportExcel(report);
+  const handleExport = async () => {
+    const projectStore = useProjectStore.getState();
+    const project = projectStore.projects.find((p) => p.id === projectId) || projectStore.currentProject;
+
+    // 양식 고정 — 최초 다운로드 시 템플릿 생성 후 프로젝트 설정에 영구 저장
+    let template = project?.settings?.reportTemplate;
+    if (project && !template) {
+      const { template: created } = ensureReportTemplate(project, tasks);
+      template = created;
+      const updated = {
+        ...project,
+        settings: { ...(project.settings || {}), reportTemplate: created },
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        await upsertProject(updated);
+        projectStore.updateProject(project.id, { settings: updated.settings, updatedAt: updated.updatedAt });
+      } catch (err) {
+        console.warn('Failed to persist report template, export will still proceed:', err);
+      }
+    }
+
+    const memberNameById = new Map(members.map((m) => [m.id, m.name]));
+    exportWeeklyReportExcel(report, { template, allTasks: tasks, memberNameById });
   };
 
   const handleExportPptx = async () => {
