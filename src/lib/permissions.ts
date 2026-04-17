@@ -14,7 +14,7 @@ export interface ProjectPermissions {
   canEditOwnAttendance: boolean;  // owner, admin, editor, member
   canEditAllAttendance: boolean;  // owner, admin
   canEditAllTasks: boolean;     // owner, admin, editor
-  canEditOwnTasksOnly: boolean; // member, restricted_member
+  canEditOwnTasksOnly: boolean; // member
   canTransferOwnership: boolean; // owner only
   isReadOnly: boolean;          // viewer, system admin read-only
 }
@@ -107,25 +107,6 @@ export function getProjectPermissions(role: ProjectMember['role'] | null): Proje
         canDeleteProject: false,
         canManageMembers: false,
         canCreateTask: true,
-        canEditTask: true,
-        canDeleteTask: false,
-        canExport: true,
-        canViewAttendance: true,
-        canEditOwnAttendance: true,
-        canEditAllAttendance: false,
-        canEditAllTasks: false,
-        canEditOwnTasksOnly: true,
-        canTransferOwnership: false,
-        isReadOnly: false,
-      };
-    case 'restricted_member':
-      return {
-        role,
-        isSystemAdmin: false,
-        canEditProject: false,
-        canDeleteProject: false,
-        canManageMembers: false,
-        canCreateTask: false,
         canEditTask: true,
         canDeleteTask: false,
         canExport: true,

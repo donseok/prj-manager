@@ -119,7 +119,6 @@ export default function Members() {
     admin: t('members.roles.admin'),
     editor: t('members.roles.editor'),
     member: t('members.roles.member'),
-    restricted_member: t('members.roles.restricted_member'),
     viewer: t('members.roles.viewer'),
   };
 
@@ -324,7 +323,6 @@ export default function Members() {
     admin: 'bg-[rgba(15,118,110,0.12)] text-[color:var(--accent-primary)]',
     editor: 'bg-[rgba(59,130,246,0.12)] text-[#3b82f6]',
     member: 'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]',
-    restricted_member: 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]',
     viewer: 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
   };
 
@@ -661,7 +659,6 @@ export default function Members() {
                   <option value="member">{t('members.roles.member')}</option>
                   <option value="admin">{t('members.roles.admin')}</option>
                   <option value="editor">{t('members.roles.editor')}</option>
-                  <option value="restricted_member">{t('members.roles.restricted_member')}</option>
                   <option value="viewer">{t('members.roles.viewer')}</option>
                 </select>
               </div>
