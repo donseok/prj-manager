@@ -670,17 +670,23 @@ export async function loadWeeklyMemberReports(
   weekStart: string,
 ): Promise<WeeklyMemberReport[]> {
   if (!isSupabaseConfigured) return [];
-  const { data, error } = await supabase
-    .from('weekly_member_reports')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('week_start', weekStart);
+  try {
+    const { data, error } = await supabase
+      .from('weekly_member_reports')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('week_start', weekStart);
 
-  if (error) {
-    console.error('Failed to load weekly member reports:', error);
+    if (error) {
+      console.error('Failed to load weekly member reports:', error);
+      return [];
+    }
+    if (!data) return [];
+    return (data as WeeklyMemberReportRow[]).map(mapWmrRow);
+  } catch (err) {
+    console.error('Unexpected error loading weekly member reports:', err);
     return [];
   }
-  return (data as WeeklyMemberReportRow[]).map(mapWmrRow);
 }
 
 export async function upsertWeeklyMemberReport(

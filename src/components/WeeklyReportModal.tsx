@@ -97,10 +97,24 @@ export default function WeeklyReportModal({
 
   // DB에서 담당자 작성 데이터 로드
   useEffect(() => {
-    if (!isOpen || !isSupabaseConfigured) return;
+    if (!isOpen) return;
+    if (!isSupabaseConfigured) {
+      setMemberReportsLoaded(true);
+      return;
+    }
     let cancelled = false;
     setMemberReportsLoaded(false);
+
+    // 타임아웃 보호: 10초 내에 응답 없으면 빈 상태로 진행
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('Weekly member reports load timed out');
+        setMemberReportsLoaded(true);
+      }
+    }, 10000);
+
     loadWeeklyMemberReports(projectId, weekStartStr).then((reports) => {
+      clearTimeout(timeout);
       if (cancelled) return;
       const drafts = new Map<string, { thisWeekResult: string; nextWeekPlan: string; reportId?: string }>();
       for (const r of reports) {
@@ -113,10 +127,14 @@ export default function WeeklyReportModal({
       setMemberDrafts(drafts);
       setMemberReportsLoaded(true);
     }).catch((err) => {
+      clearTimeout(timeout);
       console.error('Failed to load member reports:', err);
       if (!cancelled) setMemberReportsLoaded(true);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [isOpen, projectId, weekStartStr]);
 
   const handleSaveMemberReport = useCallback(async (memberId: string) => {
@@ -329,18 +347,16 @@ export default function WeeklyReportModal({
             <Target className="h-3.5 w-3.5" />
             {t('weeklyReport.detailTab')}
           </button>
-          {isSupabaseConfigured && (
-            <button
-              className={cn(
-                'weekly-report-tab',
-                activeTab === 'member-write' && 'weekly-report-tab-active'
-              )}
-              onClick={() => setActiveTab('member-write')}
-            >
-              <UserPen className="h-3.5 w-3.5" />
-              {t('weeklyReport.memberWriteTab')}
-            </button>
-          )}
+          <button
+            className={cn(
+              'weekly-report-tab',
+              activeTab === 'member-write' && 'weekly-report-tab-active'
+            )}
+            onClick={() => setActiveTab('member-write')}
+          >
+            <UserPen className="h-3.5 w-3.5" />
+            {t('weeklyReport.memberWriteTab')}
+          </button>
         </div>
 
         {/* 탭 콘텐츠 */}
