@@ -38,6 +38,7 @@ import { exportWeeklyReportPptx } from '../lib/exportWeeklyReportPptx';
 import {
   compareSnapshots,
   getSnapshotByWeek,
+  getSnapshots,
 } from '../lib/weeklySnapshot';
 import { loadWeeklyMemberReports, upsertWeeklyMemberReport } from '../lib/dataRepository';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -45,7 +46,17 @@ import { addWeeks, startOfWeek, format } from 'date-fns';
 import type { Task, ProjectMember, Attendance } from '../types';
 import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
 import type { WeeklyAttendanceSummary, WeeklyMemberReportEntry } from '../lib/weeklyReport';
-import { CalendarCheck } from 'lucide-react';
+import {
+  CalendarCheck,
+  Layers,
+  Flag,
+  MessageSquare,
+  PenLine,
+  ArrowRight,
+  Flame,
+  Shield,
+  Info,
+} from 'lucide-react';
 
 interface WeeklyReportModalProps {
   isOpen: boolean;
@@ -198,6 +209,33 @@ export default function WeeklyReportModal({
     return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 5);
   }, [report]);
 
+  // 주간 트렌드 데이터 (최근 6주 스냅샷)
+  const trendData = useMemo(() => {
+    const snapshots = getSnapshots(projectId);
+    const recent = snapshots
+      .sort((a, b) => a.weekStart.localeCompare(b.weekStart))
+      .slice(-5);
+    const points = recent.map((s) => ({
+      weekLabel: s.weekLabel.replace(/\(.*\)/, '').trim(),
+      actualProgress: s.data.summary.overallActualProgress,
+      planProgress: s.data.summary.overallPlanProgress,
+    }));
+    // 현재 주 추가
+    points.push({
+      weekLabel: report.weekLabel.replace(/\(.*\)/, '').trim(),
+      actualProgress: report.summary.overallActualProgress,
+      planProgress: report.summary.overallPlanProgress,
+    });
+    return points;
+  }, [projectId, report]);
+
+  // 이슈 대응방안 상태
+  const [issueResponses, setIssueResponses] = useState<Map<number, string>>(new Map());
+
+  // 핵심 성과/목표 에디터블 상태
+  const [keyAchievements, setKeyAchievements] = useState('');
+  const [nextKeyGoals, setNextKeyGoals] = useState('');
+
   const progressGap = report.summary.overallPlanProgress - report.summary.overallActualProgress;
 
   return (
@@ -314,6 +352,19 @@ export default function WeeklyReportModal({
               progressGap={progressGap}
               assigneeStats={assigneeStats}
               attendanceSummary={report.attendanceSummary}
+              trendData={trendData}
+              issueResponses={issueResponses}
+              onIssueResponseChange={(idx, val) => {
+                setIssueResponses((prev) => {
+                  const next = new Map(prev);
+                  next.set(idx, val);
+                  return next;
+                });
+              }}
+              keyAchievements={keyAchievements}
+              onKeyAchievementsChange={setKeyAchievements}
+              nextKeyGoals={nextKeyGoals}
+              onNextKeyGoalsChange={setNextKeyGoals}
             />
           ) : activeTab === 'detail' ? (
             <DetailTab report={report} />
@@ -349,6 +400,13 @@ interface OverviewTabProps {
   progressGap: number;
   assigneeStats: { name: string; count: number; completed: number }[];
   attendanceSummary?: WeeklyAttendanceSummary[];
+  trendData: { weekLabel: string; actualProgress: number; planProgress: number }[];
+  issueResponses: Map<number, string>;
+  onIssueResponseChange: (idx: number, val: string) => void;
+  keyAchievements: string;
+  onKeyAchievementsChange: (val: string) => void;
+  nextKeyGoals: string;
+  onNextKeyGoalsChange: (val: string) => void;
 }
 
 function OverviewTab({
@@ -357,10 +415,53 @@ function OverviewTab({
   progressGap,
   assigneeStats,
   attendanceSummary,
+  trendData,
+  issueResponses,
+  onIssueResponseChange,
+  keyAchievements,
+  onKeyAchievementsChange,
+  nextKeyGoals,
+  onNextKeyGoalsChange,
 }: OverviewTabProps) {
   const { t } = useTranslation();
   return (
     <div className="space-y-5">
+      {/* ── #6 금주 핵심 성과 / 차주 핵심 목표 (에디터블) ── */}
+      <div className="weekly-report-section-panel">
+        <div className="flex items-center gap-2 mb-4">
+          <PenLine className="h-4 w-4 text-[color:var(--accent-primary)]" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+            {t('weeklyReport.keyAchievements')} / {t('weeklyReport.nextKeyGoals')}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-1.5">
+              {t('weeklyReport.keyAchievements')}
+            </label>
+            <textarea
+              value={keyAchievements}
+              onChange={(e) => onKeyAchievementsChange(e.target.value)}
+              placeholder={t('weeklyReport.keyAchievementsPlaceholder')}
+              rows={3}
+              className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)] mb-1.5">
+              {t('weeklyReport.nextKeyGoals')}
+            </label>
+            <textarea
+              value={nextKeyGoals}
+              onChange={(e) => onNextKeyGoalsChange(e.target.value)}
+              placeholder={t('weeklyReport.nextKeyGoalsPlaceholder')}
+              rows={3}
+              className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)] resize-none"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* 요약 KPI 카드 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
@@ -398,6 +499,73 @@ function OverviewTab({
           deltaUnit={t('weeklyReport.unitCount')}
           inverseDelta
         />
+      </div>
+
+      {/* ── #7 완료 vs 신규 추가 비교 ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 className="h-4 w-4 text-[color:var(--accent-success)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.completedVsNew')}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 text-center">
+              <p className="text-2xl font-bold text-[color:var(--accent-success)]">{report.completedVsNew.completedCount}</p>
+              <p className="text-[10px] text-[color:var(--text-muted)] mt-1">{t('weeklyReport.completedLabel')}</p>
+            </div>
+            <div className="text-[color:var(--text-muted)]">
+              <ArrowRight className="h-5 w-5" />
+            </div>
+            <div className="flex-1 text-center">
+              <p className="text-2xl font-bold text-[color:var(--accent-primary)]">{report.completedVsNew.newlyAddedCount}</p>
+              <p className="text-[10px] text-[color:var(--text-muted)] mt-1">{t('weeklyReport.newlyAdded')}</p>
+            </div>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[color:var(--bg-elevated)] flex">
+            {(report.completedVsNew.completedCount + report.completedVsNew.newlyAddedCount) > 0 && (
+              <>
+                <div
+                  className="h-full bg-[color:var(--accent-success)] transition-all duration-500"
+                  style={{
+                    width: `${(report.completedVsNew.completedCount / (report.completedVsNew.completedCount + report.completedVsNew.newlyAddedCount)) * 100}%`,
+                  }}
+                />
+                <div
+                  className="h-full bg-[color:var(--accent-primary)] transition-all duration-500"
+                  style={{
+                    width: `${(report.completedVsNew.newlyAddedCount / (report.completedVsNew.completedCount + report.completedVsNew.newlyAddedCount)) * 100}%`,
+                  }}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 섹션 요약 리본 (2x2로 축소) */}
+        <div className="grid grid-cols-2 gap-2">
+          <SectionRibbon
+            label={t('weeklyReport.thisWeekActual')}
+            count={report.thisWeekActual.tasks.length}
+            color="var(--accent-primary)"
+          />
+          <SectionRibbon
+            label={t('weeklyReport.thisWeekCompleted')}
+            count={report.completedThisWeek.tasks.length}
+            color="var(--accent-success)"
+          />
+          <SectionRibbon
+            label={t('weeklyReport.nextWeekPlan')}
+            count={report.nextWeekPlan.tasks.length}
+            color="#6366f1"
+          />
+          <SectionRibbon
+            label={t('weeklyReport.delayedTasks')}
+            count={report.delayed.tasks.length}
+            color="var(--accent-danger)"
+          />
+        </div>
       </div>
 
       {/* 계획 vs 실적 비교 */}
@@ -451,23 +619,175 @@ function OverviewTab({
         </div>
       </div>
 
-      {/* 이슈 / 리스크 */}
-      {report.issues.length > 0 && (
+      {/* ── #1 Phase별 진척률 브레이크다운 ── */}
+      {report.phaseBreakdowns.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.phaseBreakdown')}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {report.phaseBreakdowns.map((phase) => {
+              const gap = phase.planProgress - phase.actualProgress;
+              return (
+                <div key={phase.phaseId} className="rounded-lg border border-[var(--border-color)] p-3 bg-[color:var(--bg-primary)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-[color:var(--text-primary)] truncate flex-1" title={phase.phaseName}>
+                      {phase.phaseName}
+                    </span>
+                    <div className="flex items-center gap-2 text-[10px] shrink-0 ml-2">
+                      <span className="text-[color:var(--text-muted)]">
+                        {phase.completedTasks}/{phase.totalLeafTasks}{t('weeklyReport.unitCount')}
+                      </span>
+                      {phase.delayedTasks > 0 && (
+                        <span className="text-[color:var(--accent-danger)] font-bold">
+                          {phase.delayedTasks}{t('weeklyReport.delayed')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[color:var(--text-muted)] w-7 shrink-0">{t('weeklyReport.plan')}</span>
+                      <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(91,141,239,0.1)]">
+                        <div
+                          className="h-full rounded-full bg-[linear-gradient(90deg,#5B8DEF,#A78BFA)] transition-all duration-500"
+                          style={{ width: `${phase.planProgress}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-semibold text-[color:var(--text-secondary)] w-9 text-right">{Math.round(phase.planProgress)}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[color:var(--text-muted)] w-7 shrink-0">{t('weeklyReport.actual')}</span>
+                      <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+                        <div
+                          className="h-full rounded-full bg-[image:var(--gradient-primary)] transition-all duration-500"
+                          style={{ width: `${phase.actualProgress}%` }}
+                        />
+                      </div>
+                      <span className={cn(
+                        'text-[10px] font-semibold w-9 text-right',
+                        gap > 5 ? 'text-[color:var(--accent-danger)]' : 'text-[color:var(--text-secondary)]'
+                      )}>{Math.round(phase.actualProgress)}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── #2 주간 트렌드 차트 (미니 스파크라인) ── */}
+      {trendData.length >= 2 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.trendChart')}
+            </p>
+            <span className="text-[10px] text-[color:var(--text-muted)]">
+              ({t('weeklyReport.recentWeeks', { count: trendData.length })})
+            </span>
+          </div>
+          <div className="relative h-32">
+            <MiniSparkline data={trendData} />
+          </div>
+        </div>
+      )}
+
+      {/* ── #3 마일스톤 타임라인 ── */}
+      {report.milestones.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <Flag className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.milestoneTimeline')}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {report.milestones.map((ms) => (
+              <div key={ms.taskId} className="flex items-center gap-3 rounded-lg border border-[var(--border-color)] px-4 py-2.5 bg-[color:var(--bg-primary)]">
+                <div className={cn(
+                  'h-2.5 w-2.5 rounded-full shrink-0',
+                  ms.daysUntil < 0 ? 'bg-[color:var(--accent-danger)]' :
+                  ms.daysUntil <= 3 ? 'bg-[color:var(--accent-warning)]' :
+                  'bg-[color:var(--accent-success)]'
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[color:var(--text-primary)] truncate">{ms.taskName}</span>
+                    <span className="text-[10px] text-[color:var(--text-muted)] bg-[color:var(--bg-elevated)] rounded-full px-2 py-0.5 shrink-0">
+                      {ms.levelLabel}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">
+                    {ms.planEnd} · {ms.statusLabel} · {Math.round(ms.actualProgress)}%
+                  </p>
+                </div>
+                <span className={cn(
+                  'text-xs font-bold shrink-0',
+                  ms.daysUntil < 0 ? 'text-[color:var(--accent-danger)]' :
+                  ms.daysUntil === 0 ? 'text-[color:var(--accent-warning)]' :
+                  'text-[color:var(--accent-success)]'
+                )}>
+                  {ms.daysUntil < 0
+                    ? t('weeklyReport.daysOverdue', { days: Math.abs(ms.daysUntil) })
+                    : ms.daysUntil === 0
+                      ? t('weeklyReport.dueToday')
+                      : t('weeklyReport.daysRemaining', { days: ms.daysUntil })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── #4 이슈 / 리스크 (등급화 + 대응방안) ── */}
+      {report.gradedIssues.length > 0 && (
         <div className="weekly-report-issue-panel">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-[color:var(--accent-warning)]" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--accent-warning)]">
-              {t('weeklyReport.issuesRisks')}
+              {t('weeklyReport.riskGrading')}
             </p>
           </div>
-          <ul className="space-y-2">
-            {report.issues.map((issue, i) => (
-              <li key={i} className="weekly-report-issue-item">
-                <span className="weekly-report-issue-number">{i + 1}</span>
-                <span className="text-sm text-[color:var(--text-primary)]">{issue}</span>
-              </li>
+          <div className="space-y-3">
+            {report.gradedIssues.map((issue, i) => (
+              <div key={i} className="rounded-lg border border-[var(--border-color)] p-3 bg-[color:var(--bg-primary)]">
+                <div className="flex items-start gap-2">
+                  <span className={cn(
+                    'mt-0.5 inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold shrink-0',
+                    issue.severity === 'high' && 'bg-[rgba(203,75,95,0.15)] text-[color:var(--accent-danger)]',
+                    issue.severity === 'medium' && 'bg-[rgba(203,109,55,0.15)] text-[color:var(--accent-warning)]',
+                    issue.severity === 'low' && 'bg-[rgba(91,141,239,0.15)] text-[#5B8DEF]',
+                  )}>
+                    {issue.severity === 'high' ? <Flame className="h-3 w-3 mr-0.5" /> :
+                     issue.severity === 'medium' ? <Shield className="h-3 w-3 mr-0.5" /> :
+                     <Info className="h-3 w-3 mr-0.5" />}
+                    {issue.severity === 'high' ? t('weeklyReport.severityHigh') :
+                     issue.severity === 'medium' ? t('weeklyReport.severityMedium') :
+                     t('weeklyReport.severityLow')}
+                  </span>
+                  <span className="text-sm text-[color:var(--text-primary)] flex-1">{issue.message}</span>
+                </div>
+                <div className="mt-2 ml-0">
+                  <label className="block text-[10px] font-semibold text-[color:var(--text-muted)] mb-1">
+                    {t('weeklyReport.responseAction')}
+                  </label>
+                  <input
+                    type="text"
+                    value={issueResponses.get(i) || ''}
+                    onChange={(e) => onIssueResponseChange(i, e.target.value)}
+                    placeholder={t('weeklyReport.responsePlaceholder')}
+                    className="w-full rounded-md border border-[var(--border-color)] bg-[color:var(--bg-primary)] px-2.5 py-1.5 text-xs text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent-primary)]"
+                  />
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
@@ -508,6 +828,68 @@ function OverviewTab({
         </div>
       )}
 
+      {/* ── #8 담당자별 워크로드 히트맵 ── */}
+      {report.workloadHeatmap.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.workloadHeatmap')}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="weekly-report-table-header">
+                  <th className="px-3 py-2 text-left">{t('weeklyReport.assignee')}</th>
+                  {[t('weeklyReport.dayMon'), t('weeklyReport.dayTue'), t('weeklyReport.dayWed'), t('weeklyReport.dayThu'), t('weeklyReport.dayFri')].map((d) => (
+                    <th key={d} className="px-3 py-2 text-center">{d}</th>
+                  ))}
+                  <th className="px-3 py-2 text-center">{t('weeklyReport.subtotal')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.workloadHeatmap.map((entry) => {
+                  const maxLoad = Math.max(...entry.dailyLoad, 1);
+                  return (
+                    <tr key={entry.memberName} className="weekly-report-task-row">
+                      <td className="px-3 py-2 font-medium text-[color:var(--text-primary)]">{entry.memberName}</td>
+                      {entry.dailyLoad.map((load, di) => {
+                        const intensity = load / maxLoad;
+                        const bg = load === 0
+                          ? 'transparent'
+                          : `rgba(15, 118, 110, ${0.1 + intensity * 0.4})`;
+                        return (
+                          <td key={di} className="px-3 py-2 text-center">
+                            <span
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold"
+                              style={{ backgroundColor: bg, color: load > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                              title={`${load} ${t('weeklyReport.tasks')}`}
+                            >
+                              {load}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-center">
+                        <span className={cn(
+                          'inline-block rounded-full px-2 py-0.5 text-[10px] font-bold',
+                          entry.totalLoad >= 15 ? 'bg-[rgba(203,75,95,0.12)] text-[color:var(--accent-danger)]' :
+                          entry.totalLoad >= 8 ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]' :
+                          'bg-[rgba(31,163,122,0.12)] text-[color:var(--accent-success)]'
+                        )}>
+                          {entry.totalLoad}{t('weeklyReport.unitCount')}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* 근태현황 */}
       {attendanceSummary && attendanceSummary.length > 0 && (
         <div className="weekly-report-section-panel">
@@ -532,7 +914,7 @@ function OverviewTab({
                 {attendanceSummary.map((s) => {
                   const dayMap = new Map(s.records.map((r) => {
                     const [y, m, d] = r.date.split('-').map(Number);
-                    const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0=일 1=월 2=화 3=수 4=목 5=금 6=토
+                    const dayOfWeek = new Date(y, m - 1, d).getDay();
                     return [dayOfWeek, r];
                   }));
                   return (
@@ -570,29 +952,41 @@ function OverviewTab({
         </div>
       )}
 
-      {/* 섹션 요약 리본 */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <SectionRibbon
-          label={t('weeklyReport.thisWeekActual')}
-          count={report.thisWeekActual.tasks.length}
-          color="var(--accent-primary)"
-        />
-        <SectionRibbon
-          label={t('weeklyReport.thisWeekCompleted')}
-          count={report.completedThisWeek.tasks.length}
-          color="var(--accent-success)"
-        />
-        <SectionRibbon
-          label={t('weeklyReport.nextWeekPlan')}
-          count={report.nextWeekPlan.tasks.length}
-          color="#6366f1"
-        />
-        <SectionRibbon
-          label={t('weeklyReport.delayedTasks')}
-          count={report.delayed.tasks.length}
-          color="var(--accent-danger)"
-        />
-      </div>
+      {/* ── #5 팀원 코멘트 통합 표시 ── */}
+      {report.memberReports && report.memberReports.length > 0 && (
+        <div className="weekly-report-section-panel">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+              {t('weeklyReport.memberComments')}
+            </p>
+          </div>
+          <div className="space-y-2.5">
+            {report.memberReports.map((mr) => (
+              <div key={mr.memberName} className="rounded-lg border border-[var(--border-color)] p-3 bg-[color:var(--bg-primary)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="weekly-report-assignee-avatar">{mr.memberName.slice(0, 1)}</div>
+                  <span className="text-sm font-semibold text-[color:var(--text-primary)]">{mr.memberName}</span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {mr.thisWeekResult && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-[color:var(--text-muted)] mb-0.5">{t('weeklyReport.thisWeekResult')}</p>
+                      <p className="text-xs text-[color:var(--text-secondary)] leading-5 whitespace-pre-wrap">{mr.thisWeekResult}</p>
+                    </div>
+                  )}
+                  {mr.nextWeekPlan && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-[color:var(--text-muted)] mb-0.5">{t('weeklyReport.nextWeekPlanLabel')}</p>
+                      <p className="text-xs text-[color:var(--text-secondary)] leading-5 whitespace-pre-wrap">{mr.nextWeekPlan}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );
@@ -878,6 +1272,71 @@ function ReportSection({
         </div>
       )}
     </div>
+  );
+}
+
+// ── Mini Sparkline (SVG) ────────────────────────────────────
+
+function MiniSparkline({ data }: { data: { weekLabel: string; actualProgress: number; planProgress: number }[] }) {
+  const { t } = useTranslation();
+  if (data.length < 2) return null;
+
+  const w = 100;
+  const h = 100;
+  const padding = { top: 10, right: 10, bottom: 25, left: 30 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+
+  const maxVal = Math.max(100, ...data.map((d) => Math.max(d.actualProgress, d.planProgress)));
+
+  const toX = (i: number) => padding.left + (i / (data.length - 1)) * chartW;
+  const toY = (val: number) => padding.top + chartH - (val / maxVal) * chartH;
+
+  const planPath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i)},${toY(d.planProgress)}`).join(' ');
+  const actualPath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${toX(i)},${toY(d.actualProgress)}`).join(' ');
+
+  // Y축 눈금
+  const yTicks = [0, 25, 50, 75, 100].filter((v) => v <= maxVal);
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      {/* 그리드 라인 */}
+      {yTicks.map((v) => (
+        <g key={v}>
+          <line
+            x1={padding.left} y1={toY(v)} x2={w - padding.right} y2={toY(v)}
+            stroke="var(--border-color)" strokeWidth="0.3" strokeDasharray="2,2"
+          />
+          <text x={padding.left - 2} y={toY(v) + 1} textAnchor="end" fontSize="3.5" fill="var(--text-muted)">
+            {v}%
+          </text>
+        </g>
+      ))}
+
+      {/* X축 라벨 */}
+      {data.map((d, i) => (
+        <text key={i} x={toX(i)} y={h - 5} textAnchor="middle" fontSize="2.8" fill="var(--text-muted)">
+          {d.weekLabel.replace(/년\s*/, '.').replace('주차', 'W')}
+        </text>
+      ))}
+
+      {/* 계획 라인 */}
+      <path d={planPath} fill="none" stroke="#A78BFA" strokeWidth="0.8" strokeDasharray="2,1" opacity="0.7" />
+
+      {/* 실적 라인 */}
+      <path d={actualPath} fill="none" stroke="#0f766e" strokeWidth="1.2" />
+
+      {/* 실적 점 */}
+      {data.map((d, i) => (
+        <circle key={i} cx={toX(i)} cy={toY(d.actualProgress)} r="1.5" fill="#0f766e" />
+      ))}
+
+      {/* 범례 */}
+      <line x1={padding.left} y1={h - 1} x2={padding.left + 6} y2={h - 1} stroke="#A78BFA" strokeWidth="0.8" strokeDasharray="2,1" />
+      <text x={padding.left + 8} y={h} fontSize="3" fill="var(--text-muted)">{t('weeklyReport.plan')}</text>
+      <line x1={padding.left + 22} y1={h - 1} x2={padding.left + 28} y2={h - 1} stroke="#0f766e" strokeWidth="1.2" />
+      <text x={padding.left + 30} y={h} fontSize="3" fill="var(--text-muted)">{t('weeklyReport.actual')}</text>
+    </svg>
   );
 }
 

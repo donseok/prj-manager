@@ -10,6 +10,7 @@ import {
   startOfWeek,
   endOfWeek,
   addWeeks,
+  addDays,
   isWithinInterval,
   format,
   differenceInCalendarDays,
@@ -48,6 +49,51 @@ export interface WeeklyReportSection {
   tasks: WeeklyReportTask[];
 }
 
+/** Phase별 진척률 브레이크다운 */
+export interface PhaseBreakdown {
+  phaseId: string;
+  phaseName: string;
+  planProgress: number;
+  actualProgress: number;
+  totalLeafTasks: number;
+  completedTasks: number;
+  delayedTasks: number;
+}
+
+/** 이슈 항목 (등급화) */
+export interface GradedIssue {
+  message: string;
+  severity: 'high' | 'medium' | 'low';
+  response?: string;
+}
+
+/** 완료 vs 신규 비교 */
+export interface CompletedVsNewStats {
+  completedCount: number;
+  newlyAddedCount: number;
+}
+
+/** 담당자별 워크로드 히트맵 */
+export interface WorkloadHeatmapEntry {
+  memberName: string;
+  /** 요일별 작업 수 [월, 화, 수, 목, 금] */
+  dailyLoad: [number, number, number, number, number];
+  totalLoad: number;
+}
+
+/** 마일스톤 (Phase 종료일) */
+export interface MilestoneEntry {
+  taskId: string;
+  taskName: string;
+  level: number;
+  levelLabel: string;
+  planEnd: string;
+  actualProgress: number;
+  status: string;
+  statusLabel: string;
+  daysUntil: number;
+}
+
 export interface WeeklyReportData {
   /** 보고 제목 */
   title: string;
@@ -82,12 +128,22 @@ export interface WeeklyReportData {
   completedThisWeek: WeeklyReportSection;
   /** 이슈/리스크 요약 */
   issues: string[];
+  /** 등급화된 이슈 */
+  gradedIssues: GradedIssue[];
   /** 금주 근태현황 (선택적) */
   attendanceSummary?: WeeklyAttendanceSummary[];
   /** 차주 근태현황 (선택적) */
   nextWeekAttendanceSummary?: WeeklyAttendanceSummary[];
   /** 담당자별 수기 작성 보고 */
   memberReports?: WeeklyMemberReportEntry[];
+  /** Phase별 진척률 브레이크다운 */
+  phaseBreakdowns: PhaseBreakdown[];
+  /** 마일스톤 타임라인 */
+  milestones: MilestoneEntry[];
+  /** 완료 vs 신규 비교 */
+  completedVsNew: CompletedVsNewStats;
+  /** 담당자별 워크로드 히트맵 */
+  workloadHeatmap: WorkloadHeatmapEntry[];
 }
 
 export interface WeeklyMemberReportEntry {
@@ -218,22 +274,126 @@ export function generateWeeklyReport({
         ? Math.round(leafTasks.reduce((s, t) => s + t.planProgress, 0) / leafTasks.length)
         : 0;
 
-  // 이슈 자동생성
+  // 이슈 자동생성 (등급화 포함)
   const issues: string[] = [];
+  const gradedIssues: GradedIssue[] = [];
   if (delayedTasks.length > 0) {
-    issues.push(`지연 작업 ${delayedTasks.length}건 발생 — 조속한 조치 필요`);
     const maxDelay = Math.max(...delayedTasks.map((t) => toReportTask(t).delayDays));
+    const msg1 = `지연 작업 ${delayedTasks.length}건 발생 — 조속한 조치 필요`;
+    issues.push(msg1);
+    gradedIssues.push({ message: msg1, severity: delayedTasks.length >= 5 ? 'high' : 'medium' });
     if (maxDelay >= 7) {
-      issues.push(`최대 지연일수 ${maxDelay}일 — 일정 재조정 검토 필요`);
+      const msg2 = `최대 지연일수 ${maxDelay}일 — 일정 재조정 검토 필요`;
+      issues.push(msg2);
+      gradedIssues.push({ message: msg2, severity: maxDelay >= 14 ? 'high' : 'medium' });
     }
   }
   if (overallActualProgress < overallPlanProgress - 10) {
-    issues.push(`계획 대비 실적 ${Math.round(overallPlanProgress - overallActualProgress)}%p 미달`);
+    const gap = Math.round(overallPlanProgress - overallActualProgress);
+    const msg = `계획 대비 실적 ${gap}%p 미달`;
+    issues.push(msg);
+    gradedIssues.push({ message: msg, severity: gap >= 20 ? 'high' : gap >= 10 ? 'medium' : 'low' });
   }
   const unassigned = leafTasks.filter((t) => !t.assigneeId && t.status !== 'completed');
   if (unassigned.length > 0) {
-    issues.push(`담당자 미지정 작업 ${unassigned.length}건`);
+    const msg = `담당자 미지정 작업 ${unassigned.length}건`;
+    issues.push(msg);
+    gradedIssues.push({ message: msg, severity: unassigned.length >= 5 ? 'medium' : 'low' });
   }
+
+  // Phase별 진척률 브레이크다운
+  const phases = tasks.filter((t) => t.level === 1);
+  const phaseBreakdowns: PhaseBreakdown[] = phases
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((phase) => {
+      const descendantLeafs = leafTasks.filter((lt) => {
+        let cur: Task | undefined = lt;
+        while (cur) {
+          if (cur.parentId === phase.id || cur.id === phase.id) return true;
+          cur = taskMap.get(cur.parentId || '');
+        }
+        return false;
+      });
+      const phaseCompleted = descendantLeafs.filter((t) => t.status === 'completed').length;
+      const phaseDelayed = descendantLeafs.filter((t) => {
+        if (t.status === 'completed') return false;
+        const pe = parseDate(t.planEnd);
+        return pe && pe < baseDate && t.actualProgress < 100;
+      }).length;
+      return {
+        phaseId: phase.id,
+        phaseName: phase.name,
+        planProgress: phase.planProgress,
+        actualProgress: phase.actualProgress,
+        totalLeafTasks: descendantLeafs.length,
+        completedTasks: phaseCompleted,
+        delayedTasks: phaseDelayed,
+      };
+    });
+
+  // 마일스톤 타임라인 (Phase/Activity의 planEnd가 금주~차주+1주 범위에 있는 것)
+  const milestoneRangeEnd = addWeeks(nextWeekEnd, 1);
+  const milestones: MilestoneEntry[] = tasks
+    .filter((t) => (t.level === 1 || t.level === 2) && t.planEnd)
+    .map((t) => {
+      const pe = parseDate(t.planEnd)!;
+      return {
+        taskId: t.id,
+        taskName: t.name,
+        level: t.level,
+        levelLabel: LEVEL_LABELS[t.level] || `L${t.level}`,
+        planEnd: t.planEnd!,
+        actualProgress: t.actualProgress,
+        status: t.status,
+        statusLabel: TASK_STATUS_LABELS[t.status],
+        daysUntil: differenceInCalendarDays(pe, baseDate),
+      };
+    })
+    .filter((m) => {
+      const pe = parseDate(m.planEnd)!;
+      return pe >= weekStart && pe <= milestoneRangeEnd;
+    })
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+
+  // 완료 vs 신규 비교
+  const newlyAddedCount = leafTasks.filter((t) => {
+    const created = parseDate(t.createdAt);
+    return created && isWithinInterval(created, { start: weekStart, end: weekEnd });
+  }).length;
+  const completedVsNew: CompletedVsNewStats = {
+    completedCount: completedThisWeekTasks.length,
+    newlyAddedCount,
+  };
+
+  // 담당자별 워크로드 히트맵
+  const workloadHeatmap: WorkloadHeatmapEntry[] = (() => {
+    const activeLeafs = leafTasks.filter((t) => t.status !== 'completed' && t.assigneeId);
+    const byMember = new Map<string, [number, number, number, number, number]>();
+    for (const t of activeLeafs) {
+      const name = t.assigneeId ? memberMap.get(t.assigneeId) || '미지정' : '미지정';
+      if (!byMember.has(name)) byMember.set(name, [0, 0, 0, 0, 0]);
+      const load = byMember.get(name)!;
+      // 이번 주 각 요일에 작업이 겹치는지 확인
+      const ps = parseDate(t.planStart) || parseDate(t.actualStart);
+      const pe = parseDate(t.planEnd) || parseDate(t.actualEnd);
+      if (ps && pe) {
+        for (let d = 0; d < 5; d++) {
+          const dayDate = addDays(weekStart, d);
+          if (dayDate >= ps && dayDate <= pe) load[d]++;
+        }
+      } else {
+        // 날짜 없으면 전 요일에 균등 분배
+        for (let d = 0; d < 5; d++) load[d]++;
+      }
+    }
+    return Array.from(byMember.entries())
+      .map(([name, daily]) => ({
+        memberName: name,
+        dailyLoad: daily,
+        totalLoad: daily.reduce((a, b) => a + b, 0),
+      }))
+      .sort((a, b) => b.totalLoad - a.totalLoad);
+  })();
 
   // 근태 요약 생성 (금주 + 차주) — 기본 출근 포함
   let attendanceSummary: WeeklyAttendanceSummary[] | undefined;
@@ -315,8 +475,13 @@ export function generateWeeklyReport({
       tasks: completedThisWeekTasks.map(toReportTask),
     },
     issues,
+    gradedIssues,
     attendanceSummary,
     nextWeekAttendanceSummary,
+    phaseBreakdowns,
+    milestones,
+    completedVsNew,
+    workloadHeatmap,
   };
 }
 
