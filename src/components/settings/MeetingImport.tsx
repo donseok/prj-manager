@@ -12,7 +12,8 @@ interface MeetingImportProps {
   projectId: string;
   tasks: Task[];
   members: ProjectMember[];
-  onTasksAdded: (message: string) => void;
+  /** 추출된 Task 배열을 상위에 전달. 상위에서 병합·저장을 담당한다. */
+  onTasksAdded: (newTasks: Task[]) => void;
 }
 
 const ACCEPTED_EXTENSIONS = '.pdf,.txt,.docx';
@@ -168,7 +169,7 @@ export default function MeetingImport({ projectId, tasks, members, onTasksAdded 
       }
 
       const newTasks = convertToTasks(confirmedTasks, projectId, null, tasks);
-      onTasksAdded(`회의록에서 ${newTasks.length}개의 업무가 추가되었습니다.`);
+      onTasksAdded(newTasks);
       setShowPreview(false);
       setExtractedTasks(null);
     },

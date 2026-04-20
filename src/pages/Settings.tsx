@@ -656,18 +656,15 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* 회의록 임포트 */}
+          {/* 회의록 임포트 — 추출된 Task를 기존 WBS에 병합 저장 */}
           {projectId && (
             <MeetingImport
               projectId={projectId}
               tasks={tasks}
               members={members}
-              onTasksAdded={(message) => {
-                showFeedback({
-                  tone: 'success',
-                  title: '회의록 임포트 완료',
-                  message,
-                });
+              onTasksAdded={(newTasks) => {
+                if (newTasks.length === 0) return;
+                void applyImportedTasks([...tasks, ...newTasks]);
               }}
             />
           )}
