@@ -25,6 +25,7 @@ interface ExistingRow {
   source_type: string;
   source_id: string;
   content_hash: string;
+  metadata: Record<string, unknown> | null;
 }
 
 function vectorToLiteral(vec: number[]): string {
@@ -63,8 +64,8 @@ export async function reindexProject(
   if (!isSupabaseConfigured) {
     throw new Error('Supabase가 설정되지 않았습니다.');
   }
-  if (settings.provider !== 'openai' || !settings.apiKey) {
-    throw new Error('RAG 인덱싱은 OpenAI API 키가 필요합니다.');
+  if ((settings.provider !== 'openai' && settings.provider !== 'gemini') || !settings.apiKey) {
+    throw new Error('RAG 인덱싱은 OpenAI 또는 Gemini API 키가 필요합니다.');
   }
 
   const onProgress = options?.onProgress;
@@ -80,7 +81,7 @@ export async function reindexProject(
   onProgress?.({ phase: 'diffing', current: 0, total: docs.length, message: '기존 인덱스 비교 중…' });
   const { data: existingRaw, error: fetchError } = await supabase
     .from('chatbot_embeddings')
-    .select('id, source_type, source_id, content_hash')
+    .select('id, source_type, source_id, content_hash, metadata')
     .eq('project_id', project.id);
 
   if (fetchError) {
@@ -97,10 +98,12 @@ export async function reindexProject(
   const toEmbedIsNew: boolean[] = [];
   let unchanged = 0;
 
+  const currentProvider = settings.provider;
   for (const doc of docs) {
     const key = `${doc.sourceType}:${doc.sourceId}`;
     const prior = existing.get(key);
-    if (prior && prior.content_hash === doc.contentHash) {
+    const priorProvider = (prior?.metadata as { embedding_provider?: string } | null)?.embedding_provider;
+    if (prior && prior.content_hash === doc.contentHash && priorProvider === currentProvider) {
       unchanged++;
       existing.delete(key);
       continue;
@@ -151,7 +154,7 @@ export async function reindexProject(
       source_id: doc.sourceId,
       content: doc.content,
       embedding: vectorToLiteral(vectors[idx]),
-      metadata: doc.metadata,
+      metadata: { ...doc.metadata, embedding_provider: currentProvider },
       content_hash: doc.contentHash,
       updated_at: new Date().toISOString(),
     }));

@@ -22,5 +22,9 @@ export { searchKnowledgeBase, type RagHit, type SearchOptions } from './ragSearc
 export { answerWithRag } from './ragAnswer';
 
 export function isRagReady(settings: AISettings): boolean {
-  return isSupabaseConfigured && settings.provider === 'openai' && !!settings.apiKey;
+  return (
+    isSupabaseConfigured &&
+    (settings.provider === 'openai' || settings.provider === 'gemini') &&
+    !!settings.apiKey
+  );
 }
