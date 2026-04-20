@@ -1,8 +1,8 @@
-import type { AISettings, Project, ProjectMember, Task } from '../../types';
+import type { Project, ProjectMember, Task } from '../../types';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { loadProjectMembers, loadProjectTasks } from '../dataRepository';
 import { generateId } from '../utils';
-import { embedBatch } from './ragEmbedding';
+import { embedBatch, RAG_EMBEDDING_PROVIDER } from './ragEmbedding';
 import { buildAllProjectDocs, type RagDocument } from './ragDocumentBuilder';
 
 export interface ReindexProgress {
@@ -58,14 +58,10 @@ async function loadProjectById(projectId: string): Promise<Project | null> {
 
 export async function reindexProject(
   project: Project,
-  settings: AISettings,
   options?: { onProgress?: (p: ReindexProgress) => void; membersOverride?: ProjectMember[]; tasksOverride?: Task[] },
 ): Promise<ReindexResult> {
   if (!isSupabaseConfigured) {
     throw new Error('Supabase가 설정되지 않았습니다.');
-  }
-  if ((settings.provider !== 'openai' && settings.provider !== 'gemini') || !settings.apiKey) {
-    throw new Error('RAG 인덱싱은 OpenAI 또는 Gemini API 키가 필요합니다.');
   }
 
   const onProgress = options?.onProgress;
@@ -98,7 +94,7 @@ export async function reindexProject(
   const toEmbedIsNew: boolean[] = [];
   let unchanged = 0;
 
-  const currentProvider = settings.provider;
+  const currentProvider = RAG_EMBEDDING_PROVIDER;
   for (const doc of docs) {
     const key = `${doc.sourceType}:${doc.sourceId}`;
     const prior = existing.get(key);
@@ -129,7 +125,6 @@ export async function reindexProject(
 
     const vectors = await embedBatch(
       toEmbed.map((d) => d.content),
-      settings,
       (done, total) => {
         onProgress?.({
           phase: 'embedding',

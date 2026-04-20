@@ -1,7 +1,12 @@
-import type { AISettings } from '../../types';
 import { isSupabaseConfigured } from '../supabase';
 
-export { embedText, embedBatch, RAG_EMBEDDING_MODEL, RAG_EMBEDDING_DIM } from './ragEmbedding';
+export {
+  embedText,
+  embedBatch,
+  RAG_EMBEDDING_MODEL,
+  RAG_EMBEDDING_DIM,
+  RAG_EMBEDDING_PROVIDER,
+} from './ragEmbedding';
 export {
   buildProjectDoc,
   buildTaskDoc,
@@ -21,10 +26,7 @@ export {
 export { searchKnowledgeBase, type RagHit, type SearchOptions } from './ragSearch';
 export { answerWithRag } from './ragAnswer';
 
-export function isRagReady(settings: AISettings): boolean {
-  return (
-    isSupabaseConfigured &&
-    (settings.provider === 'openai' || settings.provider === 'gemini') &&
-    !!settings.apiKey
-  );
+// API 키 없이 Supabase Edge Function(gte-small) + pgvector만으로 동작한다.
+export function isRagReady(): boolean {
+  return isSupabaseConfigured;
 }

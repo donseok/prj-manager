@@ -100,8 +100,8 @@ export default function Settings() {
     }
   };
 
-  // RAG 지식베이스 상태
-  const ragReady = isRagReady(aiSettings);
+  // RAG 지식베이스 상태 (Supabase 연결만 있으면 동작 — API 키 불필요)
+  const ragReady = isRagReady();
   const [ragStats, setRagStats] = useState<{ count: number; lastUpdatedAt: string | null }>({ count: 0, lastUpdatedAt: null });
   const [isReindexing, setIsReindexing] = useState(false);
   const [reindexProgress, setReindexProgress] = useState<ReindexProgress | null>(null);
@@ -120,7 +120,7 @@ export default function Settings() {
     setIsReindexing(true);
     setReindexProgress(null);
     try {
-      const result = await reindexProject(currentProject, aiSettings, {
+      const result = await reindexProject(currentProject, {
         membersOverride: members,
         tasksOverride: tasks,
         onProgress: (p) => setReindexProgress(p),
@@ -798,11 +798,6 @@ export default function Settings() {
               {!isSupabaseConfigured && (
                 <div className="rounded-[14px] border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-4 py-3 text-sm text-[color:var(--accent-warning)]">
                   {t('settings.rag.requireSupabase')}
-                </div>
-              )}
-              {isSupabaseConfigured && !ragReady && (
-                <div className="rounded-[14px] border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-4 py-3 text-sm text-[color:var(--accent-warning)]">
-                  {t('settings.rag.requireOpenAI')}
                 </div>
               )}
               {ragReady && !currentProject && (

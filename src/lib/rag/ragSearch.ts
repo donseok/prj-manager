@@ -1,4 +1,3 @@
-import type { AISettings } from '../../types';
 import { isSupabaseConfigured, supabase } from '../supabase';
 import { embedText } from './ragEmbedding';
 import type { RagSourceType } from './ragDocumentBuilder';
@@ -20,13 +19,12 @@ export interface SearchOptions {
 export async function searchKnowledgeBase(
   question: string,
   projectId: string,
-  settings: AISettings,
   options: SearchOptions = {},
 ): Promise<RagHit[]> {
   if (!isSupabaseConfigured) return [];
 
   const { topK = 5, minSimilarity = 0.3 } = options;
-  const vec = await embedText(question, settings);
+  const vec = await embedText(question);
 
   const { data, error } = await supabase.rpc('match_chatbot_embeddings', {
     query_embedding: vec,
