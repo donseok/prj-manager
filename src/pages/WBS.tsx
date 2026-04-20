@@ -1098,6 +1098,9 @@ export default function WBS() {
         );
 
       case 'weight': {
+        // 부모 작업의 가중치는 자식 합계로 자동 산출되어 읽기 전용.
+        const hasChildrenForWeight = tasks.some((t) => t.parentId === task.id);
+        const weightEditable = taskEditable && !hasChildrenForWeight;
         const commitWeight = () => {
           if (task.weight === 0) {
             showFeedback({
@@ -1108,6 +1111,16 @@ export default function WBS() {
           }
           handleCellCommit();
         };
+        if (hasChildrenForWeight) {
+          return (
+            <span
+              className="block text-right text-[color:var(--text-secondary)]"
+              title={t('wbs.weightParentReadOnly')}
+            >
+              {Math.round(task.weight)}
+            </span>
+          );
+        }
         return isEditing ? (
           <input
             type="text"
@@ -1136,8 +1149,8 @@ export default function WBS() {
           />
         ) : (
           <span
-            className={cn('text-right block', taskEditable && 'cursor-text')}
-            onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
+            className={cn('text-right block', weightEditable && 'cursor-text')}
+            onClick={() => { if (weightEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
             {Math.round(task.weight)}
           </span>

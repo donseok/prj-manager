@@ -51,6 +51,12 @@ export interface ProjectSettings {
   defaultView?: 'week' | 'month';
   statusMode?: 'auto' | 'manual';
   manualStatus?: ProjectStatus;
+  /**
+   * 상위 작업 진도 산출 방식.
+   * 'auto' (기본): 자식 가중치 기반 가중평균으로 자동 계산.
+   * 'manual': 사용자가 각 작업의 진도를 직접 입력하고 롤업을 건너뜀.
+   */
+  progressMode?: 'auto' | 'manual';
   ganttSummaryCollapsed?: boolean;
   kanbanSummaryCollapsed?: boolean;
   wbsSummaryCollapsed?: boolean;

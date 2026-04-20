@@ -99,7 +99,11 @@ function deriveParentStatus(children: Task[]): Task['status'] {
   return 'pending';
 }
 
-function applyParentAggregation(task: InternalTask, children: InternalTask[]) {
+function applyParentAggregation(
+  task: InternalTask,
+  children: InternalTask[],
+  options: { manualProgress: boolean }
+) {
   const allChildrenCompleted = children.every(
     (child) => child.status === 'completed' || child.actualProgress >= 100
   );
@@ -113,13 +117,22 @@ function applyParentAggregation(task: InternalTask, children: InternalTask[]) {
   task.actualEnd = allChildrenCompleted
     ? getLatestDate(filterReasonableDates(children.map((child) => child.actualEnd))) ?? task.actualEnd ?? null
     : null;
-  task.planProgress = calculateAggregateProgress(children, 'planProgress');
-  task.actualProgress = calculateAggregateProgress(children, 'actualProgress');
+  // 수동 진도 입력 모드에서는 부모 진도 롤업을 건너뛴다 (날짜/상태는 계속 집계).
+  if (!options.manualProgress) {
+    task.planProgress = calculateAggregateProgress(children, 'planProgress');
+    task.actualProgress = calculateAggregateProgress(children, 'actualProgress');
+  }
   task.status = deriveParentStatus(children);
   task.updatedAt = getLatestDate([task.updatedAt, ...children.map((child) => child.updatedAt)]) ?? task.updatedAt;
 }
 
-export function normalizeTaskHierarchy(tasks: Task[]) {
+export interface NormalizeOptions {
+  /** 'manual'이면 부모 진도 롤업을 건너뛴다 (사용자가 직접 입력한 값 유지). */
+  progressMode?: 'auto' | 'manual';
+}
+
+export function normalizeTaskHierarchy(tasks: Task[], options?: NormalizeOptions) {
+  const manualProgress = options?.progressMode === 'manual';
   const taskMap = new Map<string, InternalTask>();
   const childrenByParent = new Map<string | null, InternalTask[]>();
 
@@ -176,7 +189,7 @@ export function normalizeTaskHierarchy(tasks: Task[]) {
       const children = buildBranch(task.id, level + 1);
       task._children = children;
       if (children.length > 0) {
-        applyParentAggregation(task, children);
+        applyParentAggregation(task, children, { manualProgress });
       }
       return task;
     });
@@ -257,7 +270,9 @@ function buildDerivedProject(project: Project, tasks: Task[]) {
 }
 
 export async function syncProjectWorkspace(project: Project, tasks: Task[], options?: { skipNormalize?: boolean }) {
-  const normalizedTasks = options?.skipNormalize ? tasks : normalizeTaskHierarchy(tasks);
+  const normalizedTasks = options?.skipNormalize
+    ? tasks
+    : normalizeTaskHierarchy(tasks, { progressMode: project.settings?.progressMode });
   await syncProjectTasks(project.id, normalizedTasks);
   const savedProject = await upsertProject(buildDerivedProject(project, normalizedTasks));
   return {

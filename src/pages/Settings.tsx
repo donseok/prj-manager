@@ -62,6 +62,7 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isStatusModeSaving, setIsStatusModeSaving] = useState(false);
+  const [isProgressModeSaving, setIsProgressModeSaving] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null);
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const { canEditProject, canDeleteProject, isReadOnly } = useProjectPermission();
@@ -167,6 +168,8 @@ export default function Settings() {
   };
   const statusMode = currentProject?.settings?.statusMode ?? 'auto';
   const isManualStatus = statusMode === 'manual';
+  const progressMode = currentProject?.settings?.progressMode ?? 'auto';
+  const isManualProgress = progressMode === 'manual';
 
   // 실시간 유효성 검사
   const nameError = (() => {
@@ -434,6 +437,51 @@ export default function Settings() {
       });
     } finally {
       setIsStatusModeSaving(false);
+    }
+  };
+
+  const handleProgressModeChange = async (mode: 'auto' | 'manual') => {
+    if (!currentProject || !isAdmin || progressMode === mode) return;
+
+    setIsProgressModeSaving(true);
+    try {
+      const nextProject = {
+        ...currentProject,
+        settings: {
+          ...currentProject.settings,
+          progressMode: mode,
+        },
+      };
+      // 모드 전환 시 현재 작업을 새 규칙으로 재정규화한다.
+      const { project, tasks: normalizedTasks } = await syncProjectWorkspace(nextProject, tasks);
+      setTasks(normalizedTasks, projectId ?? undefined);
+      updateProject(project.id, project);
+      showFeedback({
+        tone: mode === 'auto' ? 'info' : 'success',
+        title: mode === 'auto' ? t('settings.progressAutoEnabled') : t('settings.progressManualEnabled'),
+        message: mode === 'auto' ? t('settings.progressAutoEnabledMsg') : t('settings.progressManualEnabledMsg'),
+      });
+      if (user) {
+        void logAuditEvent({
+          projectId: project.id,
+          userId: user.id,
+          userName: user.name,
+          action: 'project.settings_change',
+          details:
+            mode === 'auto'
+              ? t('settings.progressAutoEnabled')
+              : t('settings.progressManualEnabled'),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update progress mode:', error);
+      showFeedback({
+        tone: 'error',
+        title: t('settings.progressModeFail'),
+        message: t('settings.progressModeFailMsg'),
+      });
+    } finally {
+      setIsProgressModeSaving(false);
     }
   };
 
@@ -957,6 +1005,65 @@ export default function Settings() {
               <p className="mt-4 text-sm text-[color:var(--text-secondary)]">
                 {t('settings.completedDate')}: {new Date(currentProject.completedAt).toLocaleDateString('ko-KR')}
               </p>
+            )}
+          </div>
+
+          <div className="app-panel p-6">
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+              {t('settings.progressManagement')}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {t('settings.progressDesc')}
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {([
+                {
+                  key: 'auto' as const,
+                  title: t('settings.progressAuto'),
+                  description: t('settings.progressAutoDesc'),
+                },
+                {
+                  key: 'manual' as const,
+                  title: t('settings.progressManual'),
+                  description: t('settings.progressManualDesc'),
+                },
+              ]).map((mode) => {
+                const isCurrentMode = progressMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => void handleProgressModeChange(mode.key)}
+                    disabled={!isAdmin || isCurrentMode || isProgressModeSaving}
+                    data-testid={`settings-progress-mode-${mode.key}`}
+                    className={`rounded-[22px] border p-4 text-left transition-all duration-200 ${
+                      isCurrentMode
+                        ? 'border-[color:var(--accent-primary)] bg-[rgba(15,118,110,0.06)]'
+                        : !isAdmin
+                          ? 'cursor-not-allowed border-[var(--border-color)] bg-[color:var(--bg-elevated)] opacity-60'
+                          : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] hover:bg-[color:var(--bg-tertiary)]'
+                    }`}
+                  >
+                    <p className="font-medium text-[color:var(--text-primary)]">
+                      {mode.title}
+                      {isCurrentMode && (
+                        <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentPolicy')}</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{mode.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {isManualProgress
+                ? t('settings.progressManualActiveDesc')
+                : t('settings.progressAutoActiveDesc')}
+            </div>
+            {!isAdmin && (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">{t('settings.adminOnlyProgress')}</p>
             )}
           </div>
 
