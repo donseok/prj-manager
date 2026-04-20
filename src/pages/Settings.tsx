@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -19,6 +19,8 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useAuthStore } from '../store/authStore';
@@ -41,6 +43,8 @@ import type { AIProvider, ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
 import { loadAISettings, saveAISettings, hasEnvAIConfig, getDefaultModel } from '../lib/ai';
 import { testConnection } from '../lib/ai/aiClient';
+import { isRagReady, loadIndexStats, reindexProject, type ReindexProgress } from '../lib/rag';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -93,6 +97,56 @@ export default function Settings() {
       setAiTestResult({ success: false, message: t('settings.testConnectionError') });
     } finally {
       setIsAiTesting(false);
+    }
+  };
+
+  // RAG 지식베이스 상태
+  const ragReady = isRagReady(aiSettings);
+  const [ragStats, setRagStats] = useState<{ count: number; lastUpdatedAt: string | null }>({ count: 0, lastUpdatedAt: null });
+  const [isReindexing, setIsReindexing] = useState(false);
+  const [reindexProgress, setReindexProgress] = useState<ReindexProgress | null>(null);
+
+  useEffect(() => {
+    if (!currentProject || !isSupabaseConfigured) return;
+    let cancelled = false;
+    void loadIndexStats(currentProject.id).then((s) => {
+      if (!cancelled) setRagStats(s);
+    });
+    return () => { cancelled = true; };
+  }, [currentProject]);
+
+  const handleReindex = async () => {
+    if (!currentProject) return;
+    setIsReindexing(true);
+    setReindexProgress(null);
+    try {
+      const result = await reindexProject(currentProject, aiSettings, {
+        membersOverride: members,
+        tasksOverride: tasks,
+        onProgress: (p) => setReindexProgress(p),
+      });
+      const stats = await loadIndexStats(currentProject.id);
+      setRagStats(stats);
+      showFeedback({
+        tone: 'success',
+        title: t('settings.rag.rebuildSuccess'),
+        message: t('settings.rag.rebuildSuccessMsg', {
+          added: result.added,
+          updated: result.updated,
+          deleted: result.deleted,
+          unchanged: result.unchanged,
+        }),
+      });
+    } catch (err) {
+      console.error('RAG reindex failed:', err);
+      showFeedback({
+        tone: 'error',
+        title: t('settings.rag.rebuildFail'),
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsReindexing(false);
+      setReindexProgress(null);
     }
   };
 
@@ -722,6 +776,81 @@ export default function Settings() {
               <div className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
                 {t('settings.aiModeDesc')}
               </div>
+            </div>
+          </div>
+
+          <div className="app-panel p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#0ea5e9,#6366f1)] text-white shadow-[0_18px_36px_-22px_rgba(14,165,233,0.7)]">
+                <Database className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">
+                  {t('settings.rag.title')}
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                  {t('settings.rag.desc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {!isSupabaseConfigured && (
+                <div className="rounded-[14px] border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-4 py-3 text-sm text-[color:var(--accent-warning)]">
+                  {t('settings.rag.requireSupabase')}
+                </div>
+              )}
+              {isSupabaseConfigured && !ragReady && (
+                <div className="rounded-[14px] border border-[rgba(203,109,55,0.2)] bg-[rgba(203,109,55,0.08)] px-4 py-3 text-sm text-[color:var(--accent-warning)]">
+                  {t('settings.rag.requireOpenAI')}
+                </div>
+              )}
+              {ragReady && !currentProject && (
+                <div className="rounded-[14px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+                  {t('settings.rag.requireProject')}
+                </div>
+              )}
+
+              {ragReady && currentProject && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
+                        {t('settings.rag.indexedCount')}
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                        {t('settings.rag.countUnit', { count: ragStats.count })}
+                      </p>
+                    </div>
+                    <div className="rounded-[16px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
+                        {t('settings.rag.lastIndexed')}
+                      </p>
+                      <p className="mt-2 text-sm text-[color:var(--text-primary)]">
+                        {ragStats.lastUpdatedAt
+                          ? new Date(ragStats.lastUpdatedAt).toLocaleString()
+                          : t('settings.rag.notIndexed')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      onClick={() => void handleReindex()}
+                      isLoading={isReindexing}
+                      disabled={isReindexing}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      {isReindexing ? t('settings.rag.rebuilding') : t('settings.rag.rebuild')}
+                    </Button>
+                    {isReindexing && reindexProgress && (
+                      <span className="text-sm text-[color:var(--text-secondary)]">
+                        {reindexProgress.message}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

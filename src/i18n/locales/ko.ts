@@ -483,6 +483,23 @@ const ko = {
       aiOpenaiDesc: 'GPT-4o 등',
       aiGeminiDesc: 'Gemini 2.0 Flash 등',
       selected: '선택됨',
+      // AI Knowledge Base (RAG)
+      rag: {
+        title: 'AI 지식베이스 (RAG)',
+        desc: '현재 프로젝트의 작업/멤버 데이터를 벡터화해 챗봇이 의미 기반으로 검색하게 합니다. OpenAI 키 설정이 필요합니다.',
+        rebuild: '지식베이스 재구축',
+        rebuilding: '재구축 중…',
+        lastIndexed: '마지막 인덱싱',
+        indexedCount: '인덱싱된 문서',
+        countUnit: '{{count}}건',
+        notIndexed: '아직 인덱싱되지 않음',
+        requireOpenAI: 'RAG는 OpenAI provider + API 키가 필요합니다. 위에서 provider를 OpenAI로 변경한 뒤 키를 입력하세요.',
+        requireSupabase: 'RAG는 Supabase 연결이 필요합니다. 환경변수 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY를 설정하세요.',
+        requireProject: '프로젝트를 선택한 뒤 재구축을 실행할 수 있습니다.',
+        rebuildSuccess: '지식베이스 재구축 완료',
+        rebuildSuccessMsg: '신규 {{added}} / 갱신 {{updated}} / 삭제 {{deleted}} / 유지 {{unchanged}}',
+        rebuildFail: '재구축 실패',
+      },
       // Data Management
       dataManagement: '데이터 관리',
       dataManagementDesc: 'WBS 데이터를 내보내거나 다시 가져와 현재 프로젝트 구조를 재정렬할 수 있습니다.',

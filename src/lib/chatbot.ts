@@ -4,6 +4,8 @@ import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './tas
 import { supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 import { parseISO, differenceInDays } from 'date-fns';
+import { loadAISettings } from './ai';
+import { isRagReady, searchKnowledgeBase, answerWithRag } from './rag';
 
 // ─── Public types ────────────────────────────────────────────
 
@@ -1160,6 +1162,35 @@ async function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): Pr
   return { text, intentType: intent.type };
 }
 
+// ─── RAG attempt ─────────────────────────────────────────────
+
+const RAG_MIN_TOP_SIMILARITY = 0.45;
+
+async function tryRagAnswer(
+  question: string,
+  context: ChatbotContext,
+  history: ChatbotMessage[]
+): Promise<string | null> {
+  if (!context.project) return null;
+  if (question.length < 3) return null;
+
+  const settings = loadAISettings();
+  if (!isRagReady(settings)) return null;
+
+  try {
+    const hits = await searchKnowledgeBase(question, context.project.id, settings, {
+      topK: 5,
+      minSimilarity: 0.3,
+    });
+    if (hits.length === 0) return null;
+    if (hits[0].similarity < RAG_MIN_TOP_SIMILARITY) return null;
+    return await answerWithRag(question, hits, history, settings);
+  } catch (err) {
+    console.warn('[RAG] 답변 생성 실패, 룰 폴백:', err);
+    return null;
+  }
+}
+
 // ─── Fallback: fuzzy local search ────────────────────────────
 
 function buildFallbackFromLocal(question: string, context: ChatbotContext): string | null {
@@ -1398,6 +1429,15 @@ export async function createChatbotReply(
         }
       }
     }
+  }
+
+  // 0.5단계: RAG 시도 (OpenAI 설정 + Supabase 연결 + 프로젝트 컨텍스트가 있을 때만)
+  const ragAnswer = await tryRagAnswer(trimmed, context, history);
+  if (ragAnswer) {
+    return {
+      text: ragAnswer,
+      suggestions: ['지연된 작업 알려줘', '이번 주 일정은?', '멤버별 업무 현황'],
+    };
   }
 
   // 1단계: 의도 분류 스코어링

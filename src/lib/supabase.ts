@@ -29,6 +29,7 @@ export async function ensureMigrations(): Promise<void> {
       ensureSystemSettingsTable(),
       ensureMemberWeeklyNotesTable(),
       ensureWeeklyMemberReportsTable(),
+      ensureChatbotEmbeddingsTable(),
     ]);
   } catch (err) {
     console.warn('[migration] 마이그레이션 확인 중 오류:', err);
@@ -275,6 +276,27 @@ async function ensureWeeklyMemberReportsTable(): Promise<void> {
     );
   } catch (err) {
     console.warn('[migration] weekly_member_reports 마이그레이션 중 예외 발생 (무시):', err);
+  }
+}
+
+/** chatbot_embeddings 테이블이 없으면 안내 로그 */
+async function ensureChatbotEmbeddingsTable(): Promise<void> {
+  try {
+    const { error } = await supabase.from('chatbot_embeddings').select('id').limit(1);
+    if (!error) {
+      console.log('[migration] chatbot_embeddings 테이블 확인 완료');
+      return;
+    }
+
+    console.log('[migration] chatbot_embeddings 테이블 없음 — 수동 마이그레이션 필요');
+
+    console.warn(
+      '[migration] ⚠ chatbot_embeddings 테이블이 없습니다. RAG 챗봇을 사용하려면 ' +
+      'supabase/migrations/20260420100000_add_chatbot_embeddings.sql 을 Supabase SQL Editor에서 실행하세요. ' +
+      '(pgvector 확장 필요)'
+    );
+  } catch (err) {
+    console.warn('[migration] chatbot_embeddings 마이그레이션 확인 중 예외 (무시):', err);
   }
 }
 
