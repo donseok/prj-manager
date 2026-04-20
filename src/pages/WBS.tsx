@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   Target,
   Users,
+  History,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -77,8 +78,10 @@ import AIReviewPanel from '../components/wbs/AIReviewPanel';
 import AISuggestionPanel from '../components/wbs/AISuggestionPanel';
 import RecurringTaskModal from '../components/common/RecurringTaskModal';
 import SaveTemplateModal from '../components/common/SaveTemplateModal';
+import AssigneeHistoryModal from '../components/wbs/AssigneeHistoryModal';
 import { loadCustomTemplates, applyCustomTemplate } from '../lib/customTemplates';
 import { useRecurringTasks } from '../hooks/useRecurringTasks';
+import { appendAssigneeHistory, loadAssigneeHistory } from '../lib/taskAssigneeHistory';
 
 export default function WBS() {
   const { t } = useTranslation();
@@ -134,6 +137,8 @@ export default function WBS() {
   const loadComments = useCommentStore((s) => s.loadComments);
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
   const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [assigneeHistoryTask, setAssigneeHistoryTask] = useState<Task | null>(null);
+  const [assigneeHistoryVersion, setAssigneeHistoryVersion] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window === 'undefined' ? 1440 : window.innerWidth
   );
@@ -182,6 +187,14 @@ export default function WBS() {
     }
     return map;
   }, [commentCounts]);
+
+  const assigneeHistoryTaskIds = useMemo(() => {
+    if (!projectId) return new Set<string>();
+    const entries = loadAssigneeHistory(projectId);
+    return new Set(entries.map((e) => e.taskId));
+    // assigneeHistoryVersion은 이력 추가 시 리마운트를 유도하는 용도
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, assigneeHistoryVersion]);
 
   useEffect(() => {
     if (projectId) loadComments(projectId);
@@ -320,6 +333,38 @@ export default function WBS() {
     const task = tasks.find((t) => t.id === taskId);
     if (task && !canEditSpecificTask(permissions, task, currentMemberId)) return;
     const hasChildren = task ? tasks.some((t) => t.parentId === taskId) : false;
+
+    // 담당자 변경 이력 기록
+    if (task && projectId && field === 'assigneeId') {
+      const oldId = task.assigneeId ?? null;
+      const newId = (value as string | null) ?? null;
+      if (oldId !== newId) {
+        const oldMember = oldId ? members.find((m) => m.id === oldId) : null;
+        const newMember = newId ? members.find((m) => m.id === newId) : null;
+        const actorId = authUser?.id || 'unknown';
+        const actorName = authUser?.name || '알 수 없음';
+        appendAssigneeHistory({
+          projectId,
+          taskId,
+          actorId,
+          actorName,
+          oldAssigneeId: oldId,
+          oldAssigneeName: oldMember?.name ?? null,
+          newAssigneeId: newId,
+          newAssigneeName: newMember?.name ?? null,
+        });
+        setAssigneeHistoryVersion((v) => v + 1);
+        if (authUser) {
+          void logAuditEvent({
+            projectId,
+            userId: actorId,
+            userName: actorName,
+            action: 'task.assignee_change',
+            details: `작업 "${task.name || '이름 없음'}": ${oldMember?.name ?? '미배정'} → ${newMember?.name ?? '미배정'}`,
+          });
+        }
+      }
+    }
 
     // TC4: 극단값 날짜 Validation — 2000~2099년 범위만 허용
     if (['planStart', 'planEnd', 'actualStart', 'actualEnd'].includes(field) && typeof value === 'string' && value) {
@@ -1075,27 +1120,47 @@ export default function WBS() {
           </span>
         );
 
-      case 'assignee':
+      case 'assignee': {
+        const hasHistory = assigneeHistoryTaskIds.has(task.id);
         return (
-          <MemberSelect
-            members={members}
-            value={task.assigneeId || null}
-            onChange={(memberId) => handleCellChange(task.id, 'assigneeId', memberId, true)}
-            onCreateMember={(name) => {
-              const member: ProjectMember = {
-                id: generateId(),
-                projectId: projectId!,
-                name,
-                role: 'member',
-                createdAt: new Date().toISOString(),
-              };
-              addMember(member);
-              const updatedMembers = [...useProjectStore.getState().members];
-              void syncProjectMembers(projectId!, updatedMembers);
-              return member.id;
-            }}
-          />
+          <div className="flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              <MemberSelect
+                members={members}
+                value={task.assigneeId || null}
+                onChange={(memberId) => handleCellChange(task.id, 'assigneeId', memberId, true)}
+                onCreateMember={(name) => {
+                  const member: ProjectMember = {
+                    id: generateId(),
+                    projectId: projectId!,
+                    name,
+                    role: 'member',
+                    createdAt: new Date().toISOString(),
+                  };
+                  addMember(member);
+                  const updatedMembers = [...useProjectStore.getState().members];
+                  void syncProjectMembers(projectId!, updatedMembers);
+                  return member.id;
+                }}
+              />
+            </div>
+            {hasHistory && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAssigneeHistoryTask(task);
+                }}
+                title="담당자 변경 이력 보기"
+                aria-label="담당자 변경 이력 보기"
+                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--accent-primary)]"
+              >
+                <History className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         );
+      }
 
       case 'weight': {
         const commitWeight = () => {
@@ -2207,6 +2272,16 @@ export default function WBS() {
           });
         }}
       />
+
+      {assigneeHistoryTask && projectId && (
+        <AssigneeHistoryModal
+          isOpen={Boolean(assigneeHistoryTask)}
+          onClose={() => setAssigneeHistoryTask(null)}
+          projectId={projectId}
+          taskId={assigneeHistoryTask.id}
+          taskName={assigneeHistoryTask.name}
+        />
+      )}
 
       {contextMenu && (
         <ContextMenu

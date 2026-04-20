@@ -5,6 +5,7 @@ export type AuditAction =
   | 'member.add'
   | 'member.remove'
   | 'task.delete'
+  | 'task.assignee_change'
   | 'owner.transfer';
 
 export interface AuditLogEntry {

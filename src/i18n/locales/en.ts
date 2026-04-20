@@ -995,6 +995,7 @@ const en = {
         memberAdd: 'Member Added',
         memberRemove: 'Member Removed',
         taskDelete: 'Task Deleted',
+        taskAssigneeChange: 'Assignee Changed',
         ownerTransfer: 'Ownership Transferred',
       },
     },
