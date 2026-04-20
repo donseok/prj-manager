@@ -392,3 +392,29 @@ export interface MemberWeeklyNote {
   nextWeekPlans: string;
   updatedAt: string;
 }
+
+// 프로젝트 기준선 (Baseline) — 특정 시점의 계획 스냅샷
+export interface ProjectBaselineTaskSnapshot {
+  taskId: string;
+  name: string;
+  level: number;
+  weight: number;
+  planStart: string | null;
+  planEnd: string | null;
+  planProgress: number;
+}
+
+export interface ProjectBaseline {
+  id: string;
+  projectId: string;
+  name: string;
+  capturedAt: string;       // ISO timestamp
+  capturedBy: string;       // 사용자 id
+  capturedByName?: string;  // 사용자 이름 (표시용)
+  note?: string;
+  isActive?: boolean;       // 비교 기준으로 사용할 활성 기준선 여부
+  taskSnapshots: ProjectBaselineTaskSnapshot[];
+  /** 캡처 시점 프로젝트 일정 (편차 계산용) */
+  projectStart?: string | null;
+  projectEnd?: string | null;
+}
