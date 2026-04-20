@@ -1009,6 +1009,7 @@ const ko = {
         memberAdd: '멤버 추가',
         memberRemove: '멤버 삭제',
         taskDelete: '태스크 삭제',
+        taskAssigneeChange: '담당자 변경',
         ownerTransfer: '소유권 이전',
       },
     },

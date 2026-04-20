@@ -11,6 +11,7 @@ const ACTION_LABEL_KEYS: Record<AuditAction, string> = {
   'member.add': 'auditLog.actions.memberAdd',
   'member.remove': 'auditLog.actions.memberRemove',
   'task.delete': 'auditLog.actions.taskDelete',
+  'task.assignee_change': 'auditLog.actions.taskAssigneeChange',
   'owner.transfer': 'auditLog.actions.ownerTransfer',
 };
 

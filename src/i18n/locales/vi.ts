@@ -995,6 +995,7 @@ const vi = {
         memberAdd: 'Thêm thành viên',
         memberRemove: 'Xóa thành viên',
         taskDelete: 'Xóa công việc',
+        taskAssigneeChange: 'Thay đổi người phụ trách',
         ownerTransfer: 'Chuyển quyền sở hữu',
       },
     },
