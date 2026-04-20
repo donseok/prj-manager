@@ -66,6 +66,7 @@ const ko = {
       settings: '설정',
       home: '홈',
       allProjects: '전체 프로젝트',
+      myTasks: '내 작업',
       userManagement: '사용자 관리',
       userManual: '사용자 매뉴얼',
       portfolio: '포트폴리오',

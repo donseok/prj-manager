@@ -66,6 +66,7 @@ const en = {
       settings: 'Settings',
       home: 'Home',
       allProjects: 'All Projects',
+      myTasks: 'My Tasks',
       userManagement: 'User Management',
       userManual: 'User Manual',
       portfolio: 'Portfolio',

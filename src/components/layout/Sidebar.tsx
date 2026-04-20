@@ -1,5 +1,5 @@
 import { NavLink, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck, Columns3, Briefcase } from 'lucide-react';
+import { LayoutDashboard, ListTree, Calendar, Users, Settings, FolderOpen, Plus, ChevronRight, PanelLeftClose, PanelLeftOpen, ShieldCheck, BookOpen, ExternalLink, CalendarCheck, Columns3, Briefcase, UserCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,7 @@ function getGlobalNavItems(pendingBadge: number, t: TFunction): NavItem[] {
   return [
     { to: '/', icon: LayoutDashboard, label: t('sidebar.home'), end: true },
     { to: '/projects', icon: FolderOpen, label: t('sidebar.allProjects') },
+    { to: '/me', icon: UserCheck, label: t('sidebar.myTasks') },
     { to: '/portfolio', icon: Briefcase, label: t('sidebar.portfolio') },
     { to: '/admin/users', icon: ShieldCheck, label: t('sidebar.userManagement'), adminOnly: true, badge: pendingBadge },
     { to: '/manual', icon: BookOpen, label: t('sidebar.userManual') },
