@@ -66,6 +66,7 @@ const vi = {
       settings: 'Cài đặt',
       home: 'Trang chủ',
       allProjects: 'Tất cả dự án',
+      myTasks: 'Công việc của tôi',
       userManagement: 'Quản lý người dùng',
       userManual: 'Hướng dẫn sử dụng',
       portfolio: 'Danh mục đầu tư',

@@ -26,6 +26,7 @@ import SuperAdminRoute from './components/common/SuperAdminRoute';
 import ProjectAdminRoute from './components/common/ProjectAdminRoute';
 import UserManual from './pages/UserManual';
 import Portfolio from './pages/Portfolio';
+import MyTasks from './pages/MyTasks';
 import AccountSettings from './pages/AccountSettings';
 import { useProjectStore } from './store/projectStore';
 import { useAuthStore } from './store/authStore';
@@ -176,6 +177,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="portfolio" element={<Portfolio />} />
+          <Route path="me" element={<MyTasks />} />
           <Route path="account" element={<AccountSettings />} />
           <Route path="manual" element={<UserManual />} />
           {/* 하위 호환: 기존 /admin/users 경로를 슈퍼관리자 사용자 관리로 영구 리다이렉트 */}
