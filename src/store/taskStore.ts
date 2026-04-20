@@ -5,6 +5,7 @@ import { normalizeTaskHierarchy } from '../lib/projectTaskSync';
 import { autoCalculateWeights } from '../lib/taskAutoFill';
 import { broadcastTasks, onTasksUpdated } from '../lib/broadcastSync';
 import { checkAndGenerateNotifications } from '../lib/notificationGenerator';
+import { useProjectStore } from './projectStore';
 
 interface TaskState {
   tasks: Task[];
@@ -69,7 +70,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   setTasks: (tasks, projectId, options) => {
     const currentState = get();
     const expandedIds = get().expandedIds;
-    const tasksWithExpanded = normalizeTaskHierarchy(tasks).map((t) => ({
+    const progressMode = useProjectStore.getState().currentProject?.settings?.progressMode;
+    const tasksWithExpanded = normalizeTaskHierarchy(tasks, { progressMode }).map((t) => ({
       ...t,
       isExpanded: expandedIds.has(t.id),
     }));

@@ -227,6 +227,118 @@ describe('normalizeTaskHierarchy', () => {
     });
   });
 
+  // ── Weighted aggregation edge cases ─────────────────────────────
+  describe('Weighted aggregation', () => {
+    it('falls back to simple average when all child weights are zero', () => {
+      const tasks: Task[] = [
+        makeTask({ id: 'parent', parentId: null, level: 1 }),
+        makeTask({
+          id: 'child-a',
+          parentId: 'parent',
+          level: 2,
+          weight: 0,
+          actualProgress: 40,
+        }),
+        makeTask({
+          id: 'child-b',
+          parentId: 'parent',
+          level: 2,
+          weight: 0,
+          actualProgress: 80,
+        }),
+      ];
+
+      const result = normalizeTaskHierarchy(tasks);
+      const parent = result.find((t) => t.id === 'parent');
+
+      // Simple average: (40 + 80) / 2 = 60
+      expect(parent?.actualProgress).toBe(60);
+    });
+
+    it('aggregates nested parents using their accumulated weights', () => {
+      const tasks: Task[] = [
+        makeTask({ id: 'root', parentId: null, level: 1 }),
+        // Branch A (weight 4): child progress 100
+        makeTask({ id: 'branch-a', parentId: 'root', level: 2, weight: 4 }),
+        makeTask({
+          id: 'leaf-a1',
+          parentId: 'branch-a',
+          level: 3,
+          weight: 4,
+          actualProgress: 100,
+        }),
+        // Branch B (weight 1): child progress 0
+        makeTask({ id: 'branch-b', parentId: 'root', level: 2, weight: 1 }),
+        makeTask({
+          id: 'leaf-b1',
+          parentId: 'branch-b',
+          level: 3,
+          weight: 1,
+          actualProgress: 0,
+        }),
+      ];
+
+      const result = normalizeTaskHierarchy(tasks);
+      const root = result.find((t) => t.id === 'root');
+
+      // Weighted roll-up: (100 * 4 + 0 * 1) / (4 + 1) = 80
+      expect(root?.actualProgress).toBe(80);
+    });
+  });
+
+  // ── Manual progress mode ────────────────────────────────────────
+  describe('Manual progress mode', () => {
+    it('skips parent progress roll-up when progressMode is manual', () => {
+      const tasks: Task[] = [
+        makeTask({
+          id: 'parent',
+          parentId: null,
+          level: 1,
+          actualProgress: 55, // user-entered value should be preserved
+        }),
+        makeTask({
+          id: 'child',
+          parentId: 'parent',
+          level: 2,
+          weight: 1,
+          actualProgress: 100,
+        }),
+      ];
+
+      const result = normalizeTaskHierarchy(tasks, { progressMode: 'manual' });
+      const parent = result.find((t) => t.id === 'parent');
+
+      // Parent actualProgress should NOT be overwritten by child's 100
+      expect(parent?.actualProgress).toBe(55);
+      // But status/date aggregation should still happen
+      expect(parent?.status).toBe('completed');
+    });
+
+    it('rolls up parent progress in auto mode (default)', () => {
+      const tasks: Task[] = [
+        makeTask({
+          id: 'parent',
+          parentId: null,
+          level: 1,
+          actualProgress: 55,
+        }),
+        makeTask({
+          id: 'child',
+          parentId: 'parent',
+          level: 2,
+          weight: 1,
+          actualProgress: 100,
+        }),
+      ];
+
+      const result = normalizeTaskHierarchy(tasks);
+      const parent = result.find((t) => t.id === 'parent');
+
+      // Auto mode: parent overwritten to 100
+      expect(parent?.actualProgress).toBe(100);
+    });
+  });
+
   // ── Date swap ───────────────────────────────────────────────────
   describe('Date swap', () => {
     it('swaps planStart and planEnd when start > end', () => {
