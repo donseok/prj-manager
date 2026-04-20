@@ -38,6 +38,7 @@ import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useProjectPermission } from '../hooks/useProjectPermission';
 import AuditLogPanel from '../components/common/AuditLogPanel';
 import MeetingImport from '../components/settings/MeetingImport';
+import BaselineManager from '../components/settings/BaselineManager';
 import { logAuditEvent } from '../lib/auditLog';
 import type { AIProvider, ProjectStatus, Task } from '../types';
 import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
@@ -666,6 +667,18 @@ export default function Settings() {
                 if (newTasks.length === 0) return;
                 void applyImportedTasks([...tasks, ...newTasks]);
               }}
+            />
+          )}
+
+          {/* 기준선(Baseline) 관리 — 계획 스냅샷 저장 & 실적 비교 */}
+          {currentProject && user && (
+            <BaselineManager
+              project={currentProject}
+              tasks={tasks}
+              currentUserId={user.id}
+              currentUserName={user.name}
+              canEdit={canEditProject}
+              onFeedback={(tone, title, message) => showFeedback({ tone, title, message })}
             />
           )}
 

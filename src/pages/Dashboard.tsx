@@ -21,6 +21,8 @@ import {
   ShieldCheck,
   UserX,
   CalendarX,
+  GitCompare,
+  Milestone,
 } from 'lucide-react';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
@@ -65,7 +67,12 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts';
+import { getActiveBaseline } from '../lib/baselineRepository';
+import { computeBaselineDeviation, computeBaselineSCurve } from '../lib/baselineAnalytics';
+import type { ProjectBaseline } from '../types';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -152,6 +159,35 @@ export default function Dashboard() {
   const weightData = useMemo(() => calculateWeightDistribution(tasks), [tasks]);
 
   const recentlyCompleted = useMemo(() => getRecentlyCompleted(tasks), [tasks]);
+
+  // Active baseline (for 계획 vs 실적 비교)
+  const [activeBaseline, setActiveBaselineState] = useState<ProjectBaseline | null>(null);
+  const [showBaselineCompare, setShowBaselineCompare] = useState(true);
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    void getActiveBaseline(projectId).then((b) => {
+      if (!cancelled) setActiveBaselineState(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, tasks.length]);
+
+  const baselineDeviation = useMemo(() => {
+    if (!activeBaseline) return null;
+    return computeBaselineDeviation(
+      activeBaseline,
+      tasks,
+      currentProject?.startDate,
+      currentProject?.endDate,
+    );
+  }, [activeBaseline, tasks, currentProject?.startDate, currentProject?.endDate]);
+
+  const baselineSCurve = useMemo(() => {
+    if (!activeBaseline) return [];
+    return computeBaselineSCurve(activeBaseline, tasks);
+  }, [activeBaseline, tasks]);
 
   // Load attendance data
   const { attendances, setAttendances } = useAttendanceStore();
@@ -702,6 +738,172 @@ export default function Dashboard() {
           )}
         </div>
       </section>
+
+      {/* 기준선 비교 섹션 — 활성 기준선이 있을 때만 렌더 */}
+      {activeBaseline && baselineDeviation && (
+        <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+          <div className="app-panel p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="page-kicker">Baseline</p>
+                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  기준선 대비 편차
+                </h2>
+                <p className="mt-2 truncate text-xs text-[color:var(--text-secondary)]" title={activeBaseline.name}>
+                  {activeBaseline.name}
+                </p>
+              </div>
+              <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#0f766e,#2fa67c)] text-white shadow-[0_20px_40px_-24px_rgba(15,118,110,0.74)]' : quietSectionIconClassName}>
+                <Milestone className="h-5 w-5" />
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-[20px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[color:var(--text-secondary)]">
+                  종료일 편차
+                </p>
+                {baselineDeviation.endDateShiftDays === null ? (
+                  <p className="mt-2 text-lg text-[color:var(--text-muted)]">기간 미설정</p>
+                ) : (
+                  <p
+                    className={`mt-2 text-3xl font-semibold ${
+                      baselineDeviation.endDateShiftDays > 0
+                        ? 'text-[color:var(--accent-danger)]'
+                        : baselineDeviation.endDateShiftDays < 0
+                          ? 'text-[color:var(--accent-success)]'
+                          : 'text-[color:var(--text-primary)]'
+                    }`}
+                  >
+                    {baselineDeviation.endDateShiftDays > 0
+                      ? `+${baselineDeviation.endDateShiftDays}일 지연`
+                      : baselineDeviation.endDateShiftDays < 0
+                        ? `${Math.abs(baselineDeviation.endDateShiftDays)}일 선행`
+                        : '일정 유지'}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+                    공정율 편차
+                  </p>
+                  <p
+                    className={`mt-2 text-xl font-semibold ${
+                      baselineDeviation.progressDeltaPercent >= 0
+                        ? 'text-[color:var(--accent-success)]'
+                        : 'text-[color:var(--accent-danger)]'
+                    }`}
+                  >
+                    {baselineDeviation.progressDeltaPercent >= 0 ? '+' : ''}
+                    {baselineDeviation.progressDeltaPercent}%
+                  </p>
+                </div>
+                <div className="rounded-[18px] border border-[var(--border-color)] bg-[color:var(--bg-elevated)] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+                    지연 작업
+                  </p>
+                  <p
+                    className={`mt-2 text-xl font-semibold ${
+                      baselineDeviation.slippedTaskCount > 0
+                        ? 'text-[color:var(--accent-danger)]'
+                        : 'text-[color:var(--text-primary)]'
+                    }`}
+                  >
+                    {baselineDeviation.slippedTaskCount}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-[color:var(--text-muted)]">
+                캡처일 {formatDate(activeBaseline.capturedAt)} · {activeBaseline.taskSnapshots.length}개 작업 스냅샷
+                {baselineDeviation.missingTaskCount > 0 && (
+                  <> · 삭제된 작업 {baselineDeviation.missingTaskCount}건</>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="app-panel p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="page-kicker">S-Curve</p>
+                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--text-primary)]">
+                  계획(기준선) vs 실적
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBaselineCompare((v) => !v)}
+                  className="rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-tertiary)]"
+                >
+                  <GitCompare className="mr-1 inline h-3.5 w-3.5" />
+                  {showBaselineCompare ? '접기' : '펼치기'}
+                </button>
+                <div className={isDark ? 'flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#5B8DEF,#A78BFA)] text-white shadow-[0_20px_40px_-24px_rgba(91,141,239,0.74)]' : quietSectionIconClassName}>
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+
+            {showBaselineCompare && (
+              <div className="mt-6 h-[300px]">
+                {baselineSCurve.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={baselineSCurve} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="4 6" stroke={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(127,111,97,0.14)'} />
+                      <XAxis dataKey="weekLabel" stroke="var(--text-muted)" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis stroke="var(--text-muted)" axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip
+                        formatter={(value) => (value === null ? '-' : `${Number(value)}%`)}
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-secondary-solid)',
+                          borderColor: 'var(--border-color)',
+                          borderRadius: '18px',
+                          boxShadow: '0 24px 56px -28px rgba(17, 24, 39, 0.28)',
+                          color: 'var(--text-primary)',
+                        }}
+                        labelStyle={{ color: 'var(--text-primary)' }}
+                        itemStyle={{ color: 'var(--text-secondary)' }}
+                      />
+                      <Legend
+                        verticalAlign="top"
+                        align="right"
+                        iconType="line"
+                        iconSize={14}
+                        wrapperStyle={{ fontSize: '12px', color: 'var(--text-secondary)', paddingBottom: '8px' }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="baselinePlan"
+                        stroke="#5B8DEF"
+                        strokeWidth={2.5}
+                        dot={false}
+                        name="계획(기준선)"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="actual"
+                        stroke="#F0A167"
+                        strokeWidth={2.5}
+                        dot={{ r: 3 }}
+                        connectNulls
+                        name="실적"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="empty-state">
+                    <p>기준선 일정이 설정되지 않아 S-커브를 그릴 수 없습니다.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Weight distribution + Recently completed tasks */}
       <section className="grid gap-6 xl:grid-cols-2">
