@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, SendHorizonal, X, RotateCcw } from 'lucide-react';
+import { MessageCircle, SendHorizonal, X, RotateCcw, Sparkles, AlertTriangle, CalendarClock, CheckCircle2 } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import { useTaskStore } from '../../store/taskStore';
 import {
@@ -10,6 +10,11 @@ import {
   type ChatbotMessage,
   type ChatbotContext,
 } from '../../lib/chatbot';
+import {
+  detectDelayRisks,
+  suggestNextTasks,
+  generateWeeklySummary,
+} from '../../lib/chatbotInsights';
 import { cn, generateId } from '../../lib/utils';
 import DKBotAvatar from './DKBotAvatar';
 
@@ -51,6 +56,23 @@ export default function ChatbotWidget() {
     () => messages.map((m) => ({ role: m.role, text: m.text })),
     [messages]
   );
+
+  // 프로액티브 인사이트 — 현재 프로젝트 기준 결정론적 분석
+  const insights = useMemo(() => {
+    if (!currentProject || tasks.length === 0) return null;
+    const baseDate = currentProject.baseDate ? new Date(currentProject.baseDate) : new Date();
+    const risks = detectDelayRisks(tasks, members, baseDate);
+    const suggestions = suggestNextTasks(tasks, members, baseDate);
+    const summary = generateWeeklySummary(tasks, members, baseDate);
+    return { risks, suggestions, summary };
+  }, [currentProject, tasks, members]);
+
+  const hasInsights =
+    !!insights &&
+    (insights.risks.length > 0 ||
+      insights.suggestions.length > 0 ||
+      insights.summary.startingThisWeek > 0 ||
+      insights.summary.completedLastWeek > 0);
 
   useEffect(() => {
     if (timerRef.current) {
@@ -181,6 +203,83 @@ export default function ChatbotWidget() {
           </div>
 
           <div className="app-panel flex max-h-[min(75vh,36rem)] flex-1 flex-col gap-3 p-3">
+            {hasInsights && insights && (
+              <div className="rounded-[20px] border border-[rgba(21,37,96,0.14)] bg-[color:var(--bg-elevated)] p-3">
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[color:var(--text-primary)]">
+                  <Sparkles className="h-3.5 w-3.5 text-[#C8102E]" />
+                  프로액티브 인사이트
+                </div>
+                <p className="mb-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+                  {insights.summary.headline}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {insights.summary.highRiskCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => submitQuestion('지연 위험 작업 알려줘')}
+                      className="flex items-center gap-1 rounded-full border border-[#C8102E]/30 bg-[#C8102E]/10 px-2.5 py-1 text-xs font-semibold text-[#C8102E] transition hover:bg-[#C8102E]/15"
+                      title="고위험 작업 상세 보기"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      지연 위험 {insights.summary.highRiskCount}건
+                    </button>
+                  )}
+                  {insights.summary.riskCount > insights.summary.highRiskCount && (
+                    <button
+                      type="button"
+                      onClick={() => submitQuestion('지연 위험 작업 알려줘')}
+                      className="flex items-center gap-1 rounded-full border border-[#F0A167]/40 bg-[#F0A167]/10 px-2.5 py-1 text-xs font-semibold text-[#B26A2F] transition hover:bg-[#F0A167]/20"
+                      title="주의 작업 상세 보기"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      주의 {insights.summary.riskCount - insights.summary.highRiskCount}건
+                    </button>
+                  )}
+                  {insights.summary.startingThisWeek > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => submitQuestion('이번 주 작업 알려줘')}
+                      className="flex items-center gap-1 rounded-full border border-[#1E3A7B]/25 bg-[#1E3A7B]/10 px-2.5 py-1 text-xs font-semibold text-[#1E3A7B] transition hover:bg-[#1E3A7B]/15"
+                      title="이번 주 시작 예정 작업 보기"
+                    >
+                      <CalendarClock className="h-3 w-3" />
+                      이번 주 시작 {insights.summary.startingThisWeek}건
+                    </button>
+                  )}
+                  {insights.summary.completedLastWeek > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => submitQuestion('완료된 작업 목록 보여줘')}
+                      className="flex items-center gap-1 rounded-full border border-[#2BAAA0]/30 bg-[#2BAAA0]/10 px-2.5 py-1 text-xs font-semibold text-[#1F7E77] transition hover:bg-[#2BAAA0]/15"
+                      title="지난 주 완료 작업 보기"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      지난 주 완료 {insights.summary.completedLastWeek}건
+                    </button>
+                  )}
+                  {insights.summary.nextSuggestionCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => submitQuestion('다음 추천 작업 알려줘')}
+                      className="flex items-center gap-1 rounded-full border border-[rgba(21,37,96,0.2)] bg-[color:var(--bg-tertiary)] px-2.5 py-1 text-xs font-semibold text-[color:var(--text-primary)] transition hover:bg-[color:var(--bg-secondary)]"
+                      title="다음 추천 작업 보기"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      추천 작업 {insights.summary.nextSuggestionCount}건
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => submitQuestion('주간 요약 보여줘')}
+                    className="flex items-center gap-1 rounded-full border border-[rgba(21,37,96,0.2)] bg-transparent px-2.5 py-1 text-xs font-semibold text-[color:var(--text-secondary)] transition hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)]"
+                    title="주간 전체 요약 보기"
+                  >
+                    주간 요약
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {visibleSuggestions.map((suggestion) => (
                 <button

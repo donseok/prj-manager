@@ -5,6 +5,14 @@ import { supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 import { parseISO, differenceInDays } from 'date-fns';
 import { isRagReady, searchKnowledgeBase, answerWithRag } from './rag';
+import {
+  detectDelayRisks,
+  suggestNextTasks,
+  generateWeeklySummary,
+  formatRiskAnswer,
+  formatSuggestionAnswer,
+  formatWeeklySummaryAnswer,
+} from './chatbotInsights';
 
 // ─── Public types ────────────────────────────────────────────
 
@@ -58,6 +66,9 @@ type IntentType =
   | 'unassigned'
   | 'priority'
   | 'progress_compare'
+  | 'risk_insight'
+  | 'next_suggestion'
+  | 'weekly_summary'
   | 'help';
 
 interface ScoredIntent {
@@ -353,6 +364,21 @@ const INTENT_KEYWORDS: Record<string, { primary: string[]; secondary: string[]; 
   progress_compare: {
     primary: ['계획대비', '대비', '비교', '계획vs', '차이', '실적대비', '계획실적'],
     secondary: ['많이했', '적게했', '계획보다', '실적이', '목표대비', '차이가', '격차', '갭'],
+    weak: [],
+  },
+  risk_insight: {
+    primary: ['지연위험', '리스크경고', '위험작업', '위험경고', '리스크분석', '위험분석', '위험도'],
+    secondary: ['위험한', '위태', '삐걱', '주의작업', '리스크높'],
+    weak: [],
+  },
+  next_suggestion: {
+    primary: ['다음작업', '추천작업', '뭐할까', '뭐부터', '무엇부터', '다음에할', '다음에뭐', '시작할작업', '추천해줘'],
+    secondary: ['먼저할', '다음것', '추천', '뭐하면', '뭐해야'],
+    weak: [],
+  },
+  weekly_summary: {
+    primary: ['주간요약', '주간리포트', '주간정리', '이번주요약', '주간브리핑', '주간인사이트'],
+    secondary: ['요약카드', '주간보고', '브리핑'],
     weak: [],
   },
   help: {
@@ -1051,6 +1077,12 @@ function buildContextualSuggestions(intentType: IntentType, rc?: ResolvedContext
       return ['지연 작업 상세', '마감 임박 작업', '멤버별 업무'];
     case 'progress_compare':
       return ['우선순위 높은 작업', '지연 현황', '멤버별 업무'];
+    case 'risk_insight':
+      return ['다음 추천 작업은?', '주간 요약 보여줘', '멤버별 업무'];
+    case 'next_suggestion':
+      return ['지연 위험 작업은?', '주간 요약 보여줘', '이번 주 일정'];
+    case 'weekly_summary':
+      return ['지연 위험 작업은?', '다음 추천 작업은?', '멤버별 업무'];
     case 'help':
       return ['전체 현황 알려줘', '지연 작업', '이번 주 일정'];
     default:
@@ -1156,6 +1188,24 @@ async function dispatchIntent(intent: ScoredIntent, context: ChatbotContext): Pr
     case 'progress_compare':
       text = buildProgressCompareAnswer(rc);
       break;
+    case 'risk_insight': {
+      const baseDate = getBaseDate(rc.project);
+      const risks = detectDelayRisks(rc.tasks, rc.members, baseDate);
+      text = formatRiskAnswer(risks, rc.project.name);
+      break;
+    }
+    case 'next_suggestion': {
+      const baseDate = getBaseDate(rc.project);
+      const suggestions = suggestNextTasks(rc.tasks, rc.members, baseDate);
+      text = formatSuggestionAnswer(suggestions, rc.project.name);
+      break;
+    }
+    case 'weekly_summary': {
+      const baseDate = getBaseDate(rc.project);
+      const summary = generateWeeklySummary(rc.tasks, rc.members, baseDate);
+      text = formatWeeklySummaryAnswer(summary, rc.project.name);
+      break;
+    }
   }
 
   return { text, intentType: intent.type };
