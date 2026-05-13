@@ -5,7 +5,6 @@ import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { cn, formatDate, getLocalDateString } from '../../lib/utils';
 import type { Task, ProjectMember } from '../../types';
-import { LEVEL_LABELS } from '../../types';
 
 interface QuickProgressModalProps {
   isOpen: boolean;
@@ -135,7 +134,7 @@ export default function QuickProgressModal({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
-                            {LEVEL_LABELS[task.level]}
+                            {t(`labels.level.${task.level}`)}
                           </span>
                           {delayed && (
                             <span className="flex items-center gap-1 rounded-full bg-[rgba(203,75,95,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">

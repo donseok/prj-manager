@@ -43,7 +43,7 @@ import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useSystemSettingsStore } from '../store/systemSettingsStore';
 import type { Project, ProjectMember, ProjectStatus } from '../types';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
+import { PROJECT_STATUS_COLORS } from '../types';
 
 export default function ProjectList() {
   const { t } = useTranslation();
@@ -286,7 +286,7 @@ export default function ProjectList() {
       showFeedback({
         tone: 'success',
         title: t('projectList.statusChangeSuccess'),
-        message: t('projectList.statusChangeSuccessMsg', { name: project.name, status: PROJECT_STATUS_LABELS[newStatus] }),
+        message: t('projectList.statusChangeSuccessMsg', { name: project.name, status: t(`labels.projectStatus.${newStatus}`) }),
       });
     } catch (error) {
       console.error('Failed to change project status:', error);
@@ -650,7 +650,7 @@ export default function ProjectList() {
                             color: PROJECT_STATUS_COLORS[project.status],
                           }}
                         >
-                          {PROJECT_STATUS_LABELS[project.status]}
+                          {t(`labels.projectStatus.${project.status}`)}
                         </span>
                       </div>
                       {project.completedAt ? (

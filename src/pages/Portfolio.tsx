@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Briefcase,
@@ -86,8 +87,8 @@ import { loadProjectTasks, loadProjectMembers } from '../lib/dataRepository';
 import { calculateProjectStats } from '../lib/taskAnalytics';
 import { getLeafTasks } from '../lib/taskAnalytics';
 import { formatDate, formatPercent, getDelayedTasks } from '../lib/utils';
-import type { Project, Task, ProjectMember } from '../types';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
+import type { Project, Task, ProjectMember, ProjectStatus } from '../types';
+import { PROJECT_STATUS_COLORS } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -150,6 +151,7 @@ const STATUS_DONUT_COLORS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────
 
 export default function Portfolio() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { projects } = useProjectStore();
   const isDark = useThemeStore((s) => s.isDark);
@@ -290,15 +292,17 @@ export default function Portfolio() {
 
   // Chart data: status donut
   const donutData = useMemo(() => {
-    const counts: Record<string, number> = { '준비': 0, '진행': 0, '완료': 0 };
+    const statuses: ProjectStatus[] = ['preparing', 'active', 'completed'];
+    const counts: Record<string, number> = {};
+    for (const s of statuses) counts[t(`labels.projectStatus.${s}`)] = 0;
     activeProjects.forEach((p) => {
-      const label = PROJECT_STATUS_LABELS[p.status] || p.status;
+      const label = t(`labels.projectStatus.${p.status}`, { defaultValue: p.status });
       if (label in counts) counts[label]++;
     });
     return Object.entries(counts)
       .filter(([, v]) => v > 0)
       .map(([name, value]) => ({ name, value }));
-  }, [activeProjects]);
+  }, [activeProjects, t]);
 
   // Tooltip style
   const tooltipStyle = {
@@ -514,7 +518,7 @@ export default function Portfolio() {
                           }}
                         >
                           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_STATUS_COLORS[d.project.status] }} />
-                          {PROJECT_STATUS_LABELS[d.project.status]}
+                          {t(`labels.projectStatus.${d.project.status}`)}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-[color:var(--text-secondary)]">
@@ -713,7 +717,7 @@ export default function Portfolio() {
                         {d.project.name}
                       </h3>
                       <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                        {PROJECT_STATUS_LABELS[d.project.status]}
+                        {t(`labels.projectStatus.${d.project.status}`)}
                       </p>
                     </div>
                     <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${health.bgClass}`}>

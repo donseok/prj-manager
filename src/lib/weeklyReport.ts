@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { Task, ProjectMember, Attendance, AttendanceType } from '../types';
-import { TASK_STATUS_LABELS, LEVEL_LABELS, ATTENDANCE_TYPE_LABELS } from '../types';
+import i18n from '../i18n';
 import { getLeafTasks } from './taskAnalytics';
 import { parseDate } from './utils';
 import { generateDefaultAttendance } from './attendanceDefaults';
@@ -206,10 +206,10 @@ export function generateWeeklyReport({
       id: t.id,
       name: t.name,
       level: t.level,
-      levelLabel: LEVEL_LABELS[t.level] || `L${t.level}`,
+      levelLabel: i18n.t(`labels.level.${t.level}`, { defaultValue: `L${t.level}` }),
       assigneeName: t.assigneeId ? memberMap.get(t.assigneeId) || '미지정' : '미지정',
       status: t.status,
-      statusLabel: TASK_STATUS_LABELS[t.status],
+      statusLabel: i18n.t(`labels.taskStatus.${t.status}`),
       planStart: t.planStart || null,
       planEnd: t.planEnd || null,
       actualStart: t.actualStart || null,
@@ -341,11 +341,11 @@ export function generateWeeklyReport({
         taskId: t.id,
         taskName: t.name,
         level: t.level,
-        levelLabel: LEVEL_LABELS[t.level] || `L${t.level}`,
+        levelLabel: i18n.t(`labels.level.${t.level}`, { defaultValue: `L${t.level}` }),
         planEnd: t.planEnd!,
         actualProgress: t.actualProgress,
         status: t.status,
-        statusLabel: TASK_STATUS_LABELS[t.status],
+        statusLabel: i18n.t(`labels.taskStatus.${t.status}`),
         daysUntil: differenceInCalendarDays(pe, baseDate),
       };
     })
@@ -423,7 +423,7 @@ export function generateWeeklyReport({
           .map((a) => ({
             date: a.date,
             type: a.type,
-            typeLabel: ATTENDANCE_TYPE_LABELS[a.type],
+            typeLabel: i18n.t(`labels.attendanceType.${a.type}`),
             note: a.note,
           }));
 

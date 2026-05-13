@@ -4,7 +4,7 @@ import { Plus, Save, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import type { Attendance, AttendanceType, ProjectMember } from '../../types';
-import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../../types';
+import { ATTENDANCE_TYPE_COLORS } from '../../types';
 import { generateId, getLocalDateString } from '../../lib/utils';
 import { isKoreanHoliday, getKoreanHolidayNames } from '../../lib/koreanHolidays';
 
@@ -204,7 +204,7 @@ export default function AttendanceModal({
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[at] }}
                 />
-                {ATTENDANCE_TYPE_LABELS[at]}
+                {t(`labels.attendanceType.${at}`)}
               </button>
             ))}
           </div>

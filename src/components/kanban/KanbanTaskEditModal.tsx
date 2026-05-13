@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, CheckCircle2, Circle, Calendar, User, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
-import { TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '../../types';
+import { TASK_STATUS_COLORS } from '../../types';
 import { format } from 'date-fns';
 
 interface KanbanTaskEditModalProps {
@@ -179,7 +179,7 @@ function KanbanTaskEditModal({
                   STATUS_PILL_CLASSES[statusColor] || STATUS_PILL_CLASSES.gray
                 )}
               >
-                {TASK_STATUS_LABELS[status]}
+                {t(`labels.taskStatus.${status}`)}
               </span>
             </div>
           </div>
@@ -287,9 +287,9 @@ function KanbanTaskEditModal({
                 onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
                 className="field-select"
               >
-                {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                {(['pending', 'in_progress', 'completed', 'on_hold'] as const).map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(`labels.taskStatus.${value}`)}
                   </option>
                 ))}
               </select>

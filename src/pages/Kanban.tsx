@@ -28,7 +28,6 @@ import { canEditSpecificTask } from '../lib/permissions';
 import { getLeafTasks, getAssigneeName } from '../lib/taskAnalytics';
 import { calculateOverallProgress } from '../lib/utils';
 import type { Task, TaskStatus } from '../types';
-import { TASK_STATUS_LABELS } from '../types';
 import { openPopup } from '../lib/popupWindow';
 
 type GroupBy = 'phase' | 'assignee' | 'status';
@@ -250,11 +249,11 @@ export default function Kanban() {
     // status
     return STATUS_COLUMN_ORDER.map((status) => ({
       id: status,
-      title: TASK_STATUS_LABELS[status],
+      title: t(`labels.taskStatus.${status}`),
       tasks: filteredTasks.filter((tk) => tk.status === status),
       accentColor: STATUS_ACCENT_COLORS[status],
     }));
-  }, [filteredTasks, groupBy, taskMap, members, projectTone]);
+  }, [filteredTasks, groupBy, taskMap, members, projectTone, t]);
 
   // Task edit handlers
   const handleEditTask = (task: Task) => {

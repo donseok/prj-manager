@@ -21,7 +21,7 @@ import {
 import { useProjectStore } from '../store/projectStore';
 import { useThemeStore } from '../store/themeStore';
 import Button from '../components/common/Button';
-import { PROJECT_STATUS_COLORS, PROJECT_STATUS_LABELS } from '../types';
+import { PROJECT_STATUS_COLORS } from '../types';
 import {
   getProjectCardBackground,
   getProjectSummary,
@@ -428,7 +428,7 @@ export default function Home() {
                         color: PROJECT_STATUS_COLORS[project.status],
                       }}
                     >
-                      {PROJECT_STATUS_LABELS[project.status]}
+                      {t(`labels.projectStatus.${project.status}`)}
                     </span>
                   </div>
 

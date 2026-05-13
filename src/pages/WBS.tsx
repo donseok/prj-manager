@@ -69,7 +69,6 @@ import { useCommentStore } from '../store/commentStore';
 import TaskCommentPanel from '../components/common/TaskCommentPanel';
 import { openPopup } from '../lib/popupWindow';
 import type { Task, TaskStatus, ProjectMember } from '../types';
-import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 import { useUIStore } from '../store/uiStore';
 import { isAIConfigured } from '../lib/ai';
 import { generateWbsWithAI } from '../lib/ai/aiWbsGenerator';
@@ -1045,7 +1044,7 @@ export default function WBS() {
       case 'level':
         return (
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-secondary)]">
-            {LEVEL_LABELS[task.level] || `L${task.level}`}
+            {t(`labels.level.${task.level}`, { defaultValue: `L${task.level}` })}
           </span>
         );
 
@@ -1335,9 +1334,9 @@ export default function WBS() {
               task.status === 'on_hold' && 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
             )}
           >
-            {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+            {(['pending', 'in_progress', 'completed', 'on_hold'] as const).map((value) => (
               <option key={value} value={value}>
-                {label}
+                {t(`labels.taskStatus.${value}`)}
               </option>
             ))}
           </select>

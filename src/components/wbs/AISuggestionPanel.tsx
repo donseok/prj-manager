@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import Button from '../common/Button';
 import { cn } from '../../lib/utils';
-import { TASK_STATUS_LABELS } from '../../types';
 import type { ProgressSuggestion } from '../../lib/ai/aiProgressSuggestion';
 
 interface AISuggestionPanelProps {
@@ -119,7 +118,7 @@ export default function AISuggestionPanel({
                         s.suggestedStatus === 'pending' && 'bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]',
                         s.suggestedStatus === 'on_hold' && 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]',
                       )}>
-                        {TASK_STATUS_LABELS[s.suggestedStatus]}
+                        {t(`labels.taskStatus.${s.suggestedStatus}`)}
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] leading-4 text-[color:var(--text-muted)]">

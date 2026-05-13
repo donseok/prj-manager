@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   UserCheck,
@@ -21,7 +22,6 @@ import { useThemeStore } from '../store/themeStore';
 import { loadProjectMembers, loadProjectTasks } from '../lib/dataRepository';
 import { getLeafTasks } from '../lib/taskAnalytics';
 import type { Project, ProjectMember, Task, TaskStatus } from '../types';
-import { TASK_STATUS_LABELS, LEVEL_LABELS } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -493,9 +493,10 @@ function TaskSection({ section, items }: { section: Section; items: MyTask[] }) 
 }
 
 function TaskCard({ entry, sectionAccent }: { entry: MyTask; sectionAccent: string }) {
+  const { t } = useTranslation();
   const { task, project, breadcrumb } = entry;
   const statusColor = STATUS_COLORS[task.status];
-  const levelLabel = LEVEL_LABELS[task.level] ?? '';
+  const levelLabel = t(`labels.level.${task.level}`, { defaultValue: '' });
 
   const today = toStartOfDay(new Date());
   const planEnd = parsePlanEnd(task.planEnd);
@@ -558,7 +559,7 @@ function TaskCard({ entry, sectionAccent }: { entry: MyTask; sectionAccent: stri
             color: statusColor.fg,
           }}
         >
-          {TASK_STATUS_LABELS[task.status]}
+          {t(`labels.taskStatus.${task.status}`)}
         </span>
       </div>
 

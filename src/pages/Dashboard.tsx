@@ -52,7 +52,7 @@ import {
 } from '../lib/taskAnalytics';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { loadAttendances } from '../lib/dataRepository';
-import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import { ATTENDANCE_TYPE_COLORS } from '../types';
 import ResourceWidget from '../components/dashboard/ResourceWidget';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import {
@@ -75,7 +75,7 @@ import { computeBaselineDeviation, computeBaselineSCurve } from '../lib/baseline
 import type { ProjectBaseline } from '../types';
 
 export default function Dashboard() {
-  const { t } = useTranslation();
+  const { t, i18n: i18nInstance } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const isDark = useThemeStore((state) => state.isDark);
   const { tasks, setTasks } = useTaskStore();
@@ -121,7 +121,8 @@ export default function Dashboard() {
     const phases = tasks.filter((t) => t.level === 1);
     return phases.length > 0 && phases.every((t) => t.weight === 0);
   }, [tasks]);
-  const statusData = useMemo(() => calculateStatusDistribution(tasks), [tasks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- calculateStatusDistribution reads i18n.t internally; recompute on language change
+  const statusData = useMemo(() => calculateStatusDistribution(tasks), [tasks, i18nInstance.language]);
   const assigneeData = useMemo(() => calculateAssigneeWorkloads(tasks, members), [tasks, members]);
 
   const thisWeekTasks = useMemo(() => getWeeklyTasks(tasks, 'this').slice(0, 5), [tasks]);
@@ -1041,7 +1042,7 @@ export default function Dashboard() {
                         className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                         style={{ backgroundColor: `${(ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type]}18`, color: (ATTENDANCE_TYPE_COLORS as Record<string, string>)[a.type] }}
                       >
-                        {(ATTENDANCE_TYPE_LABELS as Record<string, string>)[a.type]}
+                        {t(`labels.attendanceType.${a.type}`)}
                       </span>
                     </li>
                   );

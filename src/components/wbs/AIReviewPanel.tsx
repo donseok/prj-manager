@@ -4,7 +4,6 @@ import { ChevronDown, ChevronRight, Sparkles, Check } from 'lucide-react';
 import Button from '../common/Button';
 import { cn } from '../../lib/utils';
 import type { Task } from '../../types';
-import { LEVEL_LABELS } from '../../types';
 
 interface AIReviewPanelProps {
   tasks: Task[];
@@ -145,7 +144,7 @@ export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPane
           )}
 
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
-            {LEVEL_LABELS[node.task.level]}
+            {t(`labels.level.${node.task.level}`)}
           </span>
 
           <span className={cn(

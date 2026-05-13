@@ -1,4 +1,9 @@
-import { TASK_STATUS_LABELS, LEVEL_LABELS, PROJECT_STATUS_LABELS, type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
+import { type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
+import i18n from '../i18n';
+
+const tTaskStatus = (s: TaskStatus | string) => i18n.t(`labels.taskStatus.${s}`, { defaultValue: String(s) });
+const tProjectStatus = (s: string) => i18n.t(`labels.projectStatus.${s}`, { defaultValue: String(s) });
+const tLevel = (level: number | string, fallback = '작업') => i18n.t(`labels.level.${level}`, { defaultValue: fallback });
 import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
 import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './taskAnalytics';
 import { supabase } from './supabase';
@@ -682,7 +687,7 @@ function buildProjectListAnswer(context: ChatbotContext): string {
 
   for (const [status, list] of Object.entries(byStatus)) {
     if (list.length > 0) {
-      lines.push(`\n[${PROJECT_STATUS_LABELS[status as keyof typeof PROJECT_STATUS_LABELS]}] ${list.length}건`);
+      lines.push(`\n[${tProjectStatus(status)}] ${list.length}건`);
       list.slice(0, 5).forEach((p) => {
         lines.push(`- ${p.name} | ${p.startDate ? formatDate(p.startDate) : '일정 미정'} ~ ${p.endDate ? formatDate(p.endDate) : '미정'}`);
       });
@@ -706,7 +711,7 @@ function buildProjectDetailAnswer(rc: ResolvedContext): string {
 
   const lines = [
     `"${rc.project.name}" 프로젝트 요약`,
-    `상태: ${PROJECT_STATUS_LABELS[rc.project.status]} | 멤버: ${rc.members.length}명`,
+    `상태: ${tProjectStatus(rc.project.status)} | 멤버: ${rc.members.length}명`,
     `작업 ${leafTasks.length}건 | 완료 ${completed} | 진행 ${inProgress} | 대기 ${pending}${onHold > 0 ? ` | 보류 ${onHold}` : ''} | 지연 ${delayed.length}`,
     `공정률: ${progress}%`,
     rc.project.startDate
@@ -814,7 +819,7 @@ function buildMemberDetailAnswer(member: ProjectMember, rc: ResolvedContext): st
     `총 ${mt.length}건 | 진행 ${inProgress} | 완료 ${completed} | 대기 ${pending} | 지연 ${delayed.length}`,
     '',
     ...mt.slice(0, 6).map((t) =>
-      `- ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${Math.round(t.actualProgress)}%${getDelayDays(t, baseDate) > 0 ? ` | ${getDelayDays(t, baseDate)}일 지연` : ''}`
+      `- ${t.name} | ${tTaskStatus(t.status)} | ${Math.round(t.actualProgress)}%${getDelayDays(t, baseDate) > 0 ? ` | ${getDelayDays(t, baseDate)}일 지연` : ''}`
     ),
   ];
 
@@ -864,7 +869,7 @@ function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
 
   const lines = [
     `"${task.name}" 상세 ("${rc.project.name}")`,
-    `구분: ${LEVEL_LABELS[task.level] || '작업'} | 상태: ${TASK_STATUS_LABELS[task.status]}`,
+    `구분: ${tLevel(task.level)} | 상태: ${tTaskStatus(task.status)}`,
     `담당: ${assignee} | 공정률: ${Math.round(task.actualProgress)}%`,
     `계획: ${formatTaskPeriod(task)}`,
     task.actualStart || task.actualEnd
@@ -885,7 +890,7 @@ function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
   if (children.length > 0) {
     lines.push(`하위 작업 ${children.length}건`);
     children.slice(0, 3).forEach((c) => {
-      lines.push(`  - ${c.name} | ${TASK_STATUS_LABELS[c.status]} | ${Math.round(c.actualProgress)}%`);
+      lines.push(`  - ${c.name} | ${tTaskStatus(c.status)} | ${Math.round(c.actualProgress)}%`);
     });
     if (children.length > 3) lines.push(`  외 ${children.length - 3}건`);
   }
@@ -895,7 +900,7 @@ function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
 
 function buildStatusFilterAnswer(status: TaskStatus, rc: ResolvedContext): string {
   const filtered = getLeafTasks(rc.tasks).filter((t) => t.status === status);
-  const label = TASK_STATUS_LABELS[status];
+  const label = tTaskStatus(status);
 
   if (filtered.length === 0) return `"${rc.project.name}"에 "${label}" 상태 작업이 없습니다.`;
 
@@ -937,7 +942,7 @@ function buildUnassignedAnswer(rc: ResolvedContext): string {
   return [
     `"${rc.project.name}" 미배정 작업 ${unassigned.length}건`,
     ...unassigned.slice(0, 8).map((t, i) =>
-      `${i + 1}. ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${formatTaskPeriod(t)}`
+      `${i + 1}. ${t.name} | ${tTaskStatus(t.status)} | ${formatTaskPeriod(t)}`
     ),
     unassigned.length > 8 ? `외 ${unassigned.length - 8}건` : '',
   ].filter(Boolean).join('\n');
@@ -1283,7 +1288,7 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
       '관련 가능성이 높은 작업입니다.',
       ...scored.map((s) => {
         const t = s.task;
-        return `- ${t.name} | ${TASK_STATUS_LABELS[t.status]} | ${Math.round(t.actualProgress)}%`;
+        return `- ${t.name} | ${tTaskStatus(t.status)} | ${Math.round(t.actualProgress)}%`;
       }),
       '',
       '작업명을 포함하여 다시 질문하시면 상세 정보를 드릴 수 있습니다.',
@@ -1294,7 +1299,7 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
   const projectMatch = fuzzyMatchProject(question, context.allProjects);
   if (projectMatch) {
     const p = projectMatch.project;
-    return `"${p.name}" 프로젝트를 찾았습니다.\n상태: ${PROJECT_STATUS_LABELS[p.status]} | ${p.startDate ? formatDate(p.startDate) : '일정 미정'} ~ ${p.endDate ? formatDate(p.endDate) : '미정'}\n이 프로젝트에 대해 더 자세히 질문해 보세요.`;
+    return `"${p.name}" 프로젝트를 찾았습니다.\n상태: ${tProjectStatus(p.status)} | ${p.startDate ? formatDate(p.startDate) : '일정 미정'} ~ ${p.endDate ? formatDate(p.endDate) : '미정'}\n이 프로젝트에 대해 더 자세히 질문해 보세요.`;
   }
 
   return null;
@@ -1319,7 +1324,7 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       return [
         'DB에서 관련 프로젝트를 찾았습니다.',
         ...projects.map((p: { name: string; status: string; start_date: string | null; end_date: string | null }) =>
-          `- ${p.name} | ${PROJECT_STATUS_LABELS[p.status as keyof typeof PROJECT_STATUS_LABELS] || p.status} | ${p.start_date || '미정'} ~ ${p.end_date || '미정'}`
+          `- ${p.name} | ${tProjectStatus(p.status)} | ${p.start_date || '미정'} ~ ${p.end_date || '미정'}`
         ),
       ].join('\n');
     }
@@ -1334,7 +1339,7 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       return [
         'DB에서 관련 작업을 찾았습니다.',
         ...tasks.map((t: { name: string; status: string; actual_progress: number }) =>
-          `- ${t.name} | ${TASK_STATUS_LABELS[t.status as TaskStatus] || t.status} | ${Math.round(t.actual_progress)}%`
+          `- ${t.name} | ${tTaskStatus(t.status as TaskStatus)} | ${Math.round(t.actual_progress)}%`
         ),
       ].join('\n');
     }
@@ -1395,7 +1400,7 @@ function handleFollowUp(followUp: FollowUpResult, lastBotMessage: string, contex
   if (followUp.type === 'filter_status' && followUp.status) {
     const leafTasks = getLeafTasks(context.tasks);
     const filtered = leafTasks.filter((t) => t.status === followUp.status);
-    const label = TASK_STATUS_LABELS[followUp.status];
+    const label = tTaskStatus(followUp.status);
 
     if (filtered.length === 0) return `"${label}" 상태의 작업이 없습니다.`;
 

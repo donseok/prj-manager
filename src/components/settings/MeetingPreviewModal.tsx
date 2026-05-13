@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, Info } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
+import i18n from '../../i18n';
 import type { Task, ProjectMember } from '../../types';
-import { LEVEL_LABELS } from '../../types';
 
 export interface MeetingTask {
   name: string;
@@ -47,7 +48,7 @@ function buildParentOptions(tasks: Task[]): { id: string; label: string; level: 
     if (!children) return;
     for (const child of children) {
       const indent = '\u00A0\u00A0'.repeat(child.level - 1);
-      const levelTag = LEVEL_LABELS[child.level] ?? `L${child.level}`;
+      const levelTag = i18n.t(`labels.level.${child.level}`, { defaultValue: `L${child.level}` });
       result.push({
         id: child.id,
         label: `${indent}${levelTag} — ${child.name}`,
@@ -69,6 +70,7 @@ export default function MeetingPreviewModal({
   members,
   onConfirm,
 }: MeetingPreviewModalProps) {
+  const { t } = useTranslation();
   const [editedTasks, setEditedTasks] = useState<MeetingTask[]>([]);
   const [parentTaskId, setParentTaskId] = useState<string>('');
 
@@ -221,7 +223,7 @@ export default function MeetingPreviewModal({
                       >
                         {([1, 2, 3, 4] as const).map((lv) => (
                           <option key={lv} value={lv}>
-                            {LEVEL_LABELS[lv]}
+                            {t(`labels.level.${lv}`)}
                           </option>
                         ))}
                       </select>

@@ -46,7 +46,7 @@ import { ensureReportTemplate } from '../lib/weeklyReportTemplate';
 import { useProjectStore } from '../store/projectStore';
 import { addWeeks, startOfWeek, format } from 'date-fns';
 import type { Task, ProjectMember, Attendance } from '../types';
-import { ATTENDANCE_TYPE_LABELS, ATTENDANCE_TYPE_COLORS } from '../types';
+import { ATTENDANCE_TYPE_COLORS } from '../types';
 import type { WeeklyAttendanceSummary, WeeklyMemberReportEntry } from '../lib/weeklyReport';
 import {
   CalendarCheck,
@@ -979,7 +979,7 @@ function OverviewTab({
                                   color: ATTENDANCE_TYPE_COLORS[rec.type],
                                 }}
                               >
-                                {ATTENDANCE_TYPE_LABELS[rec.type]}
+                                {t(`labels.attendanceType.${rec.type}`)}
                               </span>
                             ) : (
                               <span className="text-[color:var(--text-muted)]">-</span>

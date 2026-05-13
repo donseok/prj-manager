@@ -15,7 +15,6 @@ import type { RecurringRule, ProjectMember } from '../../types';
 import {
   FREQUENCY_LABELS,
   DAY_OF_WEEK_LABELS,
-  LEVEL_LABELS,
 } from '../../types';
 
 interface Props {
@@ -163,7 +162,7 @@ export default function RecurringTaskModal({
                         </p>
                         <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-[color:var(--text-secondary)]">
                           <span className="surface-badge">{frequencyDescription(rule)}</span>
-                          <span className="surface-badge">{LEVEL_LABELS[rule.level]}</span>
+                          <span className="surface-badge">{t(`labels.level.${rule.level}`)}</span>
                           {rule.output && <span className="surface-badge">{rule.output}</span>}
                         </div>
                       </div>
@@ -267,7 +266,7 @@ export default function RecurringTaskModal({
               >
                 {[1, 2, 3, 4].map((lvl) => (
                   <option key={lvl} value={lvl}>
-                    {LEVEL_LABELS[lvl]}
+                    {t(`labels.level.${lvl}`)}
                   </option>
                 ))}
               </select>

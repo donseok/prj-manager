@@ -41,7 +41,7 @@ import MeetingImport from '../components/settings/MeetingImport';
 import BaselineManager from '../components/settings/BaselineManager';
 import { logAuditEvent } from '../lib/auditLog';
 import type { AIProvider, ProjectStatus, Task } from '../types';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../types';
+import { PROJECT_STATUS_COLORS } from '../types';
 import { loadAISettings, saveAISettings, hasEnvAIConfig, getDefaultModel } from '../lib/ai';
 import { testConnection } from '../lib/ai/aiClient';
 import { isRagReady, loadIndexStats, reindexProject, type ReindexProgress } from '../lib/rag';
@@ -281,7 +281,7 @@ export default function Settings() {
       showFeedback({
         tone: 'success',
         title: t('settings.statusChangeSuccess'),
-        message: t('settings.statusChangeSuccessMsg', { status: PROJECT_STATUS_LABELS[newStatus] }),
+        message: t('settings.statusChangeSuccessMsg', { status: t(`labels.projectStatus.${newStatus}`) }),
       });
     } catch (error) {
       console.error('Failed to change project status:', error);
@@ -536,7 +536,7 @@ export default function Settings() {
                   className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold"
                   style={{ color: PROJECT_STATUS_COLORS[currentProject.status] }}
                 >
-                  {PROJECT_STATUS_LABELS[currentProject.status]}
+                  {t(`labels.projectStatus.${currentProject.status}`)}
                 </span>
               )}
             </div>
@@ -996,7 +996,7 @@ export default function Settings() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-[color:var(--text-primary)]">
-                        {PROJECT_STATUS_LABELS[item.status]}
+                        {t(`labels.projectStatus.${item.status}`)}
                         {isCurrent && (
                           <span className="ml-2 text-xs font-semibold text-[color:var(--accent-primary)]">{t('settings.currentStatus')}</span>
                         )}
@@ -1134,7 +1134,7 @@ export default function Settings() {
         onClose={() => setPendingStatus(null)}
         onConfirm={() => pendingStatus && void executeStatusChange(pendingStatus)}
         title={t('settings.skipStepConfirmTitle')}
-        description={t('settings.skipStepConfirmDesc', { current: PROJECT_STATUS_LABELS[currentProject?.status ?? 'preparing'], target: PROJECT_STATUS_LABELS[pendingStatus ?? 'preparing'] })}
+        description={t('settings.skipStepConfirmDesc', { current: t(`labels.projectStatus.${currentProject?.status ?? 'preparing'}`), target: t(`labels.projectStatus.${pendingStatus ?? 'preparing'}`) })}
         confirmLabel={t('settings.statusChange')}
         confirmVariant="primary"
       />

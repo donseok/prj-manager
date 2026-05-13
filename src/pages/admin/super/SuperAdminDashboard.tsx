@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Users, FolderKanban, KeyRound, Clock, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useProjectStore } from '../../../store/projectStore';
 import { loadAllProfiles } from '../../../lib/supabase';
 import { loadPendingAccessRequestCount } from '../../../lib/accessRequests';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from '../../../types';
+import { PROJECT_STATUS_COLORS } from '../../../types';
 
 export default function SuperAdminDashboard() {
+  const { t } = useTranslation();
   const projects = useProjectStore((s) => s.projects);
   const [userCount, setUserCount] = useState<number | null>(null);
   const [pendingUserCount, setPendingUserCount] = useState<number>(0);
@@ -153,7 +155,7 @@ export default function SuperAdminDashboard() {
                         }}
                       >
                         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PROJECT_STATUS_COLORS[p.status] }} />
-                        {PROJECT_STATUS_LABELS[p.status]}
+                        {t(`labels.projectStatus.${p.status}`)}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-[color:var(--text-secondary)]">

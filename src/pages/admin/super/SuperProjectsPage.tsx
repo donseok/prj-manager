@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Search, FolderKanban, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useProjectStore } from '../../../store/projectStore';
-import { PROJECT_STATUS_LABELS, type Project, type ProjectStatus } from '../../../types';
+import { type Project, type ProjectStatus } from '../../../types';
 import AssignProjectAdminModal from './AssignProjectAdminModal';
 
 const STATUS_FILTERS: { key: 'all' | ProjectStatus; label: string }[] = [
@@ -13,6 +14,7 @@ const STATUS_FILTERS: { key: 'all' | ProjectStatus; label: string }[] = [
 ];
 
 export default function SuperProjectsPage() {
+  const { t } = useTranslation();
   const projects = useProjectStore((s) => s.projects);
   const [filter, setFilter] = useState<'all' | ProjectStatus>('all');
   const [query, setQuery] = useState('');
@@ -85,7 +87,7 @@ export default function SuperProjectsPage() {
                   <td className="px-4 py-3 font-medium text-[color:var(--text-primary)]">{p.name}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex rounded-lg bg-[color:var(--bg-elevated)] px-2 py-1 text-xs font-semibold text-[color:var(--text-secondary)]">
-                      {PROJECT_STATUS_LABELS[p.status]}
+                      {t(`labels.projectStatus.${p.status}`)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[color:var(--text-secondary)]">{p.startDate || '—'}</td>

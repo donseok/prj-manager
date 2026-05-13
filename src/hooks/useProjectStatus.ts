@@ -1,6 +1,5 @@
 import { useProjectStore } from '../store/projectStore';
 import { upsertProject } from '../lib/dataRepository';
-import { PROJECT_STATUS_LABELS } from '../types';
 import type { Project, ProjectStatus } from '../types';
 
 /**
@@ -40,5 +39,5 @@ export function useProjectStatus() {
     return savedProject;
   };
 
-  return { changeStatus, statusLabels: PROJECT_STATUS_LABELS };
+  return { changeStatus };
 }

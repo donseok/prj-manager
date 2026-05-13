@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
 import { cn, formatDate } from '../../lib/utils';
-import { TASK_STATUS_LABELS } from '../../types';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
 
 interface KanbanCardProps {
@@ -166,7 +165,7 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
             STATUS_BADGE_STYLES[task.status]
           )}
         >
-          {TASK_STATUS_LABELS[task.status]}
+          {t(`labels.taskStatus.${task.status}`)}
         </span>
 
         {/* Assignee name badge */}
