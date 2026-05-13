@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, FolderKanban, ArrowRight } from 'lucide-react';
+import { Search, FolderKanban, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useProjectStore } from '../../../store/projectStore';
-import { PROJECT_STATUS_LABELS, type ProjectStatus } from '../../../types';
+import { PROJECT_STATUS_LABELS, type Project, type ProjectStatus } from '../../../types';
+import AssignProjectAdminModal from './AssignProjectAdminModal';
 
 const STATUS_FILTERS: { key: 'all' | ProjectStatus; label: string }[] = [
   { key: 'all', label: '전체' },
@@ -15,6 +16,7 @@ export default function SuperProjectsPage() {
   const projects = useProjectStore((s) => s.projects);
   const [filter, setFilter] = useState<'all' | ProjectStatus>('all');
   const [query, setQuery] = useState('');
+  const [assignTarget, setAssignTarget] = useState<Project | null>(null);
 
   const filtered = useMemo(() => {
     return projects
@@ -74,7 +76,7 @@ export default function SuperProjectsPage() {
                 <th className="px-4 py-3 font-semibold">상태</th>
                 <th className="px-4 py-3 font-semibold">시작</th>
                 <th className="px-4 py-3 font-semibold">종료</th>
-                <th className="px-4 py-3 font-semibold text-right">진입</th>
+                <th className="px-4 py-3 font-semibold text-right">액션</th>
               </tr>
             </thead>
             <tbody>
@@ -88,19 +90,36 @@ export default function SuperProjectsPage() {
                   </td>
                   <td className="px-4 py-3 text-[color:var(--text-secondary)]">{p.startDate || '—'}</td>
                   <td className="px-4 py-3 text-[color:var(--text-secondary)]">{p.endDate || '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/projects/${p.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg bg-[color:var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:-translate-y-0.5"
-                    >
-                      이동 <ArrowRight className="h-3 w-3" />
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setAssignTarget(p)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary)] px-3 py-1.5 text-xs font-semibold text-[color:var(--text-primary)] transition-all hover:-translate-y-0.5 hover:bg-[color:var(--bg-tertiary)]"
+                        title="이 프로젝트의 관리자를 직접 배정"
+                      >
+                        <ShieldCheck className="h-3 w-3" /> 관리자 배정
+                      </button>
+                      <Link
+                        to={`/projects/${p.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[color:var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:-translate-y-0.5"
+                      >
+                        이동 <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {assignTarget && (
+        <AssignProjectAdminModal
+          project={assignTarget}
+          isOpen={true}
+          onClose={() => setAssignTarget(null)}
+        />
       )}
     </section>
   );
