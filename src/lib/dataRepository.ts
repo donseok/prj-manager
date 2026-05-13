@@ -338,14 +338,44 @@ async function _syncProjectTasksInner(projectId: string, tasks: Task[]) {
 /**
  * Load project IDs that a user is a member of.
  *
- * 1차: project_members.user_id 로 직접 매칭
- * 2차(폴백): 일괄 붙여넣기 등으로 user_id가 NULL인 채 등록된 멤버 중
- *           name이 일치하는 행을 찾아 user_id를 자동 백필한다.
+ * 1차: SECURITY DEFINER RPC(link_orphan_members_to_user) 가 본인 식별 정보
+ *      (이메일·이메일 prefix·user_metadata 이름·profile 이름) 와 일치하는
+ *      orphan(user_id IS NULL) 멤버를 자동 백필한 뒤, 본인이 속한 프로젝트
+ *      ID 목록을 반환한다. RLS를 우회해야 orphan 행이 보이므로 RPC가 필수.
+ * 2차(폴백): RPC 미설치 환경에서는 user_id 직접 매칭 + name 기반 클라이언트
+ *           백필을 시도. 단, RLS로 인해 orphan은 보이지 않을 수 있다.
  */
 export async function loadProjectIdsForUser(
   userId: string,
   userName?: string,
 ): Promise<Set<string>> {
+  // 1차: RPC 호출 (RLS 우회하여 orphan 매칭/백필 후 멤버 프로젝트 ID 반환)
+  const { data: rpcData, error: rpcError } = await supabase.rpc('link_orphan_members_to_user');
+  if (!rpcError && Array.isArray(rpcData)) {
+    return new Set(rpcData.map((row) => {
+      if (typeof row === 'string') return row;
+      if (row && typeof row === 'object' && 'project_id' in row) return String((row as { project_id: unknown }).project_id);
+      if (row && typeof row === 'object' && 'link_orphan_members_to_user' in row) return String((row as { link_orphan_members_to_user: unknown }).link_orphan_members_to_user);
+      return String(row);
+    }));
+  }
+  if (rpcError) {
+    if (isAuthError(rpcError)) { handleSessionExpired(); return new Set(); }
+    // RPC 미설치(함수 없음) 외 오류만 에러로 기록
+    const notInstalled = rpcError.message?.includes('link_orphan_members_to_user')
+      || rpcError.message?.includes('function') && rpcError.message?.includes('does not exist');
+    if (notInstalled) {
+      console.warn(
+        '[member-link] link_orphan_members_to_user RPC가 설치되어 있지 않습니다. ' +
+        'Supabase SQL Editor에서 supabase/migrations/20260513100000_link_orphan_members_rpc.sql 을 실행하세요. ' +
+        '폴백 매칭은 RLS 정책상 orphan 행을 보지 못해 효과가 제한됩니다.'
+      );
+    } else {
+      console.error('Failed to call link_orphan_members_to_user RPC:', rpcError);
+    }
+  }
+
+  // 폴백: user_id 직접 매칭 + name 기반 클라이언트 백필 (제한적)
   const { data, error } = await supabase
     .from('project_members')
     .select('project_id')
@@ -359,7 +389,6 @@ export async function loadProjectIdsForUser(
 
   const ids = new Set((data || []).map((row) => String((row as { project_id: string }).project_id)));
 
-  // 이름 기반 폴백 매칭 + user_id 백필
   const trimmedName = userName?.trim();
   if (trimmedName) {
     const { data: orphans, error: orphanErr } = await supabase
@@ -379,7 +408,6 @@ export async function loadProjectIdsForUser(
         .in('id', orphanIds);
 
       if (backfillErr) {
-        // 백필 실패해도 프로젝트는 노출되도록 ids에는 추가한다
         console.error('Failed to backfill user_id for orphan members:', backfillErr);
       } else {
         console.info(`[member-link] backfilled user_id for ${orphanIds.length} member(s) (name="${trimmedName}")`);
