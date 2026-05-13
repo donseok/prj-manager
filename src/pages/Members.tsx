@@ -152,6 +152,19 @@ export default function Members() {
     setPendingDuplicateName(null);
   };
 
+  // 입력된 이름/이메일을 활성 프로필과 매칭해 user_id를 찾는다
+  const matchProfile = useCallback(
+    (input: string) => {
+      const trimmed = input.trim();
+      if (!trimmed) return undefined;
+      const lower = trimmed.toLowerCase();
+      return activeProfiles.find(
+        (p) => p.name === trimmed || p.email.toLowerCase() === lower
+      );
+    },
+    [activeProfiles]
+  );
+
   const handleSingleAdd = () => {
     // 승인된 사용자 선택 모드
     if (selectedUserId) {
@@ -162,7 +175,7 @@ export default function Members() {
       return;
     }
 
-    // 직접 입력 모드 (폴백)
+    // 직접 입력 모드 (폴백) — 이름/이메일이 활성 프로필과 매칭되면 user_id 자동 연결
     const trimmed = singleName.trim();
     if (!trimmed) return;
 
@@ -172,7 +185,8 @@ export default function Members() {
       return;
     }
 
-    executeSingleAdd(trimmed);
+    const matched = matchProfile(trimmed);
+    executeSingleAdd(matched?.name ?? trimmed, matched?.id);
   };
 
   const getValidPasteMembers = (): { name: string; role: ProjectMember['role'] }[] => {
@@ -188,10 +202,12 @@ export default function Members() {
     if (validMembers.length === 0) return;
 
     for (const { name, role } of validMembers) {
+      const matched = matchProfile(name);
       addMember({
         id: generateId(),
         projectId: projectId!,
-        name,
+        userId: matched?.id,
+        name: matched?.name ?? name,
         role,
         createdAt: new Date().toISOString(),
       });
@@ -768,7 +784,11 @@ export default function Members() {
       <ConfirmModal
         isOpen={pendingDuplicateName !== null}
         onClose={() => setPendingDuplicateName(null)}
-        onConfirm={() => pendingDuplicateName && executeSingleAdd(pendingDuplicateName)}
+        onConfirm={() => {
+          if (!pendingDuplicateName) return;
+          const matched = matchProfile(pendingDuplicateName);
+          executeSingleAdd(matched?.name ?? pendingDuplicateName, matched?.id);
+        }}
         title={t('members.duplicateTitle')}
         description={t('members.duplicateDesc', { name: pendingDuplicateName })}
         confirmLabel={t('common.add')}

@@ -104,7 +104,7 @@ function App() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin');
+        const projects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin', localUser.name);
         if (!isCancelled) setProjects(projects);
         return;
       }
@@ -119,7 +119,7 @@ function App() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const projects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin');
+        const projects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin', sessionUser.name);
         if (isCancelled) return;
         setProjects(projects);
       } else {
@@ -134,7 +134,7 @@ function App() {
         if (initialSkip) return;
         if (nextUser) {
           setUser(nextUser);
-          void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'superadmin').then((projects) => {
+          void loadProjectsForUser(nextUser.id, nextUser.systemRole === 'superadmin', nextUser.name).then((projects) => {
             if (!isCancelled) setProjects(projects);
           });
         } else {
@@ -341,7 +341,7 @@ function PopupProjectWrapper() {
           createdAt: new Date().toISOString(),
         };
         setUser(localUser);
-        const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin');
+        const loadedProjects = await loadProjectsForUser(localUser.id, localUser.systemRole === 'superadmin', localUser.name);
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);
@@ -358,7 +358,7 @@ function PopupProjectWrapper() {
 
       if (sessionUser) {
         setUser(sessionUser);
-        const loadedProjects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin');
+        const loadedProjects = await loadProjectsForUser(sessionUser.id, sessionUser.systemRole === 'superadmin', sessionUser.name);
         if (!isCancelled) {
           setProjects(loadedProjects);
           setReady(true);

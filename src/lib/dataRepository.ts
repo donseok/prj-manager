@@ -335,8 +335,17 @@ async function _syncProjectTasksInner(projectId: string, tasks: Task[]) {
 
 // ─── User-scoped Project Loading ────────────────────────────
 
-/** Load project IDs that a user is a member of */
-export async function loadProjectIdsForUser(userId: string): Promise<Set<string>> {
+/**
+ * Load project IDs that a user is a member of.
+ *
+ * 1차: project_members.user_id 로 직접 매칭
+ * 2차(폴백): 일괄 붙여넣기 등으로 user_id가 NULL인 채 등록된 멤버 중
+ *           name이 일치하는 행을 찾아 user_id를 자동 백필한다.
+ */
+export async function loadProjectIdsForUser(
+  userId: string,
+  userName?: string,
+): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('project_members')
     .select('project_id')
@@ -348,16 +357,54 @@ export async function loadProjectIdsForUser(userId: string): Promise<Set<string>
     return new Set();
   }
 
-  return new Set((data || []).map((row) => String((row as { project_id: string }).project_id)));
+  const ids = new Set((data || []).map((row) => String((row as { project_id: string }).project_id)));
+
+  // 이름 기반 폴백 매칭 + user_id 백필
+  const trimmedName = userName?.trim();
+  if (trimmedName) {
+    const { data: orphans, error: orphanErr } = await supabase
+      .from('project_members')
+      .select('id, project_id')
+      .is('user_id', null)
+      .eq('name', trimmedName);
+
+    if (orphanErr) {
+      if (isAuthError(orphanErr)) { handleSessionExpired(); return ids; }
+      console.error('Failed to load orphan members for backfill:', orphanErr);
+    } else if (orphans && orphans.length > 0) {
+      const orphanIds = orphans.map((row) => String((row as { id: string }).id));
+      const { error: backfillErr } = await supabase
+        .from('project_members')
+        .update({ user_id: userId })
+        .in('id', orphanIds);
+
+      if (backfillErr) {
+        // 백필 실패해도 프로젝트는 노출되도록 ids에는 추가한다
+        console.error('Failed to backfill user_id for orphan members:', backfillErr);
+      } else {
+        console.info(`[member-link] backfilled user_id for ${orphanIds.length} member(s) (name="${trimmedName}")`);
+      }
+
+      for (const row of orphans) {
+        ids.add(String((row as { project_id: string }).project_id));
+      }
+    }
+  }
+
+  return ids;
 }
 
 /** Load projects filtered by membership. System admins see all projects. */
-export async function loadProjectsForUser(userId: string, isSystemAdmin: boolean): Promise<Project[]> {
+export async function loadProjectsForUser(
+  userId: string,
+  isSystemAdmin: boolean,
+  userName?: string,
+): Promise<Project[]> {
   if (isSystemAdmin) {
     return loadProjects();
   }
 
-  const memberProjectIds = await loadProjectIdsForUser(userId);
+  const memberProjectIds = await loadProjectIdsForUser(userId, userName);
   const allProjects = await loadProjects();
   return allProjects.filter((p) => memberProjectIds.has(p.id));
 }
