@@ -254,22 +254,30 @@ export async function loadProjectTasks(projectId: string): Promise<Task[]> {
   return (data as TaskRow[]).map(mapTaskRow);
 }
 
-export async function syncProjectTasks(projectId: string, tasks: Task[]) {
+export async function syncProjectTasks(
+  projectId: string,
+  tasks: Task[],
+  options?: { allowFullClear?: boolean },
+) {
   try {
-    await _syncProjectTasksInner(projectId, tasks);
+    await _syncProjectTasksInner(projectId, tasks, options);
   } catch (err) {
     // Lock 충돌 에러인 경우 1회 재시도
     if (err instanceof Error && (err.message.includes('Lock') || err.message.includes('lock') || err.message.includes('steal'))) {
       console.warn('[tasks] Lock 충돌 감지, 500ms 후 재시도...');
       await new Promise(r => setTimeout(r, 500));
-      await _syncProjectTasksInner(projectId, tasks);
+      await _syncProjectTasksInner(projectId, tasks, options);
       return;
     }
     throw err;
   }
 }
 
-async function _syncProjectTasksInner(projectId: string, tasks: Task[]) {
+async function _syncProjectTasksInner(
+  projectId: string,
+  tasks: Task[],
+  options?: { allowFullClear?: boolean },
+) {
   if (!isSupabaseConfigured) { storage.set(lsTasksKey(projectId), tasks); return; }
   const rows = tasks
     .map(toTaskRow)
@@ -325,10 +333,26 @@ async function _syncProjectTasksInner(projectId: string, tasks: Task[]) {
         console.error('Failed to delete removed tasks:', deleteError);
       }
     }
-  } else {
+  } else if (options?.allowFullClear) {
+    // 빈 목록 = 프로젝트 전체 작업 삭제. 일시적 로드 실패/레이스로 인메모리
+    // 목록이 비는 경우가 있어, 명시적 의도(allowFullClear)가 있을 때만 수행한다.
+    // 그렇지 않으면 기존 작업을 보존해 데이터 유실을 막는다.
     const { error } = await supabase.from('tasks').delete().eq('project_id', projectId);
     if (error) {
       console.error('Failed to clear tasks:', error);
+    }
+  } else {
+    // 데이터 유실 방지: 빈 목록 저장 요청은 기존 원격 작업을 지우지 않고 건너뛴다.
+    // (의도적 전체 삭제는 allowFullClear:true 로 호출해야 한다.)
+    const { count, error: countError } = await supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId);
+    if (!countError && (count ?? 0) > 0) {
+      console.warn(
+        `[tasks] 빈 목록 저장 차단 — 프로젝트 ${projectId}의 기존 작업 ${count}건을 보존합니다. ` +
+        '(일시적 로드 실패/레이스로 추정. 의도적 전체 삭제라면 allowFullClear 필요)',
+      );
     }
   }
 }
