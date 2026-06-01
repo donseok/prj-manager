@@ -1434,3 +1434,50 @@ git commit -m "fix: 명함첩 검증 중 발견한 문제 보완"
 - **플레이스홀더:** 모든 코드 단계에 실제 코드 포함. "적절히 처리" 류 표현 없음.
 - **타입 일관성:** `Contact` 필드명이 Task 1 정의와 Row 매핑(Task 3)·store(Task 4)·모달(Task 7)에서 동일. store 액션명 `loadContacts`/`saveContact`/`removeContact`가 페이지(Task 8) 사용처와 일치. repository 함수는 별칭(`repoLoadContacts` 등)으로 충돌 회피.
 - **알려진 확인 포인트(구현 중 검증):** (1) CSS 변수/유틸 클래스 이름 — 기존 모달과 대조, (2) `useProjectStore`/`useAuthStore` 셀렉터 시그니처와 `projects`/`user.id` 필드명, (3) `App.tsx`의 Portfolio 라우트 표기, (4) en.ts가 i18n 타입 소스일 경우 키 누락 시 tsc에서 검출. 각 Task의 빌드 단계에서 잡힌다.
+
+---
+
+## 구현 보정 (Implementation Overrides) — 최우선 권위
+
+> 아래 사실은 실제 코드베이스를 조사해 확인한 것으로, 위 Task 본문의 예시 코드와 충돌하면 **이 섹션이 우선**한다. Task 본문 코드는 "동작/구조 명세"로 취급하고, 스타일·임포트·테스트 셋업은 아래 관례를 따른다.
+
+### O-1. 단위 테스트 환경 (중요)
+- 이 저장소에는 vitest 설정 파일이 없고 **기본 환경은 `node`** 다 → `localStorage`/`document`/`canvas`/`Image`가 전역에 없다.
+- 따라서 `contactRepository.test.ts`는 **실제 `localStorage`를 쓰면 안 된다.** 기존 `src/lib/__tests__/dataRepository.test.ts` 패턴을 그대로 따른다:
+  - `vi.mock('../supabase', () => ({ get isSupabaseConfigured() { return mockState.isSupabaseConfigured; }, supabase: null }))`
+  - `vi.mock('../utils', () => ({ storage: { get/set/remove/has } }))` 를 **인메모리 `Map`** 으로 구현 (set은 `JSON.parse(JSON.stringify(value))` 깊은 복사).
+  - `beforeEach`에서 `vi.resetModules()` 후 `await import('../dataRepository')`.
+  - Task 3의 테스트에서 `localStorage.clear()` 호출을 제거하고, 위 메모리 Map을 `beforeEach`에서 `clear()` 한다.
+- `contactStore.test.ts`는 `../../lib/dataRepository`를 통째로 모킹하므로 DOM 불필요 — Task 본문대로 OK.
+- `contactImage.test.ts`는 **순수 함수(`scaleToFit`, `estimateDataUrlBytes`, `isImageFile`)만** 테스트한다. `new File([''], 'a.png', { type: 'image/png' })`는 Node 20+에서 전역 `File`로 동작하지만, 만약 미정의면 `{ type: 'image/png' } as unknown as File`로 대체한다. `fileToResizedDataUrl`(canvas 의존)은 단위 테스트하지 않는다.
+
+### O-2. 공용 컴포넌트 사용 (ContactModal 재작성)
+- Task 7의 직접 작성한 backdrop/CSS는 폐기하고, **`src/components/common/Modal.tsx`** 를 사용한다: `<Modal isOpen onClose title size>`. props: `isOpen: boolean`, `onClose: () => void`, `title?: string`, `size?: 'sm'|'md'|'lg'|'xl'|'2xl'|'3xl'|'fullscreen'`.
+- 버튼은 **`src/components/common/Button.tsx`** 사용 (`<Button variant="ghost">`, 기본 variant). 아이콘은 Button children으로.
+- **구조/스타일 레퍼런스: `src/components/attendance/AttendanceModal.tsx`** 를 본떠 작성한다(라벨·입력·푸터 레이아웃 동일 관례).
+- ContactModal은 부모(페이지)가 `open` 상태를 관리하고 `isOpen` prop을 받는 형태로 만든다(AttendanceModal과 동일). 즉 props: `{ isOpen, contact, onClose, onSave }`.
+
+### O-3. CSS / Tailwind 관례 (실제 변수)
+- 텍스트: `text-[color:var(--text-primary)]`, `text-[color:var(--text-secondary)]`, `text-[color:var(--text-muted)]`
+- 테두리: `border-[var(--border-color)]` (※ `--border` 없음)
+- 배경/표면: `bg-[color:var(--bg-primary)]`, `bg-[color:var(--bg-elevated)]`, `bg-[color:var(--bg-secondary)]` (※ `--surface-0/1/2` 없음)
+- 강조: `var(--accent-primary)`, `var(--accent-danger)`
+- **입력 필드는 `className="field-input ..."`** 클래스를 사용한다(index.css에 정의된 공용 입력 스타일). 별도 border/bg 유틸을 중복 지정하지 않는다.
+
+### O-4. ID 생성 / 셀렉터 / 시간
+- 신규 id: **`generateId()` (`src/lib/utils.ts`에서 import)** — `crypto.randomUUID()` 직접 사용 금지(코드베이스 관례).
+- 현재 사용자: `const userId = useAuthStore((s) => s.user?.id ?? '')`. `User`에는 `id: string` 필드가 있다.
+- 프로젝트 목록: `const projects = useProjectStore((s) => s.projects)` (`Project[]`).
+- 타임스탬프: `new Date().toISOString()` (워크플로 스크립트가 아닌 앱 코드이므로 사용 가능).
+
+### O-5. 삭제 확인 UX
+- `window.confirm` 대신 **`src/components/common/ConfirmModal.tsx`** 를 사용한다(있는 경우 그 props에 맞춰). 페이지에서 삭제 대상 상태 + ConfirmModal 토글로 처리. (ConfirmModal API가 맞지 않으면 최소한 일관된 모달로 처리.)
+
+### O-6. 라우팅 (App.tsx 실측)
+- Portfolio import: `import Portfolio from './pages/Portfolio';` (28번째 줄 근처). 같은 형식으로 `import Contacts from './pages/Contacts';` 추가.
+- 라우트는 **185번째 줄 `<Route path="portfolio" element={<Portfolio />} />`** 바로 다음에 `<Route path="contacts" element={<Contacts />} />` 추가(`/me`, `/account`와 동일 레벨, ProtectedRoute 하위).
+
+### O-7. i18n 구조
+- 각 로케일 파일은 `export default { translation: { ... } }` 형태. `contacts` 네임스페이스는 `translation` 아래 `attendance`와 같은 레벨에 추가하고, `t('contacts.xxx')`로 접근한다.
+- **ko/en/vi 세 파일의 `contacts` 키 구조를 완전히 동일하게** 맞춘다(값만 번역). `sidebar.contacts`도 세 파일 모두 추가.
+- 기존 `src/i18n/__tests__/manualParity.test.ts`는 `manual.*`만 검사하므로 contacts 추가가 그 테스트를 깨지 않는다. 다만 `npm run build`(tsc)에서 타입 불일치가 나면 누락 키를 보완한다.
