@@ -89,10 +89,13 @@ function App() {
 
     const initializeApp = async () => {
       if (!isSupabaseConfigured) {
-        // localStorage 모드: 마이그레이션과 설정 로드를 병렬 실행
+        // localStorage 모드: 마이그레이션과 설정 로드를 병렬 실행.
+        // 설정 로드 실패가 자동 로그인/프로젝트 로드를 막지 못하도록 격리한다.
         await Promise.all([
           ensureMigrations(),
-          useSystemSettingsStore.getState().loadSettings(),
+          useSystemSettingsStore.getState().loadSettings().catch((error) => {
+            console.error('시스템 설정 로드 실패:', error);
+          }),
         ]);
         // 로컬 사용자로 자동 로그인
         const localUser = {
@@ -109,10 +112,13 @@ function App() {
         return;
       }
 
-      // Supabase 모드: 마이그레이션, 설정 로드, 세션 확인을 병렬 실행
+      // Supabase 모드: 마이그레이션, 설정 로드, 세션 확인을 병렬 실행.
+      // 설정 로드 실패가 세션 로그인/프로젝트 로드를 막지 못하도록 격리한다.
       const [, , sessionUser] = await Promise.all([
         ensureMigrations(),
-        useSystemSettingsStore.getState().loadSettings(),
+        useSystemSettingsStore.getState().loadSettings().catch((error) => {
+          console.error('시스템 설정 로드 실패:', error);
+        }),
         ensureSupabaseSession(),
       ]);
       if (isCancelled) return;
@@ -328,9 +334,12 @@ function PopupProjectWrapper() {
 
     const init = async () => {
       if (!isSupabaseConfigured) {
+        // 설정 로드 실패가 자동 로그인/프로젝트 로드를 막지 못하도록 격리한다.
         await Promise.all([
           ensureMigrations(),
-          useSystemSettingsStore.getState().loadSettings(),
+          useSystemSettingsStore.getState().loadSettings().catch((error) => {
+            console.error('시스템 설정 로드 실패:', error);
+          }),
         ]);
         const localUser = {
           id: 'local-user',
@@ -349,9 +358,12 @@ function PopupProjectWrapper() {
         return;
       }
 
+      // 설정 로드 실패가 세션 로그인/프로젝트 로드를 막지 못하도록 격리한다.
       const [, , sessionUser] = await Promise.all([
         ensureMigrations(),
-        useSystemSettingsStore.getState().loadSettings(),
+        useSystemSettingsStore.getState().loadSettings().catch((error) => {
+          console.error('시스템 설정 로드 실패:', error);
+        }),
         ensureSupabaseSession(),
       ]);
       if (isCancelled) return;

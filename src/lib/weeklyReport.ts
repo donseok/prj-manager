@@ -14,6 +14,8 @@ import {
   isWithinInterval,
   format,
   differenceInCalendarDays,
+  getISOWeek,
+  getISOWeekYear,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { Task, ProjectMember, Attendance, AttendanceType } from '../types';
@@ -113,6 +115,7 @@ export interface WeeklyReportData {
     totalLeafTasks: number;
     completedTasks: number;
     inProgressTasks: number;
+    onHoldTasks: number;
     delayedTasks: number;
     overallActualProgress: number;
     overallPlanProgress: number;
@@ -260,6 +263,7 @@ export function generateWeeklyReport({
   // 요약 통계
   const completedAll = leafTasks.filter((t) => t.status === 'completed');
   const inProgressAll = leafTasks.filter((t) => t.status === 'in_progress');
+  const onHoldAll = leafTasks.filter((t) => t.status === 'on_hold');
   const totalWeight = leafTasks.reduce((s, t) => s + t.weight, 0);
   const overallActualProgress =
     totalWeight > 0
@@ -440,8 +444,10 @@ export function generateWeeklyReport({
     nextWeekAttendanceSummary = buildAttendanceSummary(nextWeekStart, nextWeekEnd);
   }
 
-  const weekNum = getWeekNumber(baseDate);
-  const year = baseDate.getFullYear();
+  // ISO-8601 주차/주차연도 사용 — 데이터 필터(weekStartsOn:1)와 정렬되며
+  // 연말·연초 경계에서 라벨이 ±1 어긋나지 않는다.
+  const weekNum = getISOWeek(baseDate);
+  const year = getISOWeekYear(baseDate);
 
   return {
     title: `${projectName} 주간보고`,
@@ -454,6 +460,7 @@ export function generateWeeklyReport({
       totalLeafTasks: leafTasks.length,
       completedTasks: completedAll.length,
       inProgressTasks: inProgressAll.length,
+      onHoldTasks: onHoldAll.length,
       delayedTasks: delayedTasks.length,
       overallActualProgress,
       overallPlanProgress,
@@ -499,10 +506,4 @@ function isOverlapping(
   if (s) return isWithinInterval(s, { start: rangeStart, end: rangeEnd });
   if (e) return isWithinInterval(e, { start: rangeStart, end: rangeEnd });
   return false;
-}
-
-function getWeekNumber(date: Date): number {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const diff = date.getTime() - startOfYear.getTime();
-  return Math.ceil((diff / 86400000 + startOfYear.getDay() + 1) / 7);
 }

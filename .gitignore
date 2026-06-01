@@ -35,3 +35,6 @@ nul
 .agents/
 .kiro/
 supabase/.temp/
+
+# Internal harness scratch (review findings, bug-hunt reports, data probes)
+_workspace/

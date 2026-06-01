@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface SystemSettings {
   projectCreationPolicy: 'all' | 'admin_only';
@@ -9,6 +9,11 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 export async function loadSystemSettings(): Promise<SystemSettings> {
+  // Local Mode(localStorage): supabase 클라이언트가 null이므로 기본값 반환
+  if (!isSupabaseConfigured) {
+    return DEFAULT_SETTINGS;
+  }
+
   const { data, error } = await supabase
     .from('system_settings')
     .select('value')
@@ -23,6 +28,11 @@ export async function loadSystemSettings(): Promise<SystemSettings> {
 }
 
 export async function saveSystemSettings(settings: SystemSettings): Promise<void> {
+  // Local Mode(localStorage): 저장할 백엔드가 없으므로 no-op
+  if (!isSupabaseConfigured) {
+    return;
+  }
+
   const { error } = await supabase
     .from('system_settings')
     .upsert({ key: 'system_settings', value: settings }, { onConflict: 'key' });

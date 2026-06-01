@@ -4,63 +4,12 @@ import { ChevronDown, ChevronRight, Sparkles, Check } from 'lucide-react';
 import Button from '../common/Button';
 import { cn } from '../../lib/utils';
 import type { Task } from '../../types';
+import { buildTree, collectSelected, countNodes, type TreeNode } from './aiReviewTree';
 
 interface AIReviewPanelProps {
   tasks: Task[];
   onApply: (selectedTasks: Task[]) => void;
   onCancel: () => void;
-}
-
-interface TreeNode {
-  task: Task;
-  children: TreeNode[];
-  selected: boolean;
-  expanded: boolean;
-}
-
-function buildTree(tasks: Task[]): TreeNode[] {
-  const taskMap = new Map<string, TreeNode>();
-  const roots: TreeNode[] = [];
-
-  for (const task of tasks) {
-    taskMap.set(task.id, { task, children: [], selected: true, expanded: true });
-  }
-
-  for (const task of tasks) {
-    const node = taskMap.get(task.id)!;
-    if (task.parentId && taskMap.has(task.parentId)) {
-      const parent = taskMap.get(task.parentId)!;
-      taskMap.set(task.parentId, { ...parent, children: [...parent.children, node] });
-    } else {
-      roots.push(node);
-    }
-  }
-
-  return roots;
-}
-
-function collectSelected(nodes: TreeNode[]): Task[] {
-  const result: Task[] = [];
-  for (const node of nodes) {
-    if (node.selected) {
-      result.push(node.task);
-      result.push(...collectSelected(node.children));
-    }
-  }
-  return result;
-}
-
-function countNodes(nodes: TreeNode[]): { total: number; selected: number } {
-  let total = 0;
-  let selected = 0;
-  for (const node of nodes) {
-    total++;
-    if (node.selected) selected++;
-    const childCounts = countNodes(node.children);
-    total += childCounts.total;
-    selected += childCounts.selected;
-  }
-  return { total, selected };
 }
 
 export default function AIReviewPanel({ tasks, onApply, onCancel }: AIReviewPanelProps) {

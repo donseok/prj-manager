@@ -12,10 +12,6 @@ import {
 import { generateImmediateTask } from '../../lib/recurringTasks';
 import { useTaskStore } from '../../store/taskStore';
 import type { RecurringRule, ProjectMember } from '../../types';
-import {
-  FREQUENCY_LABELS,
-  DAY_OF_WEEK_LABELS,
-} from '../../types';
 
 interface Props {
   isOpen: boolean;
@@ -123,27 +119,28 @@ export default function RecurringTaskModal({
   };
 
   const frequencyDescription = (rule: RecurringRule) => {
+    const dayLabel = t(`labels.dayOfWeek.${rule.dayOfWeek ?? 1}`);
     switch (rule.frequency) {
       case 'daily':
-        return '매일';
+        return t('recurringTask.everyDay');
       case 'weekly':
-        return `매주 ${DAY_OF_WEEK_LABELS[rule.dayOfWeek ?? 1]}요일`;
+        return t('recurringTask.everyWeek', { day: dayLabel });
       case 'biweekly':
-        return `격주 ${DAY_OF_WEEK_LABELS[rule.dayOfWeek ?? 1]}요일`;
+        return t('recurringTask.everyBiweek', { day: dayLabel });
       case 'monthly':
-        return `매월 ${rule.dayOfMonth ?? 1}일`;
+        return t('recurringTask.everyMonth', { day: rule.dayOfMonth ?? 1 });
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="반복 작업 관리" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('recurringTask.title')} size="lg">
       <div className="p-6 space-y-4">
         {!isFormOpen ? (
           <>
             {/* Rule list */}
             {rules.length === 0 ? (
               <div className="py-8 text-center text-sm text-[color:var(--text-secondary)]">
-                등록된 반복 규칙이 없습니다
+                {t('recurringTask.empty')}
               </div>
             ) : (
               <div className="space-y-3">
@@ -191,7 +188,7 @@ export default function RecurringTaskModal({
                           type="button"
                           onClick={() => handleGenerateNow(rule)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-color)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
-                          title="지금 생성"
+                          title={t('recurringTask.generateNow')}
                         >
                           <Play className="w-3.5 h-3.5" />
                         </button>
@@ -200,7 +197,7 @@ export default function RecurringTaskModal({
                           type="button"
                           onClick={() => handleEdit(rule)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-color)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
-                          title="편집"
+                          title={t('recurringTask.edit')}
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -209,7 +206,7 @@ export default function RecurringTaskModal({
                           type="button"
                           onClick={() => handleDelete(rule.id)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors"
-                          title="삭제"
+                          title={t('recurringTask.delete')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -222,19 +219,19 @@ export default function RecurringTaskModal({
 
             <Button variant="outline" onClick={handleNewRule} className="w-full">
               <Plus className="w-4 h-4" />
-              새 규칙 추가
+              {t('recurringTask.addRule')}
             </Button>
           </>
         ) : (
           /* Rule edit form */
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">
-              {editingRule ? '규칙 편집' : '새 반복 규칙'}
+              {editingRule ? t('recurringTask.editRule') : t('recurringTask.newRule')}
             </h3>
 
             {/* Task name */}
             <div>
-              <label className="field-label">작업명</label>
+              <label className="field-label">{t('recurringTask.taskName')}</label>
               <input
                 type="text"
                 value={form.templateTaskName}
@@ -246,7 +243,7 @@ export default function RecurringTaskModal({
 
             {/* Output */}
             <div>
-              <label className="field-label">산출물</label>
+              <label className="field-label">{t('recurringTask.output')}</label>
               <input
                 type="text"
                 value={form.output ?? ''}
@@ -258,7 +255,7 @@ export default function RecurringTaskModal({
 
             {/* Level */}
             <div>
-              <label className="field-label">레벨</label>
+              <label className="field-label">{t('recurringTask.level')}</label>
               <select
                 value={form.level}
                 onChange={(e) => setForm((f) => ({ ...f, level: Number(e.target.value), parentId: undefined }))}
@@ -275,13 +272,13 @@ export default function RecurringTaskModal({
             {/* Parent task */}
             {form.level > 1 && (
               <div>
-                <label className="field-label">상위 작업</label>
+                <label className="field-label">{t('recurringTask.parentTask')}</label>
                 <select
                   value={form.parentId ?? ''}
                   onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value || undefined }))}
                   className="field-select mt-1"
                 >
-                  <option value="">선택 안 함</option>
+                  <option value="">{t('recurringTask.noParent')}</option>
                   {parentCandidates.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -293,13 +290,13 @@ export default function RecurringTaskModal({
 
             {/* Assignee */}
             <div>
-              <label className="field-label">담당자</label>
+              <label className="field-label">{t('recurringTask.assignee')}</label>
               <select
                 value={form.assigneeId ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, assigneeId: e.target.value || undefined }))}
                 className="field-select mt-1"
               >
-                <option value="">미지정</option>
+                <option value="">{t('recurringTask.unassigned')}</option>
                 {members
                   .filter((m) => m.role !== 'viewer')
                   .map((m) => (
@@ -312,7 +309,7 @@ export default function RecurringTaskModal({
 
             {/* Frequency */}
             <div>
-              <label className="field-label">주기</label>
+              <label className="field-label">{t('recurringTask.frequency')}</label>
               <div className="mt-1 flex gap-2">
                 {(['daily', 'weekly', 'biweekly', 'monthly'] as const).map((freq) => (
                   <button
@@ -326,7 +323,7 @@ export default function RecurringTaskModal({
                         : 'border-[var(--border-color)] text-[color:var(--text-secondary)] hover:border-[rgba(15,118,110,0.2)]'
                     )}
                   >
-                    {FREQUENCY_LABELS[freq]}
+                    {t(`labels.frequency.${freq}`)}
                   </button>
                 ))}
               </div>
@@ -335,7 +332,7 @@ export default function RecurringTaskModal({
             {/* Day of week (for weekly/biweekly) */}
             {(form.frequency === 'weekly' || form.frequency === 'biweekly') && (
               <div>
-                <label className="field-label">요일</label>
+                <label className="field-label">{t('recurringTask.dayOfWeekLabel')}</label>
                 <div className="mt-1 flex gap-1.5">
                   {[1, 2, 3, 4, 5, 6, 0].map((d) => (
                     <button
@@ -349,7 +346,7 @@ export default function RecurringTaskModal({
                           : 'border border-[var(--border-color)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-tertiary)]'
                       )}
                     >
-                      {DAY_OF_WEEK_LABELS[d]}
+                      {t(`labels.dayOfWeek.${d}`)}
                     </button>
                   ))}
                 </div>
@@ -359,7 +356,7 @@ export default function RecurringTaskModal({
             {/* Day of month */}
             {form.frequency === 'monthly' && (
               <div>
-                <label className="field-label">날짜</label>
+                <label className="field-label">{t('recurringTask.dayOfMonthLabel')}</label>
                 <select
                   value={form.dayOfMonth ?? 1}
                   onChange={(e) => setForm((f) => ({ ...f, dayOfMonth: Number(e.target.value) }))}
@@ -367,7 +364,7 @@ export default function RecurringTaskModal({
                 >
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>
-                      {d}일
+                      {t('recurringTask.dayOfMonthOption', { day: d })}
                     </option>
                   ))}
                 </select>
@@ -384,11 +381,11 @@ export default function RecurringTaskModal({
                   setForm(defaultForm);
                 }}
               >
-                취소
+                {t('recurringTask.cancel')}
               </Button>
               <Button onClick={handleSave} disabled={!form.templateTaskName.trim()}>
                 <RefreshCw className="w-4 h-4" />
-                {editingRule ? '수정' : '추가'}
+                {editingRule ? t('recurringTask.update') : t('recurringTask.add')}
               </Button>
             </div>
           </div>

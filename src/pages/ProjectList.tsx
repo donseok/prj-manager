@@ -42,6 +42,7 @@ import {
 import { useProjectStatus } from '../hooks/useProjectStatus';
 import { usePageFeedback } from '../hooks/usePageFeedback';
 import { useSystemSettingsStore } from '../store/systemSettingsStore';
+import { canCreateProject } from './projectCreationGuard';
 import type { Project, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_COLORS } from '../types';
 
@@ -54,15 +55,24 @@ export default function ProjectList() {
   const { isDark } = useThemeStore();
   const { changeStatus } = useProjectStatus();
   const { settings: systemSettings } = useSystemSettingsStore();
-  const canCreateProject = systemSettings.projectCreationPolicy === 'all' || isAdmin;
+  const canCreate = canCreateProject(systemSettings.projectCreationPolicy, isAdmin);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // /projects/new 경로 접근 시 생성 모달 자동 오픈
+  // /projects/new 경로 접근 시 생성 모달 자동 오픈.
+  // 생성 권한이 없으면(정책 admin_only + 비관리자) 모달을 열지 않고
+  // 프로젝트 목록으로 되돌린다. 설정은 비동기로 하이드레이션되므로
+  // canCreate 변화 시 effect를 다시 평가해야 한다(딥 deps).
   useEffect(() => {
-    if (location.pathname === '/projects/new') {
-      setShowCreateModal(true);
+    if (location.pathname !== '/projects/new') return;
+    if (!canCreate) {
+      // /projects 와 /projects/new 는 동일한 ProjectList 인스턴스를 공유하므로
+      // 리다이렉트만 하면 이미 열린 모달 상태가 그대로 남는다. 함께 닫는다.
+      setShowCreateModal(false);
+      navigate('/projects', { replace: true });
+      return;
     }
-  }, [location.pathname]);
+    setShowCreateModal(true);
+  }, [location.pathname, canCreate, navigate]);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null);
@@ -142,6 +152,9 @@ export default function ProjectList() {
   const completedProjects = projects.filter((project) => project.status === 'completed').length;
 
   const handleCreateProject = async () => {
+    // 정책 게이트: admin_only 정책에서 비관리자가 모달을 통해서든
+    // /projects/new 직접 진입을 통해서든 생성하지 못하도록 차단한다.
+    if (!canCreate) return;
     if (!newProject.name.trim()) return;
     if (!user) return;
     if (isCreating) return;
@@ -408,7 +421,7 @@ export default function ProjectList() {
               {t('projectList.heroDesc')}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {canCreateProject && (
+              {canCreate && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="w-4 h-4" />
                   {t('projectList.newProject')}
@@ -471,7 +484,7 @@ export default function ProjectList() {
               {t('projectList.explore')}
             </h2>
           </div>
-          {canCreateProject && (
+          {canCreate && (
             <Button variant="outline" onClick={() => setShowCreateModal(true)} data-testid="projects-open-create-button">
               <Plus className="w-4 h-4" />
               {t('projectList.newProject')}
@@ -685,7 +698,7 @@ export default function ProjectList() {
                 ? t('projectList.noSearchResultsDesc', { query: searchQuery })
                 : t('projectList.noProjectsDesc')}
             </p>
-            {!searchQuery && canCreateProject && (
+            {!searchQuery && canCreate && (
               <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className="w-4 h-4" />
                 {t('projectList.createNewProject')}

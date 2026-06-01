@@ -596,6 +596,21 @@ const en = {
         3: 'Task',
         4: 'Todo',
       },
+      frequency: {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        biweekly: 'Biweekly',
+        monthly: 'Monthly',
+      },
+      dayOfWeek: {
+        0: 'Sun',
+        1: 'Mon',
+        2: 'Tue',
+        3: 'Wed',
+        4: 'Thu',
+        5: 'Fri',
+        6: 'Sat',
+      },
       attendanceType: {
         present: 'Present',
         annual_leave: 'Annual Leave',
@@ -1184,6 +1199,32 @@ const en = {
 
     // ─── Recurring Task ─────────────────────────────────
     recurringTask: {
+      title: 'Recurring Task Management',
+      empty: 'No recurring rules registered',
+      addRule: 'Add New Rule',
+      editRule: 'Edit Rule',
+      newRule: 'New Recurring Rule',
+      generateNow: 'Generate now',
+      edit: 'Edit',
+      delete: 'Delete',
+      taskName: 'Task Name',
+      output: 'Deliverable',
+      level: 'Level',
+      parentTask: 'Parent Task',
+      noParent: 'None',
+      assignee: 'Assignee',
+      unassigned: 'Unassigned',
+      frequency: 'Frequency',
+      dayOfWeekLabel: 'Day of Week',
+      dayOfMonthLabel: 'Date',
+      dayOfMonthOption: 'Day {{day}}',
+      cancel: 'Cancel',
+      update: 'Update',
+      add: 'Add',
+      everyDay: 'Every day',
+      everyWeek: 'Every week on {{day}}',
+      everyBiweek: 'Every other week on {{day}}',
+      everyMonth: 'Monthly on day {{day}}',
       namePlaceholder: 'e.g. Weekly meeting, Daily standup',
       outputPlaceholder: 'e.g. Meeting minutes',
     },
@@ -1232,16 +1273,16 @@ const en = {
       pageSubtitle: 'A guide to all features of the project management system. Select a section from the table of contents below.',
       searchPlaceholder: 'Search sections...',
       scrollToTop: 'Back to Top',
-      previousSection: 'Previous',
-      nextSection: 'Next',
-      heroSections: 'Sections',
-      heroToc: 'TOC',
+      previous: 'Previous',
+      next: 'Next',
+      heroLabel: 'Sections',
+      tocLabel: 'TOC',
       sections: {
         gettingStarted: {
           title: 'Getting Started',
           systemRequirements: 'System Requirements',
-          systemRequirementsHeaders: ['Item', 'Recommended'],
-          systemRequirementsRows: [
+          systemTableHeaders: ['Item', 'Recommended'],
+          systemTableRows: [
             ['Browser', 'Chrome, Edge, Safari latest version'],
             ['Resolution', '1280x720 or higher (1920x1080 recommended)'],
             ['Network', 'Internet connection required (when using Supabase)'],
@@ -1272,8 +1313,8 @@ const en = {
           title: 'Home Screen',
           heroArea: 'Hero Area',
           heroAreaDesc: 'A full-width hero panel is displayed at the top of the home screen, showing project status at a glance. On the right side, real-time metric bubbles and icons are arranged as gently animated decorative elements.',
-          heroAreaHeaders: ['Element', 'Description'],
-          heroAreaRows: [
+          heroTableHeaders: ['Element', 'Description'],
+          heroTableRows: [
             ['Hero Title', '"Project Operations at a Glance" — Service introduction and CTA buttons'],
             ['Start New Project', 'Navigate to the new project creation page'],
             ['All Projects', 'Navigate to the project list page'],
@@ -1281,23 +1322,23 @@ const en = {
           ],
           summaryCards: 'Summary Cards',
           summaryCardsDesc: 'Three summary cards are displayed below the hero:',
-          summaryCardsHeaders: ['Card', 'Description'],
-          summaryCardsRows: [
+          summaryTableHeaders: ['Card', 'Description'],
+          summaryTableRows: [
             ['Total Projects', 'Total number of all registered projects'],
             ['In Progress', 'Number of currently active projects'],
             ['Recent Records', 'Number of recent projects for quick access'],
           ],
           metricsPanel: 'Metrics Panel',
           metricsPanelDesc: 'Three metric cards are placed below the hero:',
-          metricsPanelHeaders: ['Metric', 'Description'],
-          metricsPanelRows: [
+          metricsTableHeaders: ['Metric', 'Description'],
+          metricsTableRows: [
             ['Active Ratio', 'Ratio of active projects to total projects'],
             ['Completed', 'Number of completed projects'],
             ['Quick Access', 'Recent project shortcuts (up to 3)'],
           ],
           quickAccessCards: 'Quick Access Cards',
-          quickAccessCardsHeaders: ['Card', 'Description'],
-          quickAccessCardsRows: [
+          quickAccessTableHeaders: ['Card', 'Description'],
+          quickAccessTableRows: [
             ['New Project', 'Shortcut to the project creation page'],
             ['Project Library', 'Navigate to the full project list'],
             ['Operations Dashboard', 'Guide to the layout centered on key metrics and workflow'],
@@ -1345,9 +1386,9 @@ const en = {
         },
         dashboard: {
           title: 'Dashboard',
-          statusOverview: 'Status Overview Area',
-          statusOverviewHeaders: ['Item', 'Description'],
-          statusOverviewRows: [
+          topStatus: 'Status Overview Area',
+          topStatusHeaders: ['Item', 'Description'],
+          topStatusRows: [
             ['Total Tasks', 'Number of registered leaf (terminal) tasks'],
             ['Members', 'Number of project members'],
             ['Delayed', 'Number of tasks past their planned end date'],
@@ -1398,10 +1439,10 @@ const en = {
             ['Level 4', 'Todo', 'Specific action items (checklist)'],
           ],
           taskHierarchyTip: 'Parent task (Phase, Activity) schedules, progress rates, and statuses are automatically calculated from child tasks. Even if edited directly, they will be recalculated based on child tasks on the next save.',
-          inlineEditing: 'Inline Editing (Excel Style)',
-          inlineEditingDesc: 'Click any cell in the table to edit it directly:',
-          inlineEditingHeaders: ['Column', 'Editing Method'],
-          inlineEditingRows: [
+          inlineEdit: 'Inline Editing (Excel Style)',
+          inlineEditDesc: 'Click any cell in the table to edit it directly:',
+          inlineEditHeaders: ['Column', 'Editing Method'],
+          inlineEditRows: [
             ['Task Name', 'Click and type text, press Enter to confirm'],
             ['Deliverable', 'Click and type text'],
             ['Assignee', 'Select from dropdown (create a new member if not in the list)'],
@@ -1440,15 +1481,15 @@ const en = {
             ['Full Screen View', 'View the WBS table in a full-screen popup'],
             ['Kanban View', 'Navigate to the Kanban board page'],
           ],
-          wbsDraftGeneration: 'WBS Draft Generation',
-          wbsDraftGenerationDesc: 'Click the Generate Draft button in the toolbar to auto-generate a WBS based on templates:',
-          wbsDraftGenerationHeaders: ['Feature', 'Description'],
-          wbsDraftGenerationRows: [
+          draftGeneration: 'WBS Draft Generation',
+          draftGenerationDesc: 'Click the Generate Draft button in the toolbar to auto-generate a WBS based on templates:',
+          draftGenerationHeaders: ['Feature', 'Description'],
+          draftGenerationRows: [
             ['Template Selection', 'Choose from 4 built-in templates (Steel Project, Web Launch, Mobile App, Internal System)'],
             ['Smart Matching', 'Enter a project description to get an automatic template recommendation'],
             ['Template Preview', 'Preview the selected template\'s phase count, task count, and target domain'],
           ],
-          wbsDraftGenerationTip: 'Generating a draft will overwrite existing tasks. If you have important data, export to Excel first.',
+          draftGenerationTip: 'Generating a draft will overwrite existing tasks. If you have important data, export to Excel first.',
           weeklyReport: 'Weekly Report',
           weeklyReportDesc: 'Click the Weekly Report button in the WBS toolbar to view weekly status:',
           weeklyReportHeaders: ['Section', 'Content'],
@@ -1467,15 +1508,25 @@ const en = {
             ['Save', 'Save immediately to the database with the per-member save button'],
           ],
           assigneeEntryTabTip: 'Assignee entries are automatically included as separate slides/sheets when exporting to PPT/Excel.',
-          weeklyReportExport: 'Weekly Report Export',
-          weeklyReportExportHeaders: ['Format', 'Description'],
-          weeklyReportExportRows: [
+          weeklyExport: 'Weekly Report Export',
+          weeklyExportHeaders: ['Format', 'Description'],
+          weeklyExportRows: [
             ['Excel (.xlsx)', 'Excel file organizing this week\'s results, next week\'s plan, delayed tasks, and attendance by sheet'],
             ['PPT (.pptx)', 'Weekly report presentation file — includes slides for this week\'s results, next week\'s plan, delayed tasks, attendance, and assignee entries'],
           ],
-          weeklyReportExportTip: 'PPT export automatically includes an attendance slide, showing this week\'s and next week\'s attendance in a day+date format on a single page.',
-          weeklyReportSnapshotTip: 'Weekly reports save snapshots for week-by-week comparison. Changes in completed count, progress rate, and delays compared to the previous week are shown as delta indicators.',
+          weeklyExportTip: 'PPT export automatically includes an attendance slide, showing this week\'s and next week\'s attendance in a day+date format on a single page.',
+          snapshotTip: 'Weekly reports save snapshots for week-by-week comparison. Changes in completed count, progress rate, and delays compared to the previous week are shown as delta indicators.',
           autoSaveTip: 'All changes in WBS are auto-saved. Changes are automatically synced to the server approximately 0.7 seconds after input. You can check the save status and last save time in the status bar at the bottom.',
+          planProgressAutoCalc: 'Planned Progress Auto-Calculation',
+          planProgressAutoCalcDesc: 'When you enter a planned start date and planned end date, the planned progress is automatically calculated based on today\'s date:',
+          planProgressAutoCalcHeaders: ['Condition', 'Result'],
+          planProgressAutoCalcRows: [
+            ['Today < Planned Start', '0%'],
+            ['Planned Start ≤ Today ≤ Planned End', 'Elapsed days / Total duration × 100%'],
+            ['Today > Planned End', '100%'],
+            ['Completed status', 'Always 100%'],
+          ],
+          planProgressAutoCalcTip: 'Planned progress is reflected immediately when dates are entered, and parent tasks are automatically aggregated as the weighted average of their child tasks.',
         },
         gantt: {
           title: 'Gantt Chart',
@@ -1554,8 +1605,8 @@ const en = {
           cardEditing: 'Card Editing',
           cardEditingDesc: 'Clicking a card opens an edit modal where you can modify the task name, deliverable, assignee, status, planned/actual schedule, and progress rate.',
           heroArea: 'Hero Area',
-          heroAreaHeaders: ['Metric', 'Description'],
-          heroAreaRows: [
+          heroTableHeaders: ['Metric', 'Description'],
+          heroTableRows: [
             ['Total Tasks', 'Total number of tasks displayed on the Kanban board'],
             ['In Progress', 'Number of currently in-progress tasks'],
             ['Completed', 'Number of completed tasks'],
@@ -1573,22 +1624,22 @@ const en = {
             ['Bulk Paste', 'Add multiple names at once separated by line breaks (role is automatically set to "Member")'],
           ],
           roleTypes: 'Role Types',
-          roleTypesHeaders: ['Role', 'Permissions'],
-          roleTypesRows: [
+          roleHeaders: ['Role', 'Permissions'],
+          roleRows: [
             ['Owner', 'All permissions (automatically assigned to the project creator)'],
             ['Admin', 'Most administrative permissions'],
             ['Member', 'Task execution and updates'],
             ['Viewer', 'View only (no editing)'],
           ],
           editMemberInfo: 'Edit Member Info',
-          editMemberInfoHeaders: ['Feature', 'Method'],
-          editMemberInfoRows: [
+          editMemberHeaders: ['Feature', 'Method'],
+          editMemberRows: [
             ['Edit Name', 'Click the pencil icon, edit, then press Enter or click the checkmark'],
             ['Change Role', 'Select from the role dropdown'],
             ['Transfer Ownership', 'Owner transfers project ownership to another member (previous owner becomes Admin)'],
             ['Delete Member', 'Click the trash icon and confirm'],
           ],
-          editMemberInfoTip: 'Ownership transfer cannot be undone. After transfer, the previous owner is automatically changed to the Admin role.',
+          ownershipTip: 'Ownership transfer cannot be undone. After transfer, the previous owner is automatically changed to the Admin role.',
           memberStatus: 'Member Status',
           memberStatusHeaders: ['Metric', 'Description'],
           memberStatusRows: [
@@ -1596,7 +1647,7 @@ const en = {
             ['Admins', 'Number of members with Owner + Admin roles'],
             ['Contributors', 'Number of members with the Member role'],
           ],
-          memberTip: 'Member changes are auto-saved. The assignee dropdown in WBS shows the list of members registered here.',
+          autoSaveTip: 'Member changes are auto-saved. The assignee dropdown in WBS shows the list of members registered here.',
         },
         attendance: {
           title: 'Attendance',
@@ -1638,14 +1689,14 @@ const en = {
             ['Delete', 'Click the trash icon in list view and confirm in the popup'],
           ],
           permissionsByRole: 'Features by Role',
-          permissionsByRoleHeaders: ['Role', 'View', 'Register/Edit Own Attendance', 'Manage All Attendance'],
-          permissionsByRoleRows: [
+          permissionsHeaders: ['Role', 'View', 'Register/Edit Own Attendance', 'Manage All Attendance'],
+          permissionsRows: [
             ['Owner/Admin', 'Yes', 'Yes', 'Yes'],
             ['Member', 'Yes', 'Yes', 'No'],
             ['Viewer', 'Yes', 'No', 'No'],
           ],
-          weeklyReportIntegration: 'Weekly Report Integration',
-          weeklyReportIntegrationDesc: 'When you generate a weekly report from the WBS page, the attendance status for that week is automatically included. You can check each member\'s daily (Mon-Fri) attendance and subtotals in the Summary tab.',
+          weeklyReportLink: 'Weekly Report Integration',
+          weeklyReportLinkDesc: 'When you generate a weekly report from the WBS page, the attendance status for that week is automatically included. You can check each member\'s daily (Mon-Fri) attendance and subtotals in the Summary tab.',
           dashboardTip: 'You can also quickly check today\'s registered attendance and weekly statistics via the "This Week\'s Attendance" widget on the dashboard.',
         },
         settings: {
@@ -1660,14 +1711,14 @@ const en = {
             ['Progress Reference Date', 'The reference date used for progress rate calculations'],
           ],
           basicInfoTip: 'You must click the Save button after editing for changes to take effect.',
-          projectStatusManagement: 'Project Status Management',
-          projectStatusManagementDesc: 'You can manage project status automatically or manually:',
-          projectStatusManagementHeaders: ['Policy', 'Description'],
-          projectStatusManagementRows: [
+          statusManagement: 'Project Status Management',
+          statusManagementDesc: 'You can manage project status automatically or manually:',
+          statusManagementHeaders: ['Policy', 'Description'],
+          statusManagementRows: [
             ['Auto Status Sync (Default)', 'When tasks are saved in WBS and Gantt, the project status is automatically calculated. (All tasks completed = Completed, tasks in progress exist = In Progress, otherwise = Preparing)'],
             ['Manual Status Lock', 'The administrator directly locks the project status to Preparing/In Progress/Completed. Task changes will not overwrite the status.'],
           ],
-          projectStatusManagementTip: 'Changing the status policy and selecting manual status requires system administrator (admin) privileges.',
+          statusManagementTip: 'Changing the status policy and selecting manual status requires system administrator (admin) privileges.',
           dataManagement: 'Data Management',
           dataManagementHeaders: ['Feature', 'Description'],
           dataManagementRows: [
@@ -1712,20 +1763,20 @@ const en = {
             ['Active', 'Users currently active'],
             ['Suspended', 'Suspended users'],
           ],
-          accountStatusManagement: 'Account Status Management',
-          accountStatusManagementHeaders: ['Status', 'Description', 'Available Actions'],
-          accountStatusManagementRows: [
+          accountStatus: 'Account Status Management',
+          accountStatusHeaders: ['Status', 'Description', 'Available Actions'],
+          accountStatusRows: [
             ['Pending', 'Awaiting admin approval after sign up', 'Approve (to Active) / Reject (to Suspended)'],
             ['Active', 'Can use the system normally', 'Suspend (to Suspended)'],
             ['Suspended', 'Cannot use the system', 'Restore (to Active)'],
           ],
-          systemRoleManagement: 'System Role Management',
-          systemRoleManagementHeaders: ['Role', 'Permissions'],
-          systemRoleManagementRows: [
+          systemRoles: 'System Role Management',
+          systemRolesHeaders: ['Role', 'Permissions'],
+          systemRolesRows: [
             ['user (General)', 'Create/join projects, WBS/Gantt tasks'],
             ['admin (Administrator)', 'General permissions + user management, manual project status changes'],
           ],
-          systemRoleManagementTip: 'You can switch each user\'s role between user and admin in the user list. You cannot change your own role.',
+          systemRolesTip: 'You can switch each user\'s role between user and admin in the user list. You cannot change your own role.',
           pendingNotification: 'Pending Approval Notification',
           pendingNotificationDesc: 'When there are users pending approval, a red badge showing the pending count appears on the profile icon in the header. A badge also appears on the User Management menu in the sidebar.',
         },
@@ -1733,8 +1784,8 @@ const en = {
           title: 'DK Bot (Chat Assistant)',
           overview: 'Overview',
           overviewDesc: 'Click the DK Bot button in the bottom-right corner to open a chat assistant that answers questions based on project data. It analyzes the current project\'s tasks, members, and schedule data to respond in natural language.',
-          howToUse: 'How to Use',
-          howToUseSteps: [
+          usage: 'How to Use',
+          usageSteps: [
             'Click the DK Bot icon in the bottom-right corner.',
             'Select a suggested question chip or type your own question.',
             'Send the question by pressing Enter or clicking the Send button.',
@@ -1748,7 +1799,7 @@ const en = {
             ['"Team member status"', 'Task assignment status by member'],
             ['"Project progress"', 'Overall project progress summary'],
           ],
-          dkBotTip: 'DK Bot responds based on the currently selected project\'s data. When you switch projects, the greeting and context are automatically updated.',
+          contextTip: 'DK Bot responds based on the currently selected project\'s data. When you switch projects, the greeting and context are automatically updated.',
         },
         aiMode: {
           title: 'AI Mode',
@@ -1802,8 +1853,8 @@ const en = {
         },
         shortcuts: {
           title: 'Keyboard Shortcuts',
-          shortcutsHeaders: ['Shortcut', 'Function', 'Page'],
-          shortcutsRows: [
+          tableHeaders: ['Shortcut', 'Function', 'Page'],
+          tableRows: [
             ['Ctrl/Cmd + S', 'Manual Save', 'WBS'],
             ['Ctrl/Cmd + Z', 'Undo', 'WBS'],
             ['Ctrl/Cmd + Y', 'Redo', 'WBS'],
@@ -1815,8 +1866,8 @@ const en = {
         dataManagement: {
           title: 'Data Management',
           exportFeatures: 'Export Features',
-          exportFeaturesHeaders: ['Feature', 'Location', 'Format'],
-          exportFeaturesRows: [
+          exportHeaders: ['Feature', 'Location', 'Format'],
+          exportRows: [
             ['WBS Excel Export', 'WBS Page / Settings Page', '.xlsx'],
             ['Gantt Chart Excel', 'Gantt Chart Page', '.xlsx'],
             ['Status Report', 'Dashboard Page', '.docx (Word) — includes auto-captured chart images'],
@@ -1908,19 +1959,19 @@ const en = {
             ['System Role', 'admin (Administrator) or user (General)'],
             ['Owned Projects', 'Number of projects owned by the current user'],
           ],
-          deleteAccount: 'Delete Account',
-          deleteAccountSteps: [
+          withdrawal: 'Delete Account',
+          withdrawalSteps: [
             'Click the "Delete Account" button at the bottom of the Account Settings page.',
             'Enter your password in the confirmation modal (online mode).',
             'Type the confirmation text "Delete Account" (exact match required).',
             'Click the "Delete" button to permanently delete the account.',
           ],
-          deleteAccountTip: 'Deleting your account permanently removes all owned projects and related data. This action cannot be undone, so please back up important data beforehand.',
+          withdrawalTip: 'Deleting your account permanently removes all owned projects and related data. This action cannot be undone, so please back up important data beforehand.',
         },
         glossary: {
           title: 'Glossary',
-          glossaryHeaders: ['Term', 'Description'],
-          glossaryRows: [
+          tableHeaders: ['Term', 'Description'],
+          tableRows: [
             ['WBS', 'Work Breakdown Structure — a hierarchical decomposition of project tasks'],
             ['Phase', 'Project phases (Analysis, Design, Development, Testing, etc.)'],
             ['Activity', 'Activities within a phase'],

@@ -83,10 +83,10 @@ export default function Gantt() {
     });
   }, [currentProject, updateProject]);
 
-  // 프로젝트 전환 시 설정 동기화
+  // 프로젝트 전환 시 설정 동기화 (다른 탭에서 토글하면 settings 값이 바뀌므로 함께 의존)
   useEffect(() => {
     setSummaryCollapsed(currentProject?.settings?.ganttSummaryCollapsed ?? false);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, currentProject?.settings?.ganttSummaryCollapsed]);
 
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();

@@ -99,14 +99,22 @@ export interface WeeklyReportTemplate {
 }
 
 // 프로젝트 멤버 타입
+export type ProjectRole = 'owner' | 'admin' | 'editor' | 'member' | 'viewer';
+
 export interface ProjectMember {
   id: string;
   projectId: string;
   userId?: string;
   name: string;
-  role: 'owner' | 'admin' | 'editor' | 'member' | 'viewer';
+  role: ProjectRole;
   avatarUrl?: string;
   createdAt: string;
+  /**
+   * 관리자(admin)로 승격되기 직전의 역할. 슈퍼관리자가 기존 멤버를 관리자로
+   * 배정할 때 기록되며, 관리자 배정 해제 시 이 역할로 복원한다.
+   * 관리자로 신규 추가된 멤버는 이 값이 없어 해제 시 멤버십이 제거된다. (M-6)
+   */
+  previousRole?: ProjectRole;
 }
 
 // 작업 타입

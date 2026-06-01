@@ -58,8 +58,11 @@ export function getWeeklyTasks(tasks: Task[], type: 'this' | 'next'): Task[] {
       );
     }
 
-    if (planStart) {
-      return isWithinInterval(planStart, { start, end });
+    // 한쪽 날짜만 있는 경우 — planStart 우선, 없으면 planEnd로 판정
+    // (resourceAnalytics.isTaskInWeek와 동일 기준: planStart || planEnd)
+    const singleDate = planStart || planEnd;
+    if (singleDate) {
+      return isWithinInterval(singleDate, { start, end });
     }
 
     return false;
@@ -68,13 +71,16 @@ export function getWeeklyTasks(tasks: Task[], type: 'this' | 'next'): Task[] {
 
 // 지연 작업 필터링
 export function getDelayedTasks(tasks: Task[], baseDate: Date = new Date()): Task[] {
+  // planEnd는 로컬 자정으로 파싱되므로 baseDate도 날짜 단위(자정)로 정규화해야
+  // 오늘 마감 작업이 지연으로 잘못 집계되지 않는다 (healthMetrics와 동일 기준).
+  const today0 = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
   return tasks.filter((task) => {
     if (task.status === 'completed') return false;
 
     const planEnd = parseDate(task.planEnd);
     if (!planEnd) return false;
 
-    return isBefore(planEnd, baseDate) && task.actualProgress < 100;
+    return isBefore(planEnd, today0) && task.actualProgress < 100;
   });
 }
 
@@ -84,9 +90,12 @@ export function getDelayDays(task: Task, baseDate: Date = new Date()): number {
   if (!planEnd) return 0;
 
   if (task.status === 'completed') return 0;
-  if (!isBefore(planEnd, baseDate)) return 0;
 
-  return differenceInDays(baseDate, planEnd);
+  // getDelayedTasks와 동일하게 날짜 단위로 비교 — 오늘 마감은 지연 0일.
+  const today0 = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  if (!isBefore(planEnd, today0)) return 0;
+
+  return differenceInDays(today0, planEnd);
 }
 
 // 계층 구조로 변환

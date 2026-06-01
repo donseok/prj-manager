@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, KeyRound } from 'lucide-react';
 import type { Project, AccessRequestScope } from '../../../types';
 import { useAuthStore } from '../../../store/authStore';
-import { createAccessRequest } from '../../../lib/accessRequests';
+import { createAccessRequest, accessRequestDeliverySupported } from '../../../lib/accessRequests';
 
 interface Props {
   project: Project;
@@ -14,11 +14,18 @@ export default function AccessRequestModal({ project, onClose }: Props) {
   const [scope, setScope] = useState<AccessRequestScope>('read');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<'success' | 'error' | null>(null);
+  const [result, setResult] = useState<'success' | 'error' | 'unsupported' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const submit = async () => {
     if (!user || submitting) return;
+    // 멀티유저(Supabase) 모드에서는 열람 요청이 제출자의 브라우저에만 기록되어
+    // 다른 기기의 슈퍼관리자에게 전달되지 않는다. 거짓 성공을 표시하지 않도록
+    // 제출을 건너뛰고 정직하게 안내한다.
+    if (!accessRequestDeliverySupported()) {
+      setResult('unsupported');
+      return;
+    }
     setSubmitting(true);
     try {
       await createAccessRequest({
@@ -38,6 +45,9 @@ export default function AccessRequestModal({ project, onClose }: Props) {
     }
   };
 
+  // 더 이상 제출 버튼이 필요 없는 종료 상태: 성공 또는 미지원 안내.
+  const isTerminal = result === 'success' || result === 'unsupported';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[color:var(--bg-secondary)] shadow-2xl">
@@ -55,6 +65,10 @@ export default function AccessRequestModal({ project, onClose }: Props) {
           {result === 'success' ? (
             <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900 dark:bg-green-900/20 dark:text-green-300">
               요청이 제출되었습니다. 슈퍼관리자가 검토 후 승인/반려합니다.
+            </div>
+          ) : result === 'unsupported' ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">
+              멀티유저 모드에서는 열람 요청 전송이 아직 지원되지 않습니다. 슈퍼관리자에게 직접 문의해 주세요.
             </div>
           ) : (
             <>
@@ -116,9 +130,9 @@ export default function AccessRequestModal({ project, onClose }: Props) {
             onClick={onClose}
             className="rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary)] px-4 py-2 text-sm font-medium text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-tertiary)]"
           >
-            {result === 'success' ? '닫기' : '취소'}
+            {isTerminal ? '닫기' : '취소'}
           </button>
-          {result !== 'success' && (
+          {!isTerminal && (
             <button
               onClick={() => void submit()}
               disabled={submitting}

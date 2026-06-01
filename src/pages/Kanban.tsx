@@ -97,10 +97,10 @@ export default function Kanban() {
     { value: 'status', label: t('kanban.groupStatus'), icon: ListChecks },
   ];
 
-  // 프로젝트 전환 시 접기 상태 동기화
+  // 프로젝트 전환 시 접기 상태 동기화 (다른 탭에서 토글하면 settings 값이 바뀌므로 함께 의존)
   useEffect(() => {
     setSummaryCollapsed(currentProject?.settings?.kanbanSummaryCollapsed ?? false);
-  }, [currentProject?.id]);
+  }, [currentProject?.id, currentProject?.settings?.kanbanSummaryCollapsed]);
 
   const { feedback, showFeedback, clearFeedback } = usePageFeedback();
   const permissions = useProjectPermission();

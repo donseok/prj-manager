@@ -153,7 +153,9 @@ function applySyncFromProgress(task: Task, progress: number, updates: Partial<Ta
     }
   } else {
     // 0% → 대기 (보류 상태라면 유지), 실적 날짜 초기화
-    if (task.status === 'in_progress') {
+    // 완료(100%) leaf의 실적공정율을 0으로 내리면 status='completed'가 그대로 남아
+    // 0%인데 완료인 모순 상태가 영속되므로, in_progress뿐 아니라 completed도 대기로 강등한다.
+    if (task.status === 'in_progress' || task.status === 'completed') {
       updates.status = 'pending';
     }
     if (task.actualStart) {

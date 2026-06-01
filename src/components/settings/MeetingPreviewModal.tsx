@@ -23,7 +23,7 @@ interface MeetingPreviewModalProps {
   tasks: MeetingTask[];
   existingTasks: Task[];
   members: ProjectMember[];
-  onConfirm: (tasks: MeetingTask[]) => void;
+  onConfirm: (tasks: MeetingTask[], parentTaskId: string | null) => void;
 }
 
 /** 기존 WBS 트리를 계층적 드롭다운 옵션으로 변환 */
@@ -101,7 +101,7 @@ export default function MeetingPreviewModal({
   const handleConfirm = () => {
     const selected = editedTasks.filter((t) => t.selected);
     if (selected.length === 0) return;
-    onConfirm(selected);
+    onConfirm(selected, parentTaskId || null);
   };
 
   return (

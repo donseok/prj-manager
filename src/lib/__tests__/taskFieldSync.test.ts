@@ -163,6 +163,68 @@ describe('syncTaskField', () => {
       expect(updates.actualEnd).toBeNull();
     });
   });
+
+  // ── actualProgress sync → status/dates ───────────────────────
+  describe('actualProgress sync', () => {
+    // ── Bug M-1: COMPLETED leaf set to 0% must demote to pending ──
+    it('actualProgress=0 on COMPLETED task → status=pending, dates cleared', () => {
+      const task = createTask({
+        status: 'completed',
+        actualProgress: 100,
+        actualStart: '2026-03-01',
+        actualEnd: '2026-03-20',
+      });
+
+      const { updates, changed } = syncTaskField(task, 'actualProgress', 0);
+
+      expect(changed).toBe(true);
+      // A completed task dropped to 0% must NOT stay 'completed'
+      expect(updates.status).toBe('pending');
+      expect(updates.actualStart).toBeNull();
+      expect(updates.actualEnd).toBeNull();
+    });
+
+    it('actualProgress=0 on IN_PROGRESS task → status=pending, dates cleared', () => {
+      const task = createTask({
+        status: 'in_progress',
+        actualProgress: 40,
+        actualStart: '2026-03-01',
+        actualEnd: null,
+      });
+
+      const { updates } = syncTaskField(task, 'actualProgress', 0);
+
+      expect(updates.status).toBe('pending');
+      expect(updates.actualStart).toBeNull();
+    });
+
+    it('actualProgress=0 on ON_HOLD task → status preserved', () => {
+      const task = createTask({
+        status: 'on_hold',
+        actualProgress: 30,
+        actualStart: '2026-03-01',
+      });
+
+      const { updates } = syncTaskField(task, 'actualProgress', 0);
+
+      // on_hold should be preserved when progress hits 0
+      expect(updates.status).toBeUndefined();
+      expect(updates.actualStart).toBeNull();
+    });
+
+    it('actualProgress=100 → status=completed', () => {
+      const task = createTask({
+        status: 'in_progress',
+        actualProgress: 50,
+        actualStart: '2026-03-01',
+      });
+
+      const { updates } = syncTaskField(task, 'actualProgress', 100);
+
+      expect(updates.status).toBe('completed');
+      expect(updates.actualEnd).toBe(TODAY);
+    });
+  });
 });
 
 // ── isSyncableField ────────────────────────────────────────────

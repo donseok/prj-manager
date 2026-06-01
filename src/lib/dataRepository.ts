@@ -29,6 +29,7 @@ function handleSessionExpired() {
 function lsProjectsKey() { return 'dk_projects'; }
 function lsMembersKey(pid: string) { return `dk_members_${pid}`; }
 function lsTasksKey(pid: string) { return `dk_tasks_${pid}`; }
+function lsAttendanceKey(pid: string) { return `dk_attendance_${pid}`; }
 
 // ─── Row interfaces (DB snake_case) ─────────────────────────
 
@@ -54,6 +55,7 @@ interface ProjectMemberRow {
   name: string;
   role: ProjectMember['role'];
   created_at: string;
+  previous_role?: ProjectMember['role'] | null;
 }
 
 interface TaskRow {
@@ -198,8 +200,24 @@ export async function syncProjectMembers(projectId: string, members: ProjectMemb
       .upsert(rows, { onConflict: 'id' });
 
     if (upsertError) {
-      console.error('Failed to upsert members:', upsertError);
-      throw new Error(`멤버 저장 실패: ${upsertError.message}`);
+      // previous_role 마이그레이션 미적용 환경(PGRST204)이면 해당 컬럼을 제거 후 재시도.
+      if (upsertError.code === 'PGRST204') {
+        const strippedRows = rows.map((row) => {
+          const clean = { ...row };
+          delete (clean as Record<string, unknown>).previous_role;
+          return clean;
+        });
+        const { error: retryError } = await supabase
+          .from('project_members')
+          .upsert(strippedRows, { onConflict: 'id' });
+        if (retryError) {
+          console.error('Failed to upsert members (retry):', retryError);
+          throw new Error(`멤버 저장 실패: ${retryError.message}`);
+        }
+      } else {
+        console.error('Failed to upsert members:', upsertError);
+        throw new Error(`멤버 저장 실패: ${upsertError.message}`);
+      }
     }
 
     // 신규 프로젝트 등 삭제 멤버가 없는 경우 정리 스킵 (불필요한 SELECT+DELETE 제거)
@@ -362,16 +380,18 @@ async function _syncProjectTasksInner(
 /**
  * Load project IDs that a user is a member of.
  *
- * 1차: SECURITY DEFINER RPC(link_orphan_members_to_user) 가 본인 식별 정보
- *      (이메일·이메일 prefix·user_metadata 이름·profile 이름) 와 일치하는
- *      orphan(user_id IS NULL) 멤버를 자동 백필한 뒤, 본인이 속한 프로젝트
- *      ID 목록을 반환한다. RLS를 우회해야 orphan 행이 보이므로 RPC가 필수.
- * 2차(폴백): RPC 미설치 환경에서는 user_id 직접 매칭 + name 기반 클라이언트
- *           백필을 시도. 단, RLS로 인해 orphan은 보이지 않을 수 있다.
+ * 1차: SECURITY DEFINER RPC(link_orphan_members_to_user) 가 본인 식별 정보와
+ *      일치하는 orphan(user_id IS NULL) 멤버를 자동 백필한 뒤, 본인이 속한
+ *      프로젝트 ID 목록을 반환한다. RLS를 우회해야 orphan 행이 보이므로 RPC가 필수.
+ * 2차(폴백): RPC 미설치 환경에서는 user_id 직접 매칭만 수행한다. 표시 이름 기반
+ *           클라이언트 백필은 동명이인 멤버십 탈취 위험이 있어 제거되었다. (M-5)
+ *
+ * `_userName`은 과거 시그니처 호환을 위해 유지하나 더 이상 사용하지 않는다.
  */
 export async function loadProjectIdsForUser(
   userId: string,
-  userName?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _userName?: string,
 ): Promise<Set<string>> {
   // 1차: RPC 호출 (RLS 우회하여 orphan 매칭/백필 후 멤버 프로젝트 ID 반환)
   const { data: rpcData, error: rpcError } = await supabase.rpc('link_orphan_members_to_user');
@@ -413,35 +433,11 @@ export async function loadProjectIdsForUser(
 
   const ids = new Set((data || []).map((row) => String((row as { project_id: string }).project_id)));
 
-  const trimmedName = userName?.trim();
-  if (trimmedName) {
-    const { data: orphans, error: orphanErr } = await supabase
-      .from('project_members')
-      .select('id, project_id')
-      .is('user_id', null)
-      .eq('name', trimmedName);
-
-    if (orphanErr) {
-      if (isAuthError(orphanErr)) { handleSessionExpired(); return ids; }
-      console.error('Failed to load orphan members for backfill:', orphanErr);
-    } else if (orphans && orphans.length > 0) {
-      const orphanIds = orphans.map((row) => String((row as { id: string }).id));
-      const { error: backfillErr } = await supabase
-        .from('project_members')
-        .update({ user_id: userId })
-        .in('id', orphanIds);
-
-      if (backfillErr) {
-        console.error('Failed to backfill user_id for orphan members:', backfillErr);
-      } else {
-        console.info(`[member-link] backfilled user_id for ${orphanIds.length} member(s) (name="${trimmedName}")`);
-      }
-
-      for (const row of orphans) {
-        ids.add(String((row as { project_id: string }).project_id));
-      }
-    }
-  }
+  // 주: 과거에는 표시 이름(name)만으로 orphan 행을 매칭해 클라이언트에서 user_id를
+  // 백필하던 폴백이 있었으나, (1) 프로젝트 단위로 스코프되지 않아 동명이인의
+  // 멤버십을 가로챌 수 있고 (2) RLS 정책상 orphan 행이 클라이언트에 보이지 않아
+  // 사실상 무력했다. orphan 연결은 본인 식별 정보로만 매칭하는 SECURITY DEFINER
+  // RPC(link_orphan_members_to_user)에 일임한다. (M-5)
 
   return ids;
 }
@@ -453,12 +449,14 @@ export async function loadProjectsForUser(
   userName?: string,
 ): Promise<Project[]> {
   if (isSystemAdmin) {
-    return loadProjects();
+    const all = await loadProjects();
+    return all;
   }
 
   const memberProjectIds = await loadProjectIdsForUser(userId, userName);
   const allProjects = await loadProjects();
-  return allProjects.filter((p) => memberProjectIds.has(p.id));
+  const visible = allProjects.filter((p) => memberProjectIds.has(p.id));
+  return visible;
 }
 
 // ─── Row Mappers (snake_case → camelCase) ────────────────────
@@ -480,7 +478,7 @@ function mapProjectRow(row: ProjectRow): Project {
   };
 }
 
-function toProjectRow(project: Project) {
+export function toProjectRow(project: Project) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const row: Record<string, any> = {
     id: project.id,
@@ -491,19 +489,19 @@ function toProjectRow(project: Project) {
     end_date: project.endDate || null,
     base_date: project.baseDate || null,
     status: project.status,
+    // 완료 해제 시 stale 값을 반드시 비워야 하므로 항상 명시적으로 전송한다.
+    // 값이 없으면 null을 보내 컬럼을 초기화한다 (M-2). UPDATE 경로에서 키가
+    // 빠지면 Supabase가 기존 completed_at을 그대로 유지하기 때문이다.
+    completed_at: project.completedAt ?? null,
     settings: project.settings ?? {},
     created_at: project.createdAt,
     updated_at: project.updatedAt,
   };
-  // completed_at은 값이 있을 때만 전송 (마이그레이션 미적용 환경 호환)
-  if (project.completedAt) {
-    row.completed_at = project.completedAt;
-  }
   return row;
 }
 
 function mapProjectMemberRow(row: ProjectMemberRow): ProjectMember {
-  return {
+  const member: ProjectMember = {
     id: row.id,
     projectId: row.project_id,
     userId: row.user_id || undefined,
@@ -512,10 +510,15 @@ function mapProjectMemberRow(row: ProjectMemberRow): ProjectMember {
     avatarUrl: undefined,
     createdAt: row.created_at,
   };
+  // previousRole 키는 실제 값이 있을 때만 둔다. 키가 없으면 toProjectMemberRow가
+  // previous_role을 아예 전송하지 않아 마이그레이션 미적용 환경에서 기존 멤버
+  // 저장이 PGRST204 재시도 없이 그대로 동작한다. (M-6)
+  if (row.previous_role) member.previousRole = row.previous_role;
+  return member;
 }
 
 function toProjectMemberRow(member: ProjectMember): ProjectMemberRow {
-  return {
+  const row: ProjectMemberRow = {
     id: member.id,
     project_id: member.projectId,
     user_id: member.userId || null,
@@ -523,6 +526,13 @@ function toProjectMemberRow(member: ProjectMember): ProjectMemberRow {
     role: member.role,
     created_at: member.createdAt,
   };
+  // previous_role 컬럼은 값이 있을 때만 전송 (마이그레이션 미적용 환경 호환).
+  // 복원 시 stale 값을 비워야 하므로 명시적으로 undefined가 들어온 경우
+  // null을 보내 컬럼을 초기화한다 (M-6).
+  if ('previousRole' in member) {
+    row.previous_role = member.previousRole ?? null;
+  }
+  return row;
 }
 
 const safeNum = (v: unknown, def: number): number => { const n = Number(v); return Number.isNaN(n) ? def : n; };
@@ -630,6 +640,7 @@ function toAttendanceRow(a: Attendance): AttendanceRow {
 }
 
 export async function loadAttendances(projectId: string): Promise<Attendance[]> {
+  if (!isSupabaseConfigured) return storage.get<Attendance[]>(lsAttendanceKey(projectId), []);
   console.log('[attendance] load 요청:', projectId);
 
   const { data, error } = await supabase
@@ -649,6 +660,13 @@ export async function loadAttendances(projectId: string): Promise<Attendance[]> 
 }
 
 export async function upsertAttendance(attendance: Attendance): Promise<Attendance> {
+  if (!isSupabaseConfigured) {
+    const list = storage.get<Attendance[]>(lsAttendanceKey(attendance.projectId), []);
+    const idx = list.findIndex((a) => a.id === attendance.id);
+    if (idx >= 0) list[idx] = attendance; else list.unshift(attendance);
+    storage.set(lsAttendanceKey(attendance.projectId), list);
+    return attendance;
+  }
   const row = toAttendanceRow(attendance);
   console.log('[attendance] upsert 요청:', row);
 
@@ -673,7 +691,12 @@ export async function upsertAttendance(attendance: Attendance): Promise<Attendan
   return mapAttendanceRow(data as AttendanceRow);
 }
 
-export async function deleteAttendanceById(_projectId: string, id: string): Promise<void> {
+export async function deleteAttendanceById(projectId: string, id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const list = storage.get<Attendance[]>(lsAttendanceKey(projectId), []);
+    storage.set(lsAttendanceKey(projectId), list.filter((a) => a.id !== id));
+    return;
+  }
   const { error } = await supabase.from('attendance').delete().eq('id', id);
   if (error) {
     console.error('Failed to delete attendance:', error);
@@ -685,6 +708,12 @@ export async function deleteAttendanceById(_projectId: string, id: string): Prom
 
 /** 사용자가 소유한 프로젝트 ID 목록 조회 */
 export async function loadOwnedProjectIds(userId: string): Promise<string[]> {
+  if (!isSupabaseConfigured) {
+    return storage
+      .get<Project[]>(lsProjectsKey(), [])
+      .filter((p) => p.ownerId === userId && p.status !== 'deleted')
+      .map((p) => p.id);
+  }
   const { data, error } = await supabase
     .from('projects')
     .select('id')

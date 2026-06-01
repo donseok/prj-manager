@@ -16,7 +16,7 @@ import { saveAs } from 'file-saver';
 import type { WeeklyReportData, WeeklyReportTask, WeeklyAttendanceSummary } from './weeklyReport';
 import type { Task, WeeklyReportTemplate } from '../types';
 import { ATTENDANCE_TYPE_COLORS, LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
-import { lightenHex } from './weeklyReportTemplate';
+import { lightenHex, reconcileProgressCategories } from './weeklyReportTemplate';
 import { computeSCurve, renderSCurvePng } from './weeklyReportChart';
 import type { WeeklySnapshot } from './weeklySnapshot';
 import { format, differenceInCalendarDays } from 'date-fns';
@@ -225,10 +225,15 @@ function writeProgressReportSheet(
     cell.border = thinBorder(THEME);
   });
 
-  const phaseMap = new Map(report.phaseBreakdowns.map((p) => [p.phaseName, p]));
+  // H-3: phaseName(고정 이름) 으로 join 하면 rename/신규 phase 에서 lookup 이 빗나가
+  // 0% 로 표시된다. live phase 와 phase.id 기준으로 카테고리를 재조정한 뒤
+  // phaseId 키 맵으로 조회한다.
+  const phaseMap = new Map(report.phaseBreakdowns.map((p) => [p.phaseId, p]));
+  const livePhases = allTasks.filter((t) => t.level === 1);
+  const resolvedCategories = reconcileProgressCategories(tpl.progressCategories, livePhases);
 
-  tpl.progressCategories.forEach((cat, idx) => {
-    const breakdown = phaseMap.get(cat.item);
+  resolvedCategories.forEach((cat, idx) => {
+    const breakdown = cat.phaseId ? phaseMap.get(cat.phaseId) : undefined;
     const plan = breakdown ? Math.round(breakdown.planProgress * 10) / 10 : 0;
     const actual = breakdown ? Math.round(breakdown.actualProgress * 10) / 10 : 0;
     const gap = Math.round((plan - actual) * 10) / 10;
@@ -275,7 +280,7 @@ function writeProgressReportSheet(
   });
 
   // 합계
-  const totalWeight = tpl.progressCategories.reduce((s, c) => s + c.weight, 0);
+  const totalWeight = resolvedCategories.reduce((s, c) => s + c.weight, 0);
   const planTot = Math.round(report.summary.overallPlanProgress * 10) / 10;
   const actualTot = Math.round(report.summary.overallActualProgress * 10) / 10;
   const gapTot = Math.round((planTot - actualTot) * 10) / 10;
@@ -499,7 +504,9 @@ function writeKpiStrip(
   const completion = s.totalLeafTasks > 0 ? Math.round((s.completedTasks / s.totalLeafTasks) * 100) : 0;
   const delayRate = s.totalLeafTasks > 0 ? Math.round((s.delayedTasks / s.totalLeafTasks) * 100) : 0;
   const gap = Math.round((s.overallPlanProgress - s.overallActualProgress) * 10) / 10;
-  const pending = s.totalLeafTasks - s.completedTasks - s.inProgressTasks;
+  // 보류(on_hold)는 미착수(대기)가 아니라 별도 상태이므로 pending 에서 제외해야
+  // 같은 워크북의 프로그램개발현황 시트(보류 별도 표기)와 모순되지 않는다.
+  const pending = s.totalLeafTasks - s.completedTasks - s.inProgressTasks - s.onHoldTasks;
 
   // Phase count
   const phases = allTasks.filter((t) => t.level === 1);
@@ -511,6 +518,7 @@ function writeKpiStrip(
     { label: '완료', value: `${s.completedTasks}`, sub: `${completion}%`, tone: 'good' },
     { label: '진행중', value: `${s.inProgressTasks}`, sub: `${Math.round((s.inProgressTasks / Math.max(1, s.totalLeafTasks)) * 100)}%`, tone: 'info' },
     { label: '대기', value: `${pending}`, sub: '미착수', tone: 'info' },
+    { label: '보류', value: `${s.onHoldTasks}`, sub: 'on hold', tone: s.onHoldTasks > 0 ? 'warn' : 'info' },
     { label: '지연', value: `${s.delayedTasks}`, sub: `${delayRate}%`, tone: s.delayedTasks > 0 ? 'bad' : 'good' },
     { label: '금주 완료', value: `${report.completedThisWeek.tasks.length}`, sub: `신규 ${report.completedVsNew.newlyAddedCount}`, tone: 'good' },
   ];

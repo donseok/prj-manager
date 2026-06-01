@@ -55,6 +55,41 @@ interface TaskState {
   setLoading: (loading: boolean) => void;
 }
 
+export type DropPosition = 'before' | 'after' | 'child';
+
+/**
+ * 드래그-드롭 위치(before/after/child)를 moveTask가 기대하는
+ * { newParentId, newIndex } 형태로 변환하는 순수 함수.
+ *
+ * moveTask는 형제 목록에서 "드래그 대상을 제외한" 뒤 newIndex 위치에 삽입한다.
+ * 따라서 여기서도 newIndex를 계산할 때 형제 목록에서 드래그 대상을 제외해야
+ * 같은-부모 하향 이동에서 인덱스가 한 칸 밀리는 off-by-one이 발생하지 않는다.
+ */
+export function resolveDropTarget(
+  tasks: Task[],
+  draggedTaskId: string,
+  targetTask: Task,
+  position: DropPosition
+): { newParentId: string | null; newIndex: number } {
+  if (position === 'child') {
+    const childCount = tasks.filter((t) => t.parentId === targetTask.id).length;
+    return { newParentId: targetTask.id, newIndex: childCount };
+  }
+
+  const parentId = targetTask.parentId ?? null;
+  // moveTask와 동일하게 드래그 대상을 제외한 형제 목록 기준으로 인덱스를 계산한다.
+  const siblings = tasks
+    .filter((t) => t.parentId === parentId && t.id !== draggedTaskId)
+    .sort((a, b) => a.orderIndex - b.orderIndex);
+  const targetIndex = siblings.findIndex((s) => s.id === targetTask.id);
+  if (targetIndex === -1) {
+    return { newParentId: parentId, newIndex: siblings.length };
+  }
+
+  const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
+  return { newParentId: parentId, newIndex: Math.max(0, newIndex) };
+}
+
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   taskTree: [],

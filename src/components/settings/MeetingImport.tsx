@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, Loader2, Brain, AlertCircle } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { parseMeetingFile } from '../../lib/meeting/meetingParser';
 import { analyzeMeeting } from '../../lib/meeting/meetingAnalyzer';
+import { convertToTasks } from '../../lib/meeting/convertToTasks';
 import { isAIConfigured } from '../../lib/ai';
 import MeetingPreviewModal from './MeetingPreviewModal';
 import { cn } from '../../lib/utils';
@@ -22,40 +22,6 @@ const ACCEPTED_MIME_TYPES = [
   'text/plain',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
-
-function convertToTasks(
-  meetingTasks: MeetingTask[],
-  projectId: string,
-  parentId: string | null,
-  existingTasks: Task[],
-): Task[] {
-  const now = new Date().toISOString();
-  const maxOrder = existingTasks
-    .filter((t) => t.parentId === parentId)
-    .reduce((max, t) => Math.max(max, t.orderIndex), -1);
-
-  return meetingTasks
-    .filter((t) => t.selected)
-    .map((mt, idx) => ({
-      id: uuidv4(),
-      projectId,
-      parentId: (mt as MeetingTask & { parentId?: string }).parentId || parentId || undefined,
-      level: mt.level,
-      orderIndex: maxOrder + 1 + idx,
-      name: mt.name,
-      description: mt.description,
-      assigneeId: (mt as MeetingTask & { assigneeId?: string }).assigneeId || undefined,
-      weight: 1,
-      planStart: mt.startDate || null,
-      planEnd: mt.endDate || null,
-      planProgress: 0,
-      actualProgress: 0,
-      status: 'pending' as const,
-      taskSource: 'ai_generated' as const,
-      createdAt: now,
-      updatedAt: now,
-    }));
-}
 
 function isValidFileType(file: File): boolean {
   if (ACCEPTED_MIME_TYPES.includes(file.type)) return true;
@@ -160,7 +126,7 @@ export default function MeetingImport({ projectId, tasks, members, onTasksAdded 
   );
 
   const handleConfirm = useCallback(
-    (confirmedTasks: MeetingTask[]) => {
+    (confirmedTasks: MeetingTask[], parentTaskId: string | null) => {
       const selectedCount = confirmedTasks.filter((t) => t.selected).length;
       if (selectedCount === 0) {
         setShowPreview(false);
@@ -168,12 +134,12 @@ export default function MeetingImport({ projectId, tasks, members, onTasksAdded 
         return;
       }
 
-      const newTasks = convertToTasks(confirmedTasks, projectId, null, tasks);
+      const newTasks = convertToTasks(confirmedTasks, projectId, parentTaskId, tasks, members);
       onTasksAdded(newTasks);
       setShowPreview(false);
       setExtractedTasks(null);
     },
-    [projectId, tasks, onTasksAdded],
+    [projectId, tasks, members, onTasksAdded],
   );
 
   const handleClosePreview = useCallback(() => {

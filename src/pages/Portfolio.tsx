@@ -142,12 +142,6 @@ const HEALTH_CONFIG = {
   danger: { label: '위험', emoji: '\u{1F534}', color: '#ef4444', bgClass: 'bg-red-500/10 text-red-600 dark:text-red-400' },
 };
 
-const STATUS_DONUT_COLORS: Record<string, string> = {
-  '준비': '#d88b44',
-  '진행': '#0f766e',
-  '완료': '#2fa67c',
-};
-
 // ─── Component ────────────────────────────────────────────────
 
 export default function Portfolio() {
@@ -294,14 +288,17 @@ export default function Portfolio() {
   const donutData = useMemo(() => {
     const statuses: ProjectStatus[] = ['preparing', 'active', 'completed'];
     const counts: Record<string, number> = {};
-    for (const s of statuses) counts[t(`labels.projectStatus.${s}`)] = 0;
+    for (const s of statuses) counts[s] = 0;
     activeProjects.forEach((p) => {
-      const label = t(`labels.projectStatus.${p.status}`, { defaultValue: p.status });
-      if (label in counts) counts[label]++;
+      if (p.status in counts) counts[p.status]++;
     });
-    return Object.entries(counts)
-      .filter(([, v]) => v > 0)
-      .map(([name, value]) => ({ name, value }));
+    return statuses
+      .filter((s) => counts[s] > 0)
+      .map((s) => ({
+        status: s,
+        name: t(`labels.projectStatus.${s}`),
+        value: counts[s],
+      }));
   }, [activeProjects, t]);
 
   // Tooltip style
@@ -659,8 +656,8 @@ export default function Portfolio() {
                   >
                     {donutData.map((entry) => (
                       <Cell
-                        key={entry.name}
-                        fill={STATUS_DONUT_COLORS[entry.name] || '#8B95A5'}
+                        key={entry.status}
+                        fill={PROJECT_STATUS_COLORS[entry.status] || '#8B95A5'}
                       />
                     ))}
                   </Pie>

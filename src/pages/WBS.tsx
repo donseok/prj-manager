@@ -32,7 +32,7 @@ import {
   Users,
   History,
 } from 'lucide-react';
-import { useTaskStore } from '../store/taskStore';
+import { useTaskStore, resolveDropTarget } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import { useAttendanceStore } from '../store/attendanceStore';
 import Button from '../components/common/Button';
@@ -271,27 +271,11 @@ export default function WBS() {
     const draggedTask = tasks.find((t) => t.id === dragTaskId);
     if (!draggedTask) return;
 
-    if (dropPosition === 'child') {
-      // 타겟 하위로 이동
-      const childCount = tasks.filter((t) => t.parentId === targetTask.id).length;
-      moveTask(dragTaskId, targetTask.id, childCount);
-    } else if (dropPosition === 'before') {
-      // 타겟 앞에 삽입
-      const parentId = targetTask.parentId ?? null;
-      const siblings = tasks
-        .filter((t) => t.parentId === parentId)
-        .sort((a, b) => a.orderIndex - b.orderIndex);
-      const targetIndex = siblings.findIndex((s) => s.id === targetTask.id);
-      moveTask(dragTaskId, parentId, Math.max(0, targetIndex));
-    } else {
-      // 타겟 뒤에 삽입
-      const parentId = targetTask.parentId ?? null;
-      const siblings = tasks
-        .filter((t) => t.parentId === parentId)
-        .sort((a, b) => a.orderIndex - b.orderIndex);
-      const targetIndex = siblings.findIndex((s) => s.id === targetTask.id);
-      moveTask(dragTaskId, parentId, targetIndex + 1);
-    }
+    // 드롭 위치(before/after/child)를 moveTask가 기대하는 { newParentId, newIndex }로 변환.
+    // resolveDropTarget은 moveTask와 동일하게 드래그 대상을 제외한 형제 기준으로 인덱스를
+    // 계산하므로 같은-부모 하향 이동의 off-by-one이 발생하지 않는다.
+    const { newParentId, newIndex } = resolveDropTarget(tasks, dragTaskId, targetTask, dropPosition);
+    moveTask(dragTaskId, newParentId, newIndex);
 
     setDragTaskId(null);
     setDropTargetId(null);
@@ -338,8 +322,11 @@ export default function WBS() {
       const oldId = task.assigneeId ?? null;
       const newId = (value as string | null) ?? null;
       if (oldId !== newId) {
-        const oldMember = oldId ? members.find((m) => m.id === oldId) : null;
-        const newMember = newId ? members.find((m) => m.id === newId) : null;
+        // 인라인으로 새 멤버를 생성한 직후의 배정은 render-time `members` prop에 아직 반영되지 않으므로
+        // 스토어에서 최신 멤버 목록을 직접 읽어 이력/감사 로그가 '미배정'으로 잘못 기록되는 것을 방지한다.
+        const freshMembers = useProjectStore.getState().members;
+        const oldMember = oldId ? freshMembers.find((m) => m.id === oldId) : null;
+        const newMember = newId ? freshMembers.find((m) => m.id === newId) : null;
         const actorId = authUser?.id || 'unknown';
         const actorName = authUser?.name || '알 수 없음';
         appendAssigneeHistory({

@@ -6,10 +6,24 @@ import type {
 } from '../types';
 import { storage } from './utils';
 import { loadProjectMembers, syncProjectMembers } from './dataRepository';
+import { isSupabaseConfigured } from './supabase';
 
 // localStorage 기반 저장. Supabase 테이블을 새로 만들지 않기 위해 현재는 로컬 전용.
 // 추후 Supabase 모드가 필요하면 동일 시그니처로 RPC 또는 신규 테이블로 교체 가능.
 const STORAGE_KEY = 'dk_access_requests';
+
+/**
+ * 열람 요청 "전송"이 실제로 상대(슈퍼관리자)에게 전달될 수 있는 환경인지 여부.
+ *
+ * 현재 구현은 localStorage 전용이라, Supabase(멀티유저) 모드에서는 제출자의 브라우저에만
+ * 기록될 뿐 다른 기기의 슈퍼관리자에게 도달하지 않는다. 따라서 이 모드에서는 "전송 성공"이라고
+ * 주장할 수 없다. UI는 이 값을 보고 정직하게 안내해야 한다.
+ *
+ * 로컬 모드에서는 기존처럼 전달된 것으로 간주한다.
+ */
+export function accessRequestDeliverySupported(): boolean {
+  return !isSupabaseConfigured;
+}
 
 function readAll(): ProjectAccessRequest[] {
   return storage.get<ProjectAccessRequest[]>(STORAGE_KEY, []);

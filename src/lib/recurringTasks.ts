@@ -1,4 +1,4 @@
-import { format, getDay, getDate, startOfDay, differenceInWeeks } from 'date-fns';
+import { format, getDay, getDate, startOfDay, differenceInWeeks, endOfMonth } from 'date-fns';
 import type { Task, RecurringRule } from '../types';
 import { generateId } from './utils';
 
@@ -26,8 +26,13 @@ function shouldGenerate(rule: RecurringRule, date: Date): boolean {
       return weeksDiff % 2 === 0;
     }
 
-    case 'monthly':
-      return dayOfMonth === (rule.dayOfMonth ?? 1);
+    case 'monthly': {
+      // Clamp the rule's target day to the month's last day so that
+      // dayOfMonth 29/30/31 still fires in shorter months (e.g. Feb).
+      const lastDay = getDate(endOfMonth(date));
+      const target = Math.min(rule.dayOfMonth ?? 1, lastDay);
+      return dayOfMonth === target;
+    }
 
     default:
       return false;
@@ -36,10 +41,11 @@ function shouldGenerate(rule: RecurringRule, date: Date): boolean {
 
 /**
  * Check if a task was already generated for this rule on the given date.
- * We check by matching the task name pattern: "templateName (M/D)"
+ * We check by matching the task name pattern: "templateName (yyyy/M/d)".
+ * The year is included so the same month/day in different years stays distinct.
  */
 function alreadyGenerated(rule: RecurringRule, existingTasks: Task[], date: Date): boolean {
-  const dateSuffix = `(${format(date, 'M/d')})`;
+  const dateSuffix = `(${format(date, 'yyyy/M/d')})`;
   const expectedName = `${rule.templateTaskName} ${dateSuffix}`;
   return existingTasks.some(
     (t) =>
@@ -66,7 +72,7 @@ export function generateRecurringTasks(
     if (alreadyGenerated(rule, existingTasks, today)) continue;
 
     const now = new Date().toISOString();
-    const dateSuffix = `(${format(today, 'M/d')})`;
+    const dateSuffix = `(${format(today, 'yyyy/M/d')})`;
     const todayStr = format(today, 'yyyy-MM-dd');
 
     const task: Task = {
@@ -114,7 +120,7 @@ export function generateImmediateTask(
   baseDate: Date = new Date()
 ): Task {
   const now = new Date().toISOString();
-  const dateSuffix = `(${format(baseDate, 'M/d')})`;
+  const dateSuffix = `(${format(baseDate, 'yyyy/M/d')})`;
   const todayStr = format(baseDate, 'yyyy-MM-dd');
 
   return {

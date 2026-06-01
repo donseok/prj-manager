@@ -9,6 +9,7 @@ import { loadAllProfiles } from '../../../lib/supabase';
 import { logAuditEvent } from '../../../lib/auditLog';
 import { useAuthStore } from '../../../store/authStore';
 import { generateId, cn } from '../../../lib/utils';
+import { findOrphanMemberForProfile, resolveAdminRevoke } from './projectAdminAssignment';
 import type { Project, ProjectMember, SystemRole } from '../../../types';
 
 interface Profile {
@@ -86,15 +87,28 @@ export default function AssignProjectAdminModal({ project, isOpen, onClose }: As
     if (!user) return;
     setBusyUserId(profile.id);
     try {
-      const existing = memberByUserId.get(profile.id);
+      // userId로 인덱싱된 멤버가 없으면, 같은 인물의 orphan(user_id 미연결) 행을
+      // 이름/이메일로 매칭한다. 매칭되면 중복 행을 만들지 않고 해당 행을 승격한다. (M-4)
+      const existing = memberByUserId.get(profile.id) ?? findOrphanMemberForProfile(members, profile);
       let next: ProjectMember[];
       let auditDetails: string;
       let auditAction: 'member.add' | 'member.role_change';
 
       if (existing) {
         const previousRole = existing.role;
+        // 관리자 해제 시 복원할 이전 역할을 기록한다. 단 이미 admin/owner였다면
+        // 복원 대상이 없으므로 기록하지 않는다. (M-6)
+        const shouldRecordPrev = previousRole !== 'admin' && previousRole !== 'owner';
         next = members.map((m) =>
-          m.id === existing.id ? { ...m, role: 'admin' as const, name: profile.name || m.name } : m,
+          m.id === existing.id
+            ? {
+                ...m,
+                userId: profile.id,
+                role: 'admin' as const,
+                name: profile.name || m.name,
+                ...(shouldRecordPrev ? { previousRole } : {}),
+              }
+            : m,
         );
         auditAction = 'member.role_change';
         auditDetails = `슈퍼관리자가 "${profile.name}" 역할 변경: ${previousRole} → admin`;
@@ -144,7 +158,27 @@ export default function AssignProjectAdminModal({ project, isOpen, onClose }: As
     if (member.role === 'owner') return;
     setBusyUserId(member.userId || member.id);
     try {
-      const next = members.filter((m) => m.id !== member.id);
+      // 관리자로 신규 추가된 멤버는 멤버십을 제거하고, 기존 멤버를 승격한 경우는
+      // 이전 역할로 복원한다 ('해제' 라벨대로 멤버십을 통째로 잃지 않도록). (M-6)
+      const decision = resolveAdminRevoke(member);
+      let next: ProjectMember[];
+      let auditAction: 'member.remove' | 'member.role_change';
+      let auditDetails: string;
+
+      if (decision.action === 'restore') {
+        next = members.map((m) =>
+          m.id === member.id
+            ? { ...m, role: decision.role, previousRole: undefined }
+            : m,
+        );
+        auditAction = 'member.role_change';
+        auditDetails = `슈퍼관리자가 관리자 "${member.name}" 해제 → ${decision.role} 복원`;
+      } else {
+        next = members.filter((m) => m.id !== member.id);
+        auditAction = 'member.remove';
+        auditDetails = `슈퍼관리자가 관리자 "${member.name}" 배정 해제`;
+      }
+
       await syncProjectMembers(project.id, next);
       setMembers(next);
 
@@ -152,8 +186,8 @@ export default function AssignProjectAdminModal({ project, isOpen, onClose }: As
         projectId: project.id,
         userId: user.id,
         userName: user.name,
-        action: 'member.remove',
-        details: `슈퍼관리자가 관리자 "${member.name}" 배정 해제`,
+        action: auditAction,
+        details: auditDetails,
       });
 
       showFeedback({
