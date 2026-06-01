@@ -26,6 +26,7 @@ import SuperAdminRoute from './components/common/SuperAdminRoute';
 import ProjectAdminRoute from './components/common/ProjectAdminRoute';
 import UserManual from './pages/UserManual';
 import Portfolio from './pages/Portfolio';
+import Contacts from './pages/Contacts';
 import MyTasks from './pages/MyTasks';
 import AccountSettings from './pages/AccountSettings';
 import { useProjectStore } from './store/projectStore';
@@ -183,6 +184,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="portfolio" element={<Portfolio />} />
+          <Route path="contacts" element={<Contacts />} />
           <Route path="me" element={<MyTasks />} />
           <Route path="account" element={<AccountSettings />} />
           <Route path="manual" element={<UserManual />} />
