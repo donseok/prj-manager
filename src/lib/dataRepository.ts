@@ -1,4 +1,4 @@
-import type { Project, ProjectMember, Task, Attendance, WeeklyMemberReport } from '../types';
+import type { Project, ProjectMember, Task, Attendance, WeeklyMemberReport, Contact } from '../types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { storage } from './utils';
 
@@ -30,6 +30,7 @@ function lsProjectsKey() { return 'dk_projects'; }
 function lsMembersKey(pid: string) { return `dk_members_${pid}`; }
 function lsTasksKey(pid: string) { return `dk_tasks_${pid}`; }
 function lsAttendanceKey(pid: string) { return `dk_attendance_${pid}`; }
+function lsContactsKey() { return 'dkflow:contacts'; }
 
 // ─── Row interfaces (DB snake_case) ─────────────────────────
 
@@ -701,6 +702,135 @@ export async function deleteAttendanceById(projectId: string, id: string): Promi
   if (error) {
     console.error('Failed to delete attendance:', error);
     throw new Error(`근태 삭제 실패: ${error.message}`);
+  }
+}
+
+// ─── Contacts (명함) ─────────────────────────────────────────
+
+interface ContactRow {
+  id: string;
+  name: string;
+  company: string | null;
+  department: string | null;
+  title: string | null;
+  mobile: string | null;
+  phone: string | null;
+  fax: string | null;
+  email: string | null;
+  address: string | null;
+  website: string | null;
+  tags: string[] | null;
+  memo: string | null;
+  card_image: string | null;
+  linked_project_ids: string[] | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function mapContactRow(row: ContactRow): Contact {
+  return {
+    id: row.id,
+    name: row.name,
+    company: row.company || undefined,
+    department: row.department || undefined,
+    title: row.title || undefined,
+    mobile: row.mobile || undefined,
+    phone: row.phone || undefined,
+    fax: row.fax || undefined,
+    email: row.email || undefined,
+    address: row.address || undefined,
+    website: row.website || undefined,
+    tags: row.tags ?? [],
+    memo: row.memo || undefined,
+    cardImage: row.card_image || undefined,
+    linkedProjectIds: row.linked_project_ids ?? [],
+    createdBy: row.created_by || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function toContactRow(c: Contact): ContactRow {
+  return {
+    id: c.id,
+    name: c.name,
+    company: c.company || null,
+    department: c.department || null,
+    title: c.title || null,
+    mobile: c.mobile || null,
+    phone: c.phone || null,
+    fax: c.fax || null,
+    email: c.email || null,
+    address: c.address || null,
+    website: c.website || null,
+    tags: c.tags ?? [],
+    memo: c.memo || null,
+    card_image: c.cardImage || null,
+    linked_project_ids: c.linkedProjectIds ?? [],
+    created_by: c.createdBy || null,
+    created_at: c.createdAt,
+    updated_at: c.updatedAt,
+  };
+}
+
+export async function loadContacts(): Promise<Contact[]> {
+  if (!isSupabaseConfigured) return storage.get<Contact[]>(lsContactsKey(), []);
+
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); return []; }
+    console.error('[contacts] load 실패:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    return [];
+  }
+
+  return (data as ContactRow[]).map(mapContactRow);
+}
+
+export async function upsertContact(contact: Contact): Promise<Contact> {
+  if (!isSupabaseConfigured) {
+    const list = storage.get<Contact[]>(lsContactsKey(), []);
+    const idx = list.findIndex((c) => c.id === contact.id);
+    if (idx >= 0) list[idx] = contact; else list.unshift(contact);
+    storage.set(lsContactsKey(), list);
+    return contact;
+  }
+
+  const row = toContactRow(contact);
+  const { data, error } = await supabase
+    .from('contacts')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) {
+    if (isAuthError(error)) { handleSessionExpired(); throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.'); }
+    console.error('[contacts] upsert 실패:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
+    throw new Error(`명함 저장 실패 [${error.code}]: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  }
+
+  if (!data) {
+    console.error('[contacts] upsert 결과 없음 (RLS 차단 가능성)');
+    throw new Error('명함 저장 실패: 권한이 없거나 데이터가 반환되지 않았습니다.');
+  }
+
+  return mapContactRow(data as ContactRow);
+}
+
+export async function deleteContactById(id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const list = storage.get<Contact[]>(lsContactsKey(), []);
+    storage.set(lsContactsKey(), list.filter((c) => c.id !== id));
+    return;
+  }
+  const { error } = await supabase.from('contacts').delete().eq('id', id);
+  if (error) {
+    console.error('Failed to delete contact:', error);
+    throw new Error(`명함 삭제 실패: ${error.message}`);
   }
 }
 

@@ -432,3 +432,25 @@ export interface ProjectBaseline {
   projectStart?: string | null;
   projectEnd?: string | null;
 }
+
+// ─── 명함(연락처) ───────────────────────────────────────────
+export interface Contact {
+  id: string;
+  name: string;               // 이름 (필수)
+  company?: string;           // 회사
+  department?: string;        // 부서
+  title?: string;             // 직책
+  mobile?: string;            // 휴대폰
+  phone?: string;             // 유선전화
+  fax?: string;               // 팩스
+  email?: string;             // 이메일
+  address?: string;           // 주소
+  website?: string;           // 웹사이트
+  tags: string[];             // 태그/분류
+  memo?: string;              // 메모/비고
+  cardImage?: string;         // 명함 사진 (축소된 base64 data URL)
+  linkedProjectIds: string[]; // 연결된 프로젝트 ID 목록
+  createdBy: string;          // 등록자 userId
+  createdAt: string;          // ISO 문자열
+  updatedAt: string;          // ISO 문자열
+}
