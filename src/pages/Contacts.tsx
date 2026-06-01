@@ -95,12 +95,14 @@ export default function Contacts() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('contacts.searchPlaceholder')}
+            aria-label={t('contacts.searchPlaceholder')}
             className="field-input w-full py-2.5 pl-9"
           />
         </div>
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
+          aria-label={t('contacts.filterByTag')}
           className="field-select py-2.5"
         >
           <option value="">{t('contacts.allTags')}</option>
@@ -113,6 +115,7 @@ export default function Contacts() {
         <select
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
+          aria-label={t('contacts.filterByProject')}
           className="field-select py-2.5"
         >
           <option value="">{t('contacts.allProjects')}</option>

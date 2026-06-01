@@ -889,7 +889,6 @@ const vi = {
       empty: 'Chưa có danh thiếp',
       emptyHint: 'Dùng nút “Thêm danh thiếp” để tạo mục đầu tiên',
       deleteConfirm: 'Xóa danh thiếp này?',
-      saving: 'Đang lưu…',
       fields: {
         name: 'Tên',
         company: 'Công ty',

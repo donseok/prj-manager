@@ -22,8 +22,12 @@ export const useContactStore = create<ContactState>((set, get) => ({
 
   loadContacts: async () => {
     set({ isLoading: true });
-    const contacts = await repoLoadContacts();
-    set({ contacts, isLoading: false });
+    try {
+      const contacts = await repoLoadContacts();
+      set({ contacts });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   saveContact: async (contact) => {

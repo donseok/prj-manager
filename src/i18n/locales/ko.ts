@@ -903,7 +903,6 @@ const ko = {
       empty: '등록된 명함이 없습니다',
       emptyHint: '오른쪽 위 “명함 등록” 버튼으로 첫 명함을 추가하세요',
       deleteConfirm: '이 명함을 삭제할까요?',
-      saving: '저장 중…',
       fields: {
         name: '이름',
         company: '회사',

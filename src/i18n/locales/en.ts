@@ -890,7 +890,6 @@ const en = {
       empty: 'No contacts yet',
       emptyHint: 'Use the “Add Contact” button to create your first one',
       deleteConfirm: 'Delete this contact?',
-      saving: 'Saving…',
       fields: {
         name: 'Name',
         company: 'Company',
