@@ -24,7 +24,12 @@ export {
   type ReindexResult,
 } from './ragIndexer';
 export { searchKnowledgeBase, type RagHit, type SearchOptions } from './ragSearch';
-export { answerWithRag } from './ragAnswer';
+export {
+  answerWithRag,
+  answerWithGeneratedRag,
+  type GeneratedRagAnswerOptions,
+  type RagConversationMessage,
+} from './ragAnswer';
 
 // API 키 없이 Supabase Edge Function(gte-small) + pgvector만으로 동작한다.
 export function isRagReady(): boolean {

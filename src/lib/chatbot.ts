@@ -9,7 +9,7 @@ import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './tas
 import { supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
 import { parseISO, differenceInDays } from 'date-fns';
-import { isRagReady, searchKnowledgeBase, answerWithRag } from './rag';
+import { isRagReady, searchKnowledgeBase, answerWithRag, answerWithGeneratedRag } from './rag';
 import {
   detectDelayRisks,
   suggestNextTasks,
@@ -1224,6 +1224,7 @@ const RAG_MIN_TOP_SIMILARITY = 0.35;
 async function tryRagAnswer(
   question: string,
   context: ChatbotContext,
+  history: ChatbotMessage[] = [],
 ): Promise<string | null> {
   if (!context.project) return null;
   if (question.length < 3) return null;
@@ -1236,6 +1237,13 @@ async function tryRagAnswer(
     });
     if (hits.length === 0) return null;
     if (hits[0].similarity < RAG_MIN_TOP_SIMILARITY) return null;
+
+    const generated = await answerWithGeneratedRag(question, hits, {
+      projectName: context.project.name,
+      history,
+    });
+    if (generated) return generated;
+
     return answerWithRag(hits);
   } catch (err) {
     console.warn('[RAG] 검색 실패, 룰 폴백:', err);
@@ -1483,15 +1491,6 @@ export async function createChatbotReply(
     }
   }
 
-  // 0.5단계: RAG 시도 (Supabase 연결 + 프로젝트 컨텍스트가 있을 때만, API 키 불필요)
-  const ragAnswer = await tryRagAnswer(trimmed, context);
-  if (ragAnswer) {
-    return {
-      text: ragAnswer,
-      suggestions: ['지연된 작업 알려줘', '이번 주 일정은?', '멤버별 업무 현황'],
-    };
-  }
-
   // 1단계: 의도 분류 스코어링
   const intents = scoreIntents(trimmed, normalized, context);
 
@@ -1519,15 +1518,25 @@ export async function createChatbotReply(
     }
   }
 
-  // 2단계: 로컬 퍼지 검색
+  // 2단계: RAG 시도. 운영성 질문은 위의 분석 로직이 먼저 처리하고,
+  // 검색/설명형 질문만 pgvector + 선택적 LLM 합성 경로로 보낸다.
+  const ragAnswer = await tryRagAnswer(trimmed, context, history);
+  if (ragAnswer) {
+    return {
+      text: ragAnswer,
+      suggestions: ['지연된 작업 알려줘', '이번 주 일정은?', '멤버별 업무 현황'],
+    };
+  }
+
+  // 3단계: 로컬 퍼지 검색
   const localFallback = buildFallbackFromLocal(trimmed, context);
   if (localFallback) return { text: localFallback, suggestions: ['전체 현황 알려줘', '도움말'] };
 
-  // 3단계: Supabase DB 검색
+  // 4단계: Supabase DB 검색
   const dbResult = await searchSupabaseForAnswer(trimmed);
   if (dbResult) return { text: dbResult, suggestions: ['전체 현황 알려줘', '도움말'] };
 
-  // 4단계: 스마트 not-found
+  // 5단계: 스마트 not-found
   return { text: buildSmartNotFound(trimmed, context), suggestions: ['도움말', '전체 현황 알려줘', '이번 주 작업'] };
 }
 
