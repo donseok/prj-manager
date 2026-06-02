@@ -454,34 +454,78 @@ export async function loadPendingCount(): Promise<number> {
   }
 }
 
-export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
-  if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
-  const { error } = await supabase
+/**
+ * profiles 직접 UPDATE 폴백.
+ * RLS 로 0건만 매칭되면 PostgREST 는 에러 없이 빈 배열을 돌려주므로, 반영된 행이 없으면
+ * 명시적으로 실패 처리한다(= 승인했는데 재조회 시 'pending' 으로 되돌아가는 무반응 버그 방지).
+ */
+async function directProfileUpdate(
+  patch: Record<string, unknown>,
+  userId: string,
+  actionLabel: string
+): Promise<{ error: string | null }> {
+  const { data, error } = await supabase
     .from('profiles')
-    .update({ system_role: role })
-    .eq('id', userId);
+    .update(patch)
+    .eq('id', userId)
+    .select('id');
 
   if (error) {
-    console.error('Failed to update system role:', error);
-    return { error: '역할 변경에 실패했습니다.' };
+    console.error(`Failed to ${actionLabel}:`, error);
+    return { error: `${actionLabel}에 실패했습니다.` };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: `${actionLabel} 권한이 없거나 대상 사용자를 찾을 수 없습니다.` };
   }
 
   return { error: null };
 }
 
-export async function updateAccountStatus(userId: string, status: AccountStatus): Promise<{ error: string | null }> {
+export async function updateUserSystemRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
   if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
-  const { error } = await supabase
-    .from('profiles')
-    .update({ account_status: status })
-    .eq('id', userId);
 
-  if (error) {
-    console.error('Failed to update account status:', error);
-    return { error: '계정 상태 변경에 실패했습니다.' };
+  // 관리자 전용 RPC 우선 (SECURITY DEFINER 로 RLS 우회 — 읽기 경로와 동일 전략)
+  const { data, error } = await supabase.rpc('admin_update_user_system_role', {
+    target_user_id: userId,
+    new_role: role,
+  });
+
+  if (!error) {
+    if (data === false) return { error: '대상 사용자를 찾을 수 없습니다.' };
+    return { error: null };
   }
 
-  return { error: null };
+  // RPC 미설치 시 직접 업데이트로 폴백 (반영 행 수 확인)
+  if (error.message.includes('admin_update_user_system_role')) {
+    return directProfileUpdate({ system_role: role }, userId, '역할 변경');
+  }
+
+  console.error('Failed to update system role:', error);
+  return { error: '역할 변경에 실패했습니다.' };
+}
+
+export async function updateAccountStatus(userId: string, status: AccountStatus): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase가 설정되지 않았습니다.' };
+
+  // 관리자 전용 RPC 우선 (SECURITY DEFINER 로 RLS 우회)
+  const { data, error } = await supabase.rpc('admin_update_account_status', {
+    target_user_id: userId,
+    new_status: status,
+  });
+
+  if (!error) {
+    if (data === false) return { error: '대상 사용자를 찾을 수 없습니다.' };
+    return { error: null };
+  }
+
+  // RPC 미설치 시 직접 업데이트로 폴백 (반영 행 수 확인)
+  if (error.message.includes('admin_update_account_status')) {
+    return directProfileUpdate({ account_status: status }, userId, '계정 상태 변경');
+  }
+
+  console.error('Failed to update account status:', error);
+  return { error: '계정 상태 변경에 실패했습니다.' };
 }
 
 // ─── Account Deletion ────────────────────────────────────────
