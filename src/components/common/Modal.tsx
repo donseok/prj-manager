@@ -8,9 +8,10 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'fullscreen';
+  density?: 'default' | 'compact';
 }
 
-export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'md', density = 'default' }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -40,9 +41,10 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
   };
 
   const isFullscreen = size === 'fullscreen';
+  const isCompact = density === 'compact';
 
   return (
-    <div className={cn('fixed inset-0 z-50 flex items-center justify-center', !isFullscreen && 'p-4')}>
+    <div className={cn('fixed inset-0 z-50 flex items-center justify-center', !isFullscreen && (isCompact ? 'p-3' : 'p-4'))}>
       <div
         className="absolute inset-0 bg-[#0c1016]/62 backdrop-blur-xl animate-fade-in"
         onClick={onClose}
@@ -51,23 +53,39 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       <div
         className={cn(
           'relative w-full overflow-hidden border border-white/10 bg-[image:var(--gradient-surface)] shadow-[0_52px_120px_-56px_rgba(0,0,0,0.72)] backdrop-blur-2xl animate-scale-in dark:border-[var(--border-color)]',
-          isFullscreen ? 'flex h-full flex-col rounded-none' : 'rounded-[30px]',
+          isFullscreen ? 'flex h-full flex-col rounded-none' : isCompact ? 'rounded-[22px]' : 'rounded-[30px]',
           sizes[size]
         )}
       >
-        <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.2),transparent_70%)] blur-3xl" />
+        <div className={cn(
+          'pointer-events-none absolute top-0 rounded-full bg-[radial-gradient(circle,rgba(15,118,110,0.2),transparent_70%)] blur-3xl',
+          isCompact ? 'inset-x-8 h-16' : 'inset-x-10 h-24'
+        )} />
 
         {(title || isFullscreen) && (
-          <div className="relative flex items-center justify-between border-b border-[var(--border-color)] px-6 py-5">
+          <div className={cn(
+            'relative flex items-center justify-between border-b border-[var(--border-color)]',
+            isCompact ? 'px-4 py-3' : 'px-6 py-5'
+          )}>
             <div>
-              <p className="page-kicker text-[0.62rem]">Workspace Dialog</p>
-              {title && <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]">{title}</h2>}
+              <p className={cn('page-kicker', isCompact ? 'text-[0.56rem]' : 'text-[0.62rem]')}>Workspace Dialog</p>
+              {title && (
+                <h2 className={cn(
+                  'font-semibold tracking-[-0.03em] text-[color:var(--text-primary)]',
+                  isCompact ? 'mt-1 text-base' : 'mt-2 text-xl'
+                )}>
+                  {title}
+                </h2>
+              )}
             </div>
             <button
               onClick={onClose}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]"
+              className={cn(
+                'flex items-center justify-center rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--bg-secondary-solid)] hover:text-[color:var(--text-primary)]',
+                isCompact ? 'h-9 w-9' : 'h-11 w-11'
+              )}
             >
-              <X className="w-5 h-5" />
+              <X className={cn(isCompact ? 'h-4 w-4' : 'h-5 w-5')} />
             </button>
           </div>
         )}

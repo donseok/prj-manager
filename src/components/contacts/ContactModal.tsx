@@ -119,14 +119,14 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
 
   const field = (key: TextField, labelKey: string) => (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+      <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
         {t(`contacts.fields.${labelKey}`)}
       </label>
       <input
         type="text"
         value={form[key]}
         onChange={(e) => setField(key, e.target.value)}
-        className="field-input w-full py-2.5"
+        className="field-input w-full py-2 text-sm"
       />
     </div>
   );
@@ -136,16 +136,17 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
       isOpen={isOpen}
       onClose={onClose}
       title={isEdit ? t('contacts.editContact') : t('contacts.addContact')}
-      size="2xl"
+      size="lg"
+      density="compact"
     >
-      <div className="space-y-4 p-6">
+      <div className="max-h-[min(76vh,38rem)] space-y-3 overflow-y-auto p-4">
         {error && (
-          <div className="rounded-lg border border-[var(--accent-danger)]/30 bg-[rgba(203,75,95,0.1)] px-3 py-2 text-sm text-[color:var(--accent-danger)]">
+          <div className="rounded-lg border border-[var(--accent-danger)]/30 bg-[rgba(203,75,95,0.1)] px-3 py-2 text-xs text-[color:var(--accent-danger)]">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {field('name', 'name')}
           {field('company', 'company')}
           {field('department', 'department')}
@@ -158,28 +159,28 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
             {t('contacts.fields.address')}
           </label>
           <input
             type="text"
             value={form.address}
             onChange={(e) => setField('address', e.target.value)}
-            className="field-input w-full py-2.5"
+            className="field-input w-full py-2 text-sm"
           />
         </div>
 
         {/* 태그 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
             {t('contacts.fields.tags')}
           </label>
           {tags.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
+            <div className="mb-1.5 flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="flex items-center gap-1 rounded-full bg-[color:var(--bg-secondary)] px-2.5 py-1 text-xs text-[color:var(--text-primary)]"
+                  className="flex items-center gap-1 rounded-full bg-[color:var(--bg-secondary)] px-2 py-0.5 text-[11px] text-[color:var(--text-primary)]"
                 >
                   {tag}
                   <button
@@ -205,24 +206,24 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
               }
             }}
             placeholder={t('contacts.tagInputPlaceholder')}
-            className="field-input w-full py-2.5"
+            className="field-input w-full py-2 text-sm"
           />
         </div>
 
         {/* 연결 프로젝트 */}
         {projects.length > 0 && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+            <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
               {t('contacts.fields.linkedProjects')}
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto pr-1">
               {projects.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => toggleProject(p.id)}
                   className={cn(
-                    'rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
+                    'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all',
                     linkedProjectIds.includes(p.id)
                       ? 'border-[var(--accent-primary)] bg-[rgba(15,118,110,0.12)] text-[color:var(--text-primary)]'
                       : 'border-[var(--border-color)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:border-[rgba(15,118,110,0.2)]',
@@ -237,32 +238,32 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
 
         {/* 메모 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
             {t('contacts.fields.memo')}
           </label>
           <textarea
             value={form.memo}
             onChange={(e) => setField('memo', e.target.value)}
-            rows={3}
-            className="field-input w-full resize-none py-2.5"
+            rows={2}
+            className="field-input w-full resize-none py-2 text-sm"
           />
         </div>
 
         {/* 명함 사진 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-[color:var(--text-secondary)]">
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
             {t('contacts.fields.cardImage')}
           </label>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {cardImage && (
               <img
                 src={cardImage}
                 alt=""
-                className="h-20 rounded-lg border border-[var(--border-color)] object-cover"
+                className="h-14 rounded-lg border border-[var(--border-color)] object-cover"
               />
             )}
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-4 py-2 text-sm font-medium text-[color:var(--text-secondary)] transition-all hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:text-[color:var(--text-primary)]">
-              <Upload className="h-4 w-4" />
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[color:var(--bg-elevated)] px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition-all hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:text-[color:var(--text-primary)]">
+              <Upload className="h-3.5 w-3.5" />
               {t('contacts.uploadImage')}
               <input
                 type="file"
@@ -275,7 +276,7 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
               <button
                 type="button"
                 onClick={() => setCardImage(undefined)}
-                className="text-sm text-[color:var(--accent-danger)] hover:underline"
+                className="text-xs text-[color:var(--accent-danger)] hover:underline"
               >
                 {t('contacts.removeImage')}
               </button>
@@ -284,11 +285,11 @@ export default function ContactModal({ isOpen, contact, onClose, onSave }: Conta
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-3 border-t border-[var(--border-color)] pt-4">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
+        <div className="flex justify-end gap-2 border-t border-[var(--border-color)] pt-3">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>
             {t('contacts.cancel')}
           </Button>
-          <Button onClick={handleSubmit} isLoading={saving}>
+          <Button size="sm" onClick={handleSubmit} isLoading={saving}>
             {isEdit ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {t('contacts.save')}
           </Button>
