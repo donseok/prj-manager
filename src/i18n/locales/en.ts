@@ -722,6 +722,7 @@ const en = {
       weightZeroMsg: 'A weight of 0 will not be reflected in progress calculation.',
       weightNoNegative: 'Negative values are not allowed for weight.',
       weightParentReadOnly: 'Parent weight is automatically computed from the sum of children.',
+      progressParentReadOnly: 'Parent progress is automatically computed from the weighted average of children.',
       dateStartAfterEnd: 'Start date is after end date',
       dateDelayed: 'Delayed vs plan',
       dateAutoSwapped: 'Start and end dates were reversed and automatically adjusted',

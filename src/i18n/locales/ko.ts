@@ -717,6 +717,7 @@ const ko = {
       weightZeroMsg: '가중치가 0이면 공정률에 반영되지 않습니다.',
       weightNoNegative: '가중치에 음수 값은 허용되지 않습니다.',
       weightParentReadOnly: '상위 작업의 가중치는 자식 합계로 자동 계산됩니다.',
+      progressParentReadOnly: '상위 작업의 실적공정율은 하위 작업의 가중 평균으로 자동 계산됩니다.',
       dateStartAfterEnd: '시작일이 종료일보다 늦습니다',
       dateDelayed: '계획 대비 지연',
       dateAutoSwapped: '시작일과 종료일이 역전되어 자동으로 조정되었습니다',

@@ -1266,6 +1266,27 @@ export default function WBS() {
 
       case 'actualProgress': {
         const actualValue = task.actualProgress as number;
+        const progressMode = currentProject?.settings?.progressMode ?? 'auto';
+        const hasChildren = tasks.some((t) => t.parentId === task.id);
+        const progressEditable = taskEditable && (!hasChildren || progressMode === 'manual');
+
+        if (!progressEditable) {
+          return (
+            <div
+              className="flex items-center gap-1"
+              title={hasChildren ? t('wbs.progressParentReadOnly') : undefined}
+            >
+              <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
+                <div
+                  className="h-full rounded-full bg-[image:linear-gradient(135deg,#1fa37a,#34c997)]"
+                  style={{ width: `${actualValue}%` }}
+                />
+              </div>
+              <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{actualValue}%</span>
+            </div>
+          );
+        }
+
         return isEditing ? (
           <div className="flex items-center gap-1">
             <input
@@ -1292,8 +1313,8 @@ export default function WBS() {
           </div>
         ) : (
           <div
-            className={cn('flex items-center gap-1', taskEditable && 'cursor-text')}
-            onClick={() => { if (taskEditable) setEditingCell({ taskId: task.id, columnId }); }}
+            className={cn('flex items-center gap-1', progressEditable && 'cursor-text')}
+            onClick={() => { if (progressEditable) setEditingCell({ taskId: task.id, columnId }); }}
           >
             <div className="flex-1 h-2 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
               <div

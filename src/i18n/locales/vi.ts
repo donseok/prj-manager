@@ -721,6 +721,7 @@ const vi = {
       weightZeroMsg: 'Trọng số 0 sẽ không được tính vào tiến độ.',
       weightNoNegative: 'Không cho phép giá trị âm cho trọng số.',
       weightParentReadOnly: 'Trọng số của công việc cha được tính tự động từ tổng của các con.',
+      progressParentReadOnly: 'Tiến độ của công việc cha được tính tự động từ trung bình trọng số của các con.',
       dateStartAfterEnd: 'Ngày bắt đầu sau ngày kết thúc',
       dateDelayed: 'Trễ so với kế hoạch',
       dateAutoSwapped: 'Ngày bắt đầu và kết thúc đã bị đảo ngược và được tự động điều chỉnh',
