@@ -16,39 +16,29 @@ DK Flow — a web-based project management system with WBS (Work Breakdown Struc
 
 ## Tech Stack
 
-React 19 + TypeScript 5.9, Vite 7, Tailwind CSS 4, Zustand 5, React Router 7, Recharts 3, Supabase (optional), date-fns 4 (Korean locale), ExcelJS, docx, Lucide icons, Playwright
+React 19 + TypeScript 5.9, Vite 7, Tailwind CSS 4, Zustand 5, React Router 7, Recharts 3, Supabase (optional), date-fns 4, ExcelJS, docx (PDF/Word), pptxgenjs (PPT), Lucide icons, Playwright. i18n via `src/i18n` (ko/en/vi; Korean default).
 
 ## Architecture
 
 ### Routing (App.tsx)
 
-```
-/login                   → Login (public)
-/                        → Home (protected — ProtectedRoute)
-├── /projects            → Project list
-├── /projects/new        → Create project
-├── /projects/:projectId → ProjectDetailWrapper (loads members + tasks)
-│   ├── index            → Dashboard
-│   ├── /wbs             → WBS table editor
-│   ├── /gantt           → Gantt chart
-│   ├── /members         → Team members
-│   └── /settings        → Project settings & import/export
-├── /manual              → User manual
-├── /admin/users         → User management (AdminRoute — systemRole='admin' only)
-└── *                    → 404
-```
+- **Public**: `/login`, `/pending-approval`
+- **Protected** (`ProtectedRoute`): `/` Home, `/portfolio`, `/my-tasks`, `/contacts`, `/attendance`, `/manual`, `/account`
+- **Project** (`/projects/:projectId` → `ProjectDetailWrapper`, loads members+tasks on `projectId` change, renders `<Outlet />`): Dashboard (index), `/wbs`, `/gantt`, `/kanban`, `/members`, `/settings`
+- **Admin**: project-admin area (`ProjectAdminRoute`) and super-admin area (`SuperAdminRoute`) under `src/pages/admin/`
 
-`ProjectDetailWrapper` is a nested route that loads project members and tasks via `dataRepository` when `projectId` changes, then renders child routes via `<Outlet />`.
+Role gates live in `src/components/common/` (`ProjectAdminRoute`, `SuperAdminRoute`) and `src/lib/permissions.ts`.
 
 ### State Management (src/store/)
 
-Five Zustand stores — no Redux:
+Zustand only — no Redux. Most important:
 
-- **projectStore** — Projects list, current project, members CRUD. `setMembers(members, projectId)` scopes members to a project.
 - **taskStore** — Flat task list with derived tree views. Key pipeline: `setTasks()` → `normalizeTaskHierarchy()` → `buildTaskTree()` → `flattenTaskTree()`. Undo/redo via 50-item history array. `loadedProjectId` prevents cross-project saves.
+- **projectStore** — Projects list, current project, members CRUD. `setMembers(members, projectId)` scopes members to a project.
 - **authStore** — User auth, persisted to localStorage via Zustand middleware. `isAdmin` computed from `systemRole`.
 - **themeStore** — Light/Dark/System theme, applies `dark` class on `document.documentElement`.
-- **uiStore** — UI-specific transient state.
+
+Others: `uiStore`, `contactStore`, `attendanceStore`, `commentStore`, `notificationStore`, `dashboardConfigStore`, `systemSettingsStore`.
 
 ### Data Layer
 
@@ -73,9 +63,10 @@ Tailwind CSS 4 utilities + custom CSS in `src/index.css` (CSS variables, glassmo
 
 ## Key Conventions
 
-- Components: `src/components/` (common/, layout/, wbs/, chatbot/). Pages: `src/pages/`.
+- Pages: `src/pages/` (admin screens under `admin/`). Components: `src/components/` (common/, layout/, wbs/, kanban/, dashboard/, chatbot/, settings/, contacts/, attendance/).
+- Logic & data: `src/lib/` — domain subfolders `ai/` (WBS/progress AI), `rag/` (chatbot retrieval), `meeting/` (meeting-notes → tasks).
 - Types: `src/types/index.ts` — core models: User, Project, ProjectMember, Task, with Korean label/color constants.
-- `cn()` utility in `src/lib/utils.ts` for conditional class merging.
-- `storage` wrapper in `src/lib/utils.ts` — typed localStorage get/set/has/remove.
-- Export modules: `src/lib/excel.ts` (ExcelJS WBS/Gantt), `src/lib/exportReport.ts` (PDF/Word via docx).
+- `cn()` and `storage` (typed localStorage) utilities in `src/lib/utils.ts`.
+- Exports: `excel.ts` (ExcelJS), `exportReport.ts` (PDF/Word), `exportWeeklyReportPptx.ts` (PPT).
 - Auto-save: `src/hooks/useAutoSave.ts` — debounced, checks `loadedProjectId` to prevent saving before hydration.
+- Tests colocated in `__tests__/` folders (Vitest); E2E via Playwright.

@@ -5,7 +5,27 @@
       "Bash(npx tsc:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Skill(telegram:configure)",
+      "Bash(sed 's/\\\\\\(TELEGRAM_BOT_TOKEN=.\\\\{10\\\\}\\\\\\).*/\\\\1.../' ~/.claude/channels/telegram/.env)",
+      "Read(//Users/jerry/.claude/channels/telegram/**)",
+      "Read(//Users/jerry/.claude/plugins/cache/claude-plugins-official/**)",
+      "Read(//Users/jerry/**)",
+      "Bash(vercel --version)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(brew list *)",
+      "Read(//opt/homebrew/lib/node_modules/vercel/dist/**)",
+      "Bash(npm config *)",
+      "Bash(npm i *)",
+      "Skill(telegram:access)",
+      "Bash(bun --version)",
+      "Bash(ps -o pid,command -p 7114)",
+      "Bash(kill 7114)",
+      "Bash(grep -o 'TELEGRAM_BOT_TOKEN=.\\\\{0,10\\\\}' ~/.claude/channels/telegram/.env)",
+      "Bash(ps -axo args)",
+      "mcp__plugin_telegram_telegram__reply",
+      "WebSearch"
     ]
   }
 }
