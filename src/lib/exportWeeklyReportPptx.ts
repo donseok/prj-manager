@@ -332,14 +332,51 @@ function addTaskTable(
   });
 }
 
+// 작업 목록을 슬라이드 높이에 맞춰 페이지로 분할
+// (고정 행 수가 아니라 각 행의 예상 렌더 높이를 누적해 페이지 예산을 넘기 직전에 분할)
+function paginateTasksByHeight(tasks: WeeklyReportTask[]): WeeklyReportTask[][] {
+  // 16:9 슬라이드(높이 5.625") 기준, 테이블 시작 Y 1.65" ~ 페이지번호(5.15") 위까지 ≈ 3.45"
+  const USABLE_H = 3.45;
+  const HEADER_ROW_H = 0.32; // 테이블 헤더 행
+  const LINE_H = 0.13;       // 본문 한 줄 높이
+  const ROW_PAD = 0.09;      // 셀 상하 여백
+  const MIN_ROW_H = 0.32;    // addTaskTable의 rowH 최소값
+  const CHARS_PER_LINE = 16; // 작업명 칼럼(폭 ≈1.76")에 들어가는 대략적 글자 수
+
+  const estRowHeight = (t: WeeklyReportTask): number => {
+    const nameLen = Math.min(t.name.length, 30); // truncate(name, 30)과 동일
+    const nameLines = Math.max(1, Math.ceil(nameLen / CHARS_PER_LINE));
+    const parentLines = t.parentName ? 1 : 0;
+    const lines = nameLines + parentLines;
+    return Math.max(MIN_ROW_H, lines * LINE_H + ROW_PAD);
+  };
+
+  const pages: WeeklyReportTask[][] = [];
+  let current: WeeklyReportTask[] = [];
+  let used = HEADER_ROW_H;
+
+  for (const t of tasks) {
+    const h = estRowHeight(t);
+    if (current.length > 0 && used + h > USABLE_H) {
+      pages.push(current);
+      current = [];
+      used = HEADER_ROW_H;
+    }
+    current.push(t);
+    used += h;
+  }
+  if (current.length > 0) pages.push(current);
+
+  return pages.length > 0 ? pages : [[]];
+}
+
 function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.Slide[] {
   const slides: PptxGenJS.Slide[] = [];
-  const maxRowsPerSlide = 14;
   const actualTasks = report.thisWeekActual.tasks;
   const planTasks = report.nextWeekPlan.tasks;
 
-  const actualChunks = actualTasks.length > 0 ? chunk(actualTasks, maxRowsPerSlide) : [[]];
-  const planChunks = planTasks.length > 0 ? chunk(planTasks, maxRowsPerSlide) : [[]];
+  const actualChunks = actualTasks.length > 0 ? paginateTasksByHeight(actualTasks) : [[]];
+  const planChunks = planTasks.length > 0 ? paginateTasksByHeight(planTasks) : [[]];
   const pageCount = Math.max(actualChunks.length, planChunks.length);
 
   for (let p = 0; p < pageCount; p++) {
