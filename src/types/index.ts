@@ -197,7 +197,8 @@ export type AttendanceType =
   | 'business_trip'
   | 'late'
   | 'early_leave'
-  | 'absence';
+  | 'absence'
+  | 'training';
 
 export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {
   present: '출근',
@@ -209,6 +210,7 @@ export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {
   late: '지각',
   early_leave: '조퇴',
   absence: '결근',
+  training: '교육',
 };
 
 export const ATTENDANCE_TYPE_COLORS: Record<AttendanceType, string> = {
@@ -221,6 +223,7 @@ export const ATTENDANCE_TYPE_COLORS: Record<AttendanceType, string> = {
   late: '#f97316',
   early_leave: '#f97316',
   absence: '#dc2626',
+  training: '#6366f1',
 };
 
 export interface Attendance {

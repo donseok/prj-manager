@@ -40,6 +40,7 @@ export function useTranslatedLabels() {
     late: t('labels.attendanceType.late'),
     early_leave: t('labels.attendanceType.early_leave'),
     absence: t('labels.attendanceType.absence'),
+    training: t('labels.attendanceType.training'),
   };
 
   const wbsColumnHeaders: Record<string, string> = {

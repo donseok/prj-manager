@@ -621,6 +621,7 @@ const vi = {
         late: 'Đi muộn',
         early_leave: 'Về sớm',
         absence: 'Vắng mặt',
+        training: 'Đào tạo',
       },
       wbsColumns: {
         level: 'Cấp độ',
@@ -1705,6 +1706,7 @@ const vi = {
             ['Đi muộn', 'Đến muộn', 'Cam'],
             ['Về sớm', 'Về sớm trước giờ', 'Cam'],
             ['Vắng mặt', 'Vắng mặt không phép', 'Đỏ đậm'],
+            ['Đào tạo', 'Tham gia đào tạo/tập huấn', 'Chàm'],
           ],
           editAndDelete: 'Sửa và xóa chấm công',
           editAndDeleteHeaders: ['Chức năng', 'Phương pháp'],

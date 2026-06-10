@@ -246,7 +246,7 @@ CREATE TABLE attendances (
   project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
   member_id UUID REFERENCES project_members(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  type VARCHAR(20) NOT NULL,  -- present, annual_leave, half_day_am, half_day_pm, sick_leave, business_trip, late, early_leave, absence
+  type VARCHAR(20) NOT NULL,  -- present, annual_leave, half_day_am, half_day_pm, sick_leave, business_trip, late, early_leave, absence, training
   note TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()

@@ -622,6 +622,7 @@ const en = {
         late: 'Late',
         early_leave: 'Early Leave',
         absence: 'Absent',
+        training: 'Training',
       },
       wbsColumns: {
         level: 'Level',
@@ -1723,6 +1724,7 @@ const en = {
             ['Late', 'Late arrival', 'Orange'],
             ['Early Leave', 'Early departure', 'Orange'],
             ['Absent', 'Unexcused absence', 'Dark Red'],
+            ['Training', 'Attending training/education', 'Indigo'],
           ],
           editAndDelete: 'Edit and Delete Attendance',
           editAndDeleteHeaders: ['Feature', 'Method'],

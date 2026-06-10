@@ -22,6 +22,7 @@ interface AttendanceModalProps {
 const attendanceTypes: AttendanceType[] = [
   'present', 'annual_leave', 'half_day_am', 'half_day_pm',
   'sick_leave', 'business_trip', 'late', 'early_leave', 'absence',
+  'training',
 ];
 
 function getInitialMemberId(

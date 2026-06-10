@@ -343,7 +343,7 @@ export default function Attendance() {
                   <th className="px-4 py-3 text-left font-medium text-[color:var(--text-secondary)]">
                     <div className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{t('attendance.member')}</div>
                   </th>
-                  {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((at) => (
+                  {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence', 'training'] as AttendanceType[]).map((at) => (
                     <th key={at} className="px-3 py-3 text-center font-medium text-[color:var(--text-secondary)]">
                       <div className="flex items-center justify-center gap-1">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ATTENDANCE_TYPE_COLORS[at] }} />
@@ -357,7 +357,7 @@ export default function Attendance() {
                 {members.map((m) => (
                   <tr key={m.id} className="border-b border-[var(--border-color)] hover:bg-[color:var(--bg-tertiary)] transition-colors">
                     <td className="px-4 py-3 font-medium text-[color:var(--text-primary)]">{m.name}</td>
-                    {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence'] as AttendanceType[]).map((at) => (
+                    {(['present', 'annual_leave', 'half_day_am', 'half_day_pm', 'sick_leave', 'business_trip', 'late', 'early_leave', 'absence', 'training'] as AttendanceType[]).map((at) => (
                       <td key={at} className="px-3 py-3 text-center text-[color:var(--text-secondary)]">
                         {monthlySummary[m.id]?.[at] || '-'}
                       </td>

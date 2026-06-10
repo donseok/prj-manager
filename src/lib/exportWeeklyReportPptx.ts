@@ -396,7 +396,7 @@ function addDetailSlides(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.S
 }
 
 // ── 근태현황 슬라이드 (금주 + 차주 통합) ─────────────────────
-// 출근(present)을 제외하고 휴가·반차·병가·출장·지각·조퇴·결근 등만 표시
+// 출근(present)을 제외하고 휴가·반차·병가·출장·지각·조퇴·결근·교육 등만 표시
 function filterNonPresentAttendance(
   summary: import('./weeklyReport').WeeklyAttendanceSummary[],
 ): import('./weeklyReport').WeeklyAttendanceSummary[] {

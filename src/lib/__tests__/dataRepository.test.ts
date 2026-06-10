@@ -117,6 +117,13 @@ describe('M-3: Local Mode 근태 (attendance) 그레이스풀 동작', () => {
     expect(list[0].type).toBe('sick_leave');
   });
 
+  it("'training'(교육) 유형도 저장/로드가 왕복된다", async () => {
+    const { upsertAttendance, loadAttendances } = await import('../dataRepository');
+    await upsertAttendance(makeAttendance({ type: 'training' }));
+    const list = await loadAttendances('proj-1');
+    expect(list[0].type).toBe('training');
+  });
+
   it('deleteAttendanceById는 projectId 키로 해당 항목만 제거한다', async () => {
     const { upsertAttendance, deleteAttendanceById, loadAttendances } = await import(
       '../dataRepository'

@@ -635,6 +635,7 @@ const ko = {
         late: '지각',
         early_leave: '조퇴',
         absence: '결근',
+        training: '교육',
       },
       wbsColumns: {
         level: '구분',
@@ -1736,6 +1737,7 @@ const ko = {
             ['지각', '지각 출근', '주황색'],
             ['조퇴', '조기 퇴근', '주황색'],
             ['결근', '무단 결근', '진빨간색'],
+            ['교육', '교육/연수 참석', '남색'],
           ],
           editAndDelete: '근태 수정 및 삭제',
           editAndDeleteHeaders: ['기능', '방법'],
