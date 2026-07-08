@@ -25,7 +25,9 @@
       "Bash(grep -o 'TELEGRAM_BOT_TOKEN=.\\\\{0,10\\\\}' ~/.claude/channels/telegram/.env)",
       "Bash(ps -axo args)",
       "mcp__plugin_telegram_telegram__reply",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   }
 }
