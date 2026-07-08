@@ -13,7 +13,7 @@ import { ko, enUS, vi } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, CalendarDays, ScanSearch } from 'lucide-react';
 import type { Task } from '../../types';
-import { cn } from '../../lib/utils';
+import { cn, formatPercent } from '../../lib/utils';
 import { useThemeStore } from '../../store/themeStore';
 import { isKoreanHoliday } from '../../lib/holidays';
 import Button from '../common/Button';
@@ -611,7 +611,7 @@ function GanttChartInner({
                           width: Math.max(actualBar.width * (task.actualProgress / 100), task.actualProgress > 0 ? 8 : 0),
                           height: barHeight,
                         }}
-                        title={`${t('wbsComponents.ganttChart.actual')}: ${task.actualStart} ~ ${task.actualEnd || t('wbsComponents.ganttChart.inProgress')} (${task.actualProgress}%)`}
+                        title={`${t('wbsComponents.ganttChart.actual')}: ${task.actualStart} ~ ${task.actualEnd || t('wbsComponents.ganttChart.inProgress')} (${formatPercent(task.actualProgress)})`}
                       />
                     </>
                   )}

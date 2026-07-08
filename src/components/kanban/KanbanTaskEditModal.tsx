@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, CheckCircle2, Circle, Calendar, User, TrendingUp } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatPercent } from '../../lib/utils';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
 import { TASK_STATUS_COLORS } from '../../types';
 import { format } from 'date-fns';
@@ -236,7 +236,7 @@ function KanbanTaskEditModal({
               <TrendingUp className="h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)]" />
               <span className="text-sm text-[color:var(--text-secondary)]">{t('kanbanComponents.planProgress')}</span>
               <span className="ml-auto text-sm font-medium text-[color:var(--text-primary)]">
-                {task.planProgress}%
+                {formatPercent(task.planProgress)}
               </span>
             </div>
           </div>
@@ -266,7 +266,7 @@ function KanbanTaskEditModal({
                       {child.name || t('kanbanComponents.noName')}
                     </span>
                     <span className="ml-auto text-xs text-[color:var(--text-muted)]">
-                      {child.actualProgress}%
+                      {formatPercent(child.actualProgress)}
                     </span>
                   </div>
                 ))}

@@ -1,6 +1,7 @@
 import { format, parseISO, startOfWeek, endOfWeek, addWeeks, isWithinInterval, isBefore, differenceInDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { Task } from '../types';
+import { calculateProjectProgress, formatProgress, roundProgress, weightedProgress } from './progress';
 
 // 오늘 날짜를 로컬 timezone 기준 'yyyy-MM-dd' 문자열로 반환 (UTC 오프셋 방지)
 export function getLocalDateString(d: Date = new Date()): string {
@@ -151,36 +152,22 @@ export function flattenTaskTree(tasks: Task[], depth: number = 0): Task[] {
 // 상위 작업 공정율 자동 계산
 export function calculateParentProgress(tasks: Task[], parentId: string): number {
   const children = tasks.filter((t) => t.parentId === parentId);
-  if (children.length === 0) return 0;
-
-  const totalWeight = children.reduce((sum, t) => sum + t.weight, 0);
-  // 가중치가 모두 0이면 단순 평균으로 fallback
-  const progress =
-    totalWeight > 0
-      ? children.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
-      : children.reduce((sum, t) => sum + t.actualProgress, 0) / children.length;
-
-  return Math.round(progress);
+  return roundProgress(weightedProgress(children, 'actualProgress'));
 }
 
-// 전체 공정율 계산
+// 전체 공정율 계산 (대시보드/주간보고 공통 기준 — src/lib/progress.ts 참고)
 export function calculateOverallProgress(tasks: Task[]): number {
-  const topLevelTasks = tasks.filter((t) => !t.parentId || t.level === 1);
-  if (topLevelTasks.length === 0) return 0;
-
-  const totalWeight = topLevelTasks.reduce((sum, t) => sum + t.weight, 0);
-  // 가중치가 모두 0이면 단순 평균으로 fallback (주간보고와 동일 기준)
-  const progress =
-    totalWeight > 0
-      ? topLevelTasks.reduce((sum, t) => sum + t.weight * t.actualProgress, 0) / totalWeight
-      : topLevelTasks.reduce((sum, t) => sum + t.actualProgress, 0) / topLevelTasks.length;
-
-  return Math.round(progress);
+  return calculateProjectProgress(tasks, 'actualProgress');
 }
 
-// 숫자 포맷팅 (퍼센트)
-export function formatPercent(value: number): string {
-  return `${Math.round(value)}%`;
+// 전체 계획 공정율 계산 (동일 기준)
+export function calculateOverallPlanProgress(tasks: Task[]): number {
+  return calculateProjectProgress(tasks, 'planProgress');
+}
+
+// 숫자 포맷팅 (퍼센트) — 기본 소수점 1자리
+export function formatPercent(value: number, decimals?: number): string {
+  return formatProgress(value, decimals);
 }
 
 // 숫자 포맷팅 (소수점)

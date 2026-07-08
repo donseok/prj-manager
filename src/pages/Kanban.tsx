@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import { getProjectVisualTone } from '../lib/projectVisuals';
-import { cn } from '../lib/utils';
+import { cn, formatPercent } from '../lib/utils';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import KanbanColumn from '../components/kanban/KanbanColumn';
 import KanbanTaskEditModal from '../components/kanban/KanbanTaskEditModal';
@@ -355,7 +355,7 @@ export default function Kanban() {
           <div className="ml-auto flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
             <span>{t('kanban.taskCount', { count: stats.total })}</span>
             <span>·</span>
-            <span>{stats.overallProgress}%</span>
+            <span>{formatPercent(stats.overallProgress)}</span>
           </div>
         </div>
 
@@ -425,7 +425,7 @@ export default function Kanban() {
               <span className="h-3.5 w-px bg-[var(--border-color)]" />
               <span>{t('kanban.filterInProgress')}: <strong className="text-[color:var(--text-primary)]">{stats.inProgress}</strong></span>
               <span className="h-3.5 w-px bg-[var(--border-color)]" />
-              <span>{t('kanban.overallProgress')}: <strong className="text-[color:var(--text-primary)]">{stats.overallProgress}%</strong></span>
+              <span>{t('kanban.overallProgress')}: <strong className="text-[color:var(--text-primary)]">{formatPercent(stats.overallProgress)}</strong></span>
             </div>
           </div>
           <button
@@ -497,7 +497,7 @@ export default function Kanban() {
                   <Target className="h-3 w-3 text-white/60" />
                   <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('kanban.overallProgress')}</p>
                 </div>
-                <p className="mt-2 text-3xl font-semibold text-white">{stats.overallProgress}%</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{formatPercent(stats.overallProgress)}</p>
               </div>
             </div>
           </div>

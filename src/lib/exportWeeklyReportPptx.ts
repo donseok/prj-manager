@@ -8,6 +8,7 @@
 
 import PptxGenJS from 'pptxgenjs';
 import type { WeeklyReportData, WeeklyReportTask } from './weeklyReport';
+import { formatProgress } from './progress';
 import { ATTENDANCE_TYPE_COLORS } from '../types';
 
 // ── 색상 (동국제강그룹 CI 기반) ──────────────────────────────
@@ -122,7 +123,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.S
   const kpis = [
     { label: '전체 작업', value: `${report.summary.totalLeafTasks}건`, color: C.primary },
     { label: '완료', value: `${report.summary.completedTasks}건`, color: C.success },
-    { label: '실적 공정율', value: `${Math.round(report.summary.overallActualProgress)}%`, color: C.primaryLight },
+    { label: '실적 공정율', value: formatProgress(report.summary.overallActualProgress), color: C.primaryLight },
     { label: '지연', value: `${report.summary.delayedTasks}건`, color: C.accent },
   ];
 
@@ -173,7 +174,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.S
   const barH = 0.22;
 
   // 계획
-  slide.addText(`계획 공정율   ${Math.round(planPct)}%`, {
+  slide.addText(`계획 공정율   ${formatProgress(planPct)}`, {
     x: 0.6, y: barY + 0.35, w: 4, h: 0.2,
     fontSize: 9, fontFace: FONT, color: C.gray600,
   });
@@ -189,7 +190,7 @@ function addSummarySlide(pptx: PptxGenJS, report: WeeklyReportData): PptxGenJS.S
   }
 
   // 실적
-  slide.addText(`실적 공정율   ${Math.round(actualPct)}%`, {
+  slide.addText(`실적 공정율   ${formatProgress(actualPct)}`, {
     x: 0.6, y: barY + 0.95, w: 4, h: 0.2,
     fontSize: 9, fontFace: FONT, color: C.gray600,
   });
@@ -306,7 +307,7 @@ function addTaskTable(
         options: { fontSize: 7, bold: true, color: sc.font, fill: { color: sc.bg }, align: 'center' as const, fontFace: FONT, valign: 'middle' as const },
       },
       {
-        text: `${t.actualProgress}%`,
+        text: formatProgress(t.actualProgress),
         options: { fontSize: 7.5, color: C.dark, fill: { color: rowBg }, align: 'center' as const, fontFace: FONT, valign: 'middle' as const },
       },
     ];

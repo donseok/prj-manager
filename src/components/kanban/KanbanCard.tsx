@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
-import { cn, formatDate } from '../../lib/utils';
+import { cn, formatDate, formatPercent } from '../../lib/utils';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
 
 interface KanbanCardProps {
@@ -153,8 +153,8 @@ export default function KanbanCard({ task, childTasks, members, canEdit, onEditC
               }}
             />
           </div>
-          <span className="text-[11px] tabular-nums text-[var(--text-muted)] min-w-[28px] text-right">
-            {task.actualProgress}%
+          <span className="text-[11px] tabular-nums text-[var(--text-muted)] min-w-[44px] text-right">
+            {formatPercent(task.actualProgress)}
           </span>
         </div>
 

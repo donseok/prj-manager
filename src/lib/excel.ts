@@ -14,6 +14,7 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import type { ProjectMember, Task, TaskStatus } from '../types';
+import { formatProgress } from './progress';
 import { LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 import { buildTaskTree, formatDate, getDelayDays, parseDate } from './utils';
 
@@ -136,8 +137,8 @@ function levelFontStyle(level: number): Partial<ExcelJS.Font> {
 }
 
 function progressBar(progress: number): string {
-  const filled = Math.round(progress / 10);
-  return '█'.repeat(filled) + '░'.repeat(10 - filled) + ` ${progress}%`;
+  const filled = Math.min(10, Math.max(0, Math.round(progress / 10)));
+  return '█'.repeat(filled) + '░'.repeat(10 - filled) + ` ${formatProgress(progress)}`;
 }
 
 function createMemberNameMap(members: ProjectMember[]) {

@@ -1,5 +1,6 @@
 import type { Task, ProjectMember, TaskStatus } from '../types';
 import { getDelayedTasks, getDelayDays, calculateOverallProgress } from './utils';
+import { calculateProjectProgress, roundTo, PROGRESS_DISPLAY_DECIMALS } from './progress';
 import i18n from '../i18n';
 
 // ─── Leaf task filtering ─────────────────────────────────────
@@ -37,15 +38,7 @@ export function calculateProjectStats(tasks: Task[], baseDate?: Date): ProjectSt
   const inProgressTasks = leafTasks.filter((t) => t.status === 'in_progress');
   const delayedTasks = getDelayedTasks(leafTasks, baseDate);
   const overallProgress = calculateOverallProgress(tasks);
-
-  const phases = tasks.filter((t) => t.level === 1);
-  const totalPlanWeight = phases.reduce((sum, t) => sum + t.weight, 0);
-  const planProgress =
-    totalPlanWeight > 0
-      ? Math.round(phases.reduce((sum, t) => sum + t.weight * t.planProgress, 0) / totalPlanWeight)
-      : phases.length > 0
-        ? Math.round(phases.reduce((sum, t) => sum + t.planProgress, 0) / phases.length)
-        : 0;
+  const planProgress = calculateProjectProgress(tasks, 'planProgress');
 
   return {
     totalTasks: leafTasks.length,
@@ -143,8 +136,8 @@ export function calculatePhaseProgress(tasks: Task[]): PhaseProgressData[] {
     .sort((a, b) => a.orderIndex - b.orderIndex)
     .map((phase) => ({
       name: phase.name.length > 8 ? phase.name.slice(0, 8) + '\u2026' : phase.name,
-      계획: Math.round(phase.planProgress),
-      실적: Math.round(phase.actualProgress),
+      계획: roundTo(phase.planProgress, PROGRESS_DISPLAY_DECIMALS),
+      실적: roundTo(phase.actualProgress, PROGRESS_DISPLAY_DECIMALS),
     }));
 }
 

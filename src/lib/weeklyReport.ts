@@ -22,6 +22,7 @@ import type { Task, ProjectMember, Attendance, AttendanceType } from '../types';
 import i18n from '../i18n';
 import { getLeafTasks } from './taskAnalytics';
 import { parseDate } from './utils';
+import { calculateProjectProgress, roundTo, PROGRESS_DISPLAY_DECIMALS } from './progress';
 import { generateDefaultAttendance } from './attendanceDefaults';
 
 // ── Types ────────────────────────────────────────────────────
@@ -264,19 +265,10 @@ export function generateWeeklyReport({
   const completedAll = leafTasks.filter((t) => t.status === 'completed');
   const inProgressAll = leafTasks.filter((t) => t.status === 'in_progress');
   const onHoldAll = leafTasks.filter((t) => t.status === 'on_hold');
-  const totalWeight = leafTasks.reduce((s, t) => s + t.weight, 0);
-  const overallActualProgress =
-    totalWeight > 0
-      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.actualProgress, 0) / totalWeight)
-      : leafTasks.length > 0
-        ? Math.round(leafTasks.reduce((s, t) => s + t.actualProgress, 0) / leafTasks.length)
-        : 0;
-  const overallPlanProgress =
-    totalWeight > 0
-      ? Math.round(leafTasks.reduce((s, t) => s + t.weight * t.planProgress, 0) / totalWeight)
-      : leafTasks.length > 0
-        ? Math.round(leafTasks.reduce((s, t) => s + t.planProgress, 0) / leafTasks.length)
-        : 0;
+  // 대시보드/포트폴리오와 동일한 단일 기준(Phase 가중 롤업)을 사용한다.
+  // 리프 작업을 전역 가중 평균하면 Phase 가중치가 무시되어 화면마다 %가 달라진다.
+  const overallActualProgress = calculateProjectProgress(tasks, 'actualProgress');
+  const overallPlanProgress = calculateProjectProgress(tasks, 'planProgress');
 
   // 이슈 자동생성 (등급화 포함)
   const issues: string[] = [];
@@ -293,7 +285,7 @@ export function generateWeeklyReport({
     }
   }
   if (overallActualProgress < overallPlanProgress - 10) {
-    const gap = Math.round(overallPlanProgress - overallActualProgress);
+    const gap = roundTo(overallPlanProgress - overallActualProgress, PROGRESS_DISPLAY_DECIMALS);
     const msg = `계획 대비 실적 ${gap}%p 미달`;
     issues.push(msg);
     gradedIssues.push({ message: msg, severity: gap >= 20 ? 'high' : gap >= 10 ? 'medium' : 'low' });

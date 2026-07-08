@@ -2,6 +2,7 @@ import { differenceInCalendarDays, format } from 'date-fns';
 import type { Project, ProjectStatus, Task } from '../types';
 import { syncProjectTasks, upsertProject } from './dataRepository';
 import { getLeafTasks } from './taskAnalytics';
+import { roundProgress, weightedProgress, type ProgressField } from './progress';
 import { parseDate } from './utils';
 
 type InternalTask = Task & {
@@ -45,16 +46,9 @@ function filterReasonableDates(dates: Array<string | null | undefined>): Array<s
   });
 }
 
-function calculateAggregateProgress(tasks: Task[], field: 'planProgress' | 'actualProgress') {
-  if (tasks.length === 0) return 0;
-
-  const totalWeight = tasks.reduce((sum, task) => sum + task.weight, 0);
-  const value =
-    totalWeight > 0
-      ? tasks.reduce((sum, task) => sum + task.weight * task[field], 0) / totalWeight
-      : tasks.reduce((sum, task) => sum + task[field], 0) / tasks.length;
-
-  return Math.round(value);
+function calculateAggregateProgress(tasks: Task[], field: ProgressField) {
+  // 롤업 단계마다 정수로 반올림하면 오차가 누적되므로 저장 정밀도(소수점 2자리)를 유지한다.
+  return roundProgress(weightedProgress(tasks, field));
 }
 
 
@@ -74,7 +68,7 @@ function calculateLeafPlanProgress(task: Task, today: Date): number {
 
   const elapsedDays = differenceInCalendarDays(today, start);
   const progress = (elapsedDays / totalDays) * 100;
-  return Math.round(Math.min(100, Math.max(0, progress)));
+  return roundProgress(Math.min(100, Math.max(0, progress)));
 }
 
 function deriveParentStatus(children: Task[]): Task['status'] {

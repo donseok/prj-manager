@@ -17,6 +17,7 @@ import type { WeeklyReportData, WeeklyReportTask, WeeklyAttendanceSummary } from
 import type { Task, WeeklyReportTemplate } from '../types';
 import { ATTENDANCE_TYPE_COLORS, LEVEL_LABELS, TASK_STATUS_LABELS } from '../types';
 import { lightenHex, reconcileProgressCategories } from './weeklyReportTemplate';
+import { formatProgress, roundTo, PROGRESS_DISPLAY_DECIMALS } from './progress';
 import { computeSCurve, renderSCurvePng } from './weeklyReportChart';
 import type { WeeklySnapshot } from './weeklySnapshot';
 import { format, differenceInCalendarDays } from 'date-fns';
@@ -234,9 +235,9 @@ function writeProgressReportSheet(
 
   resolvedCategories.forEach((cat, idx) => {
     const breakdown = cat.phaseId ? phaseMap.get(cat.phaseId) : undefined;
-    const plan = breakdown ? Math.round(breakdown.planProgress * 10) / 10 : 0;
-    const actual = breakdown ? Math.round(breakdown.actualProgress * 10) / 10 : 0;
-    const gap = Math.round((plan - actual) * 10) / 10;
+    const plan = breakdown ? roundTo(breakdown.planProgress, PROGRESS_DISPLAY_DECIMALS) : 0;
+    const actual = breakdown ? roundTo(breakdown.actualProgress, PROGRESS_DISPLAY_DECIMALS) : 0;
+    const gap = roundTo(plan - actual, PROGRESS_DISPLAY_DECIMALS);
     const progressBar = makeProgressBar(actual);
     const note = breakdown && breakdown.delayedTasks > 0 ? `지연 조치 필요` : breakdown && actual >= plan ? '정상' : '';
 
@@ -281,9 +282,9 @@ function writeProgressReportSheet(
 
   // 합계
   const totalWeight = resolvedCategories.reduce((s, c) => s + c.weight, 0);
-  const planTot = Math.round(report.summary.overallPlanProgress * 10) / 10;
-  const actualTot = Math.round(report.summary.overallActualProgress * 10) / 10;
-  const gapTot = Math.round((planTot - actualTot) * 10) / 10;
+  const planTot = roundTo(report.summary.overallPlanProgress, PROGRESS_DISPLAY_DECIMALS);
+  const actualTot = roundTo(report.summary.overallActualProgress, PROGRESS_DISPLAY_DECIMALS);
+  const gapTot = roundTo(planTot - actualTot, PROGRESS_DISPLAY_DECIMALS);
   const total = ws.addRow([
     '합계', '', totalWeight, planTot, actualTot, gapTot,
     `${report.summary.completedTasks}/${report.summary.totalLeafTasks}`,
@@ -328,7 +329,7 @@ function writeProgressReportSheet(
       const dDayLabel = ms.daysUntil < 0 ? `${Math.abs(ms.daysUntil)}일 경과` : ms.daysUntil === 0 ? 'D-Day' : `D-${ms.daysUntil}`;
       const row = ws.addRow([
         ms.levelLabel, ms.taskName, '', '', ms.planEnd,
-        `${makeProgressBar(ms.actualProgress)} ${Math.round(ms.actualProgress)}%`,
+        `${makeProgressBar(ms.actualProgress)} ${formatProgress(ms.actualProgress)}`,
         dDayLabel, ms.statusLabel, '', '', '', '',
       ]);
       ws.mergeCells(row.number, 2, row.number, 4);
@@ -503,7 +504,7 @@ function writeKpiStrip(
   const s = report.summary;
   const completion = s.totalLeafTasks > 0 ? Math.round((s.completedTasks / s.totalLeafTasks) * 100) : 0;
   const delayRate = s.totalLeafTasks > 0 ? Math.round((s.delayedTasks / s.totalLeafTasks) * 100) : 0;
-  const gap = Math.round((s.overallPlanProgress - s.overallActualProgress) * 10) / 10;
+  const gap = roundTo(s.overallPlanProgress - s.overallActualProgress, PROGRESS_DISPLAY_DECIMALS);
   // 보류(on_hold)는 미착수(대기)가 아니라 별도 상태이므로 pending 에서 제외해야
   // 같은 워크북의 프로그램개발현황 시트(보류 별도 표기)와 모순되지 않는다.
   const pending = s.totalLeafTasks - s.completedTasks - s.inProgressTasks - s.onHoldTasks;
@@ -512,7 +513,7 @@ function writeKpiStrip(
   const phases = allTasks.filter((t) => t.level === 1);
 
   const kpis: Array<{ label: string; value: string; sub?: string; tone?: 'good' | 'warn' | 'bad' | 'info' }> = [
-    { label: '프로젝트 진척', value: `${Math.round(s.overallActualProgress)}%`, sub: `계획 ${Math.round(s.overallPlanProgress)}%`, tone: gap > 10 ? 'bad' : gap > 5 ? 'warn' : 'good' },
+    { label: '프로젝트 진척', value: formatProgress(s.overallActualProgress), sub: `계획 ${formatProgress(s.overallPlanProgress)}`, tone: gap > 10 ? 'bad' : gap > 5 ? 'warn' : 'good' },
     { label: '계획-실적 격차', value: `${gap >= 0 ? '-' : '+'}${Math.abs(gap)}%p`, sub: gap > 0 ? '지연' : '정상', tone: gap > 10 ? 'bad' : gap > 0 ? 'warn' : 'good' },
     { label: '전체 작업', value: `${s.totalLeafTasks}`, sub: `${phases.length}개 Phase`, tone: 'info' },
     { label: '완료', value: `${s.completedTasks}`, sub: `${completion}%`, tone: 'good' },
@@ -615,8 +616,8 @@ function writePhaseActualPlanTable(
 
   phases.forEach((phase, idx) => {
     const bd = phaseMap.get(phase.id);
-    const plan = bd ? Math.round(bd.planProgress * 10) / 10 : 0;
-    const actual = bd ? Math.round(bd.actualProgress * 10) / 10 : 0;
+    const plan = bd ? roundTo(bd.planProgress, PROGRESS_DISPLAY_DECIMALS) : 0;
+    const actual = bd ? roundTo(bd.actualProgress, PROGRESS_DISPLAY_DECIMALS) : 0;
 
     const thisWeekList = [
       ...(thisWeekTasksByPhase.get(phase.id) || []).map((t) => bulletTask('▸', t, allTasks, memberNames)),
@@ -789,9 +790,9 @@ function writeWBSSheet(
 
   ordered.forEach((t, idx) => {
     const assignee = t.assigneeId ? memberNames.get(t.assigneeId) || '-' : '-';
-    const planP = Math.round(t.planProgress);
-    const actualP = Math.round(t.actualProgress);
-    const gap = planP - actualP;
+    const planP = roundTo(t.planProgress, PROGRESS_DISPLAY_DECIMALS);
+    const actualP = roundTo(t.actualProgress, PROGRESS_DISPLAY_DECIMALS);
+    const gap = roundTo(planP - actualP, PROGRESS_DISPLAY_DECIMALS);
 
     const isDelayed = !!t.planEnd && t.planEnd < nowStr && t.status !== 'completed' && actualP < 100;
     const delayDays = isDelayed && t.planEnd ? differenceInCalendarDays(now, new Date(t.planEnd)) : 0;
@@ -864,10 +865,10 @@ function writeWBSSheet(
     '합계', '', '', '', '',
     allTasks.reduce((s, t) => s + (t.level === 1 ? (t.weight || 0) : 0), 0),
     '', '',
-    Math.round(report.summary.overallPlanProgress),
+    roundTo(report.summary.overallPlanProgress, PROGRESS_DISPLAY_DECIMALS),
     '', '',
-    Math.round(report.summary.overallActualProgress),
-    Math.round((report.summary.overallPlanProgress - report.summary.overallActualProgress) * 10) / 10,
+    roundTo(report.summary.overallActualProgress, PROGRESS_DISPLAY_DECIMALS),
+    roundTo(report.summary.overallPlanProgress - report.summary.overallActualProgress, PROGRESS_DISPLAY_DECIMALS),
     '', '', '',
   ]);
   ws.mergeCells(summaryRow.number, 1, summaryRow.number, 5);
@@ -970,7 +971,7 @@ function writeDevStatusSheet(
     if (!!t.planEnd && t.planEnd < nowStr && t.actualProgress < 100) entry.delayed += 1;
     byAssignee.set(name, entry);
   }
-  for (const v of byAssignee.values()) v.avgProgress = v.total > 0 ? Math.round(v._progSum / v.total) : 0;
+  for (const v of byAssignee.values()) v.avgProgress = v.total > 0 ? roundTo(v._progSum / v.total, PROGRESS_DISPLAY_DECIMALS) : 0;
 
   const assigneeSummary = Array.from(byAssignee.entries())
     .map(([name, v]) => `${name}: ${v.total}건(지연${v.delayed}, 평균${v.avgProgress}%)`)
@@ -1031,9 +1032,9 @@ function writeDevStatusSheet(
       t.weight || 0,
       t.planStart || '',
       t.planEnd || '',
-      Math.round(t.planProgress),
+      roundTo(t.planProgress, PROGRESS_DISPLAY_DECIMALS),
       t.actualStart || '',
-      Math.round(t.actualProgress),
+      roundTo(t.actualProgress, PROGRESS_DISPLAY_DECIMALS),
       delayDays > 0 ? delayDays : '',
       TASK_STATUS_LABELS[t.status] || t.status,
       note,
@@ -1216,7 +1217,7 @@ function writeSingleSheetLegacy(wb: ExcelJS.Workbook, report: WeeklyReportData) 
   const s = report.summary;
   const summary = [
     ['전체', `${s.totalLeafTasks}건`, '완료', `${s.completedTasks}건`, '진행중', `${s.inProgressTasks}건`, '지연', `${s.delayedTasks}건`, ''],
-    ['계획', `${Math.round(s.overallPlanProgress)}%`, '실적', `${Math.round(s.overallActualProgress)}%`, '', '', '', '', ''],
+    ['계획', formatProgress(s.overallPlanProgress), '실적', formatProgress(s.overallActualProgress), '', '', '', '', ''],
   ];
   summary.forEach((data) => {
     const row = ws.addRow(data);

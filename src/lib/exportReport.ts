@@ -21,11 +21,13 @@ import {
 import type { Task, Project, ProjectMember } from '../types';
 import {
   calculateOverallProgress,
+  calculateOverallPlanProgress,
   getDelayedTasks,
   getWeeklyTasks,
   formatDate,
   getDelayDays,
 } from './utils';
+import { formatProgress, roundTo, PROGRESS_DISPLAY_DECIMALS } from './progress';
 
 // CSS 변수를 실제 값으로 치환하는 헬퍼
 function resolveCssVar(value: string): string {
@@ -169,10 +171,8 @@ export async function generateProjectReport({ project, tasks, members }: ReportD
   const nextWeekTasks = getWeeklyTasks(tasks, 'next');
 
   const phases = tasks.filter(t => t.level === 1).sort((a, b) => a.orderIndex - b.orderIndex);
-  const totalWeight = phases.reduce((sum, p) => sum + p.weight, 0);
-  const planProgress = totalWeight > 0
-    ? Math.round(phases.reduce((sum, p) => sum + p.weight * p.planProgress, 0) / totalWeight)
-    : 0;
+  // 대시보드/주간보고와 동일한 단일 기준 (src/lib/progress.ts)
+  const planProgress = calculateOverallPlanProgress(tasks);
 
   // 일정 계산
   let timelineInfo = '';
@@ -346,9 +346,9 @@ export async function generateProjectReport({ project, tasks, members }: ReportD
   const progCol1 = 3000;
   const progCol2 = CONTENT_WIDTH - progCol1;
   const progressRows: [string, string][] = [
-    ['계획 공정율', `${Math.round(planProgress)}%`],
-    ['실적 공정율', `${Math.round(overallProgress)}%`],
-    ['Gap', `${Math.round(overallProgress - planProgress)}%p`],
+    ['계획 공정율', formatProgress(planProgress)],
+    ['실적 공정율', formatProgress(overallProgress)],
+    ['Gap', `${roundTo(overallProgress - planProgress, PROGRESS_DISPLAY_DECIMALS)}%p`],
   ];
 
   children.push(new Table({
@@ -445,15 +445,15 @@ export async function generateProjectReport({ project, tasks, members }: ReportD
         ],
       }),
       ...phases.map((phase, i) => {
-        const gap = Math.round(phase.actualProgress - phase.planProgress);
+        const gap = roundTo(phase.actualProgress - phase.planProgress, PROGRESS_DISPLAY_DECIMALS);
         const gapColor = gap >= 0 ? '2FA67C' : 'CB4B5F';
         return new TableRow({
           children: [
             dataCell(`${i + 1}`, phaseColWidths[0], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
             dataCell(phase.name, phaseColWidths[1], { shading: i % 2 === 0 ? altShading : undefined }),
             dataCell(`${phase.weight}`, phaseColWidths[2], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
-            dataCell(`${Math.round(phase.planProgress)}%`, phaseColWidths[3], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
-            dataCell(`${Math.round(phase.actualProgress)}%`, phaseColWidths[4], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
+            dataCell(formatProgress(phase.planProgress), phaseColWidths[3], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
+            dataCell(formatProgress(phase.actualProgress), phaseColWidths[4], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
             dataCell(`${gap >= 0 ? '+' : ''}${gap}%p`, phaseColWidths[5], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined, bold: true, color: gapColor }),
           ],
         });
@@ -578,7 +578,7 @@ export async function generateProjectReport({ project, tasks, members }: ReportD
               dataCell(task.name, delayCols[1], { shading: i % 2 === 0 ? altShading : undefined }),
               dataCell(STATUS_LABELS[task.status] || task.status, delayCols[2], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
               dataCell(formatDate(task.planEnd), delayCols[3], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
-              dataCell(`${Math.round(task.actualProgress)}%`, delayCols[4], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
+              dataCell(formatProgress(task.actualProgress), delayCols[4], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined }),
               dataCell(`${days}일`, delayCols[5], { alignment: AlignmentType.CENTER, shading: i % 2 === 0 ? altShading : undefined, bold: true, color: 'CB4B5F' }),
             ],
           });

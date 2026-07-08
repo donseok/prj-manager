@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import Modal from './common/Modal';
 import { cn, generateId } from '../lib/utils';
+import { formatProgress, roundTo, PROGRESS_DISPLAY_DECIMALS } from '../lib/progress';
 import {
   generateWeeklyReport,
   type WeeklyReportSection,
@@ -529,7 +530,7 @@ function OverviewTab({
         />
         <KpiCard
           label={t('weeklyReport.actualProgress')}
-          value={Math.round(report.summary.overallActualProgress)}
+          value={roundTo(report.summary.overallActualProgress, PROGRESS_DISPLAY_DECIMALS).toFixed(PROGRESS_DISPLAY_DECIMALS)}
           unit="%"
           icon={<TrendingUp className="h-4 w-4" />}
           gradient="from-[#5B8DEF] to-[#A78BFA]"
@@ -629,7 +630,7 @@ function OverviewTab({
                 ? 'bg-[rgba(203,109,55,0.12)] text-[color:var(--accent-warning)]'
                 : 'bg-[rgba(203,75,95,0.12)] text-[color:var(--accent-danger)]'
           )}>
-            {progressGap <= 0 ? t('weeklyReport.onTrack') : `${Math.round(progressGap)}%p ${t('weeklyReport.behind')}`}
+            {progressGap <= 0 ? t('weeklyReport.onTrack') : `${roundTo(progressGap, PROGRESS_DISPLAY_DECIMALS)}%p ${t('weeklyReport.behind')}`}
           </span>
         </div>
 
@@ -638,7 +639,7 @@ function OverviewTab({
             <div className="flex items-center justify-between text-sm mb-1.5">
               <span className="text-[color:var(--text-secondary)]">{t('weeklyReport.planProgress')}</span>
               <span className="font-semibold text-[color:var(--text-primary)]">
-                {Math.round(report.summary.overallPlanProgress)}%
+                {formatProgress(report.summary.overallPlanProgress)}
               </span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-[rgba(91,141,239,0.1)]">
@@ -653,7 +654,7 @@ function OverviewTab({
             <div className="flex items-center justify-between text-sm mb-1.5">
               <span className="text-[color:var(--text-secondary)]">{t('weeklyReport.actualProgressRate')}</span>
               <span className="font-semibold text-[color:var(--text-primary)]">
-                {Math.round(report.summary.overallActualProgress)}%
+                {formatProgress(report.summary.overallActualProgress)}
               </span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-[rgba(15,118,110,0.08)]">
@@ -704,7 +705,7 @@ function OverviewTab({
                           style={{ width: `${phase.planProgress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] font-semibold text-[color:var(--text-secondary)] w-9 text-right">{Math.round(phase.planProgress)}%</span>
+                      <span className="text-[10px] font-semibold text-[color:var(--text-secondary)] w-12 text-right">{formatProgress(phase.planProgress)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-[color:var(--text-muted)] w-7 shrink-0">{t('weeklyReport.actual')}</span>
@@ -715,9 +716,9 @@ function OverviewTab({
                         />
                       </div>
                       <span className={cn(
-                        'text-[10px] font-semibold w-9 text-right',
+                        'text-[10px] font-semibold w-12 text-right',
                         gap > 5 ? 'text-[color:var(--accent-danger)]' : 'text-[color:var(--text-secondary)]'
-                      )}>{Math.round(phase.actualProgress)}%</span>
+                      )}>{formatProgress(phase.actualProgress)}</span>
                     </div>
                   </div>
                 </div>
@@ -771,7 +772,7 @@ function OverviewTab({
                     </span>
                   </div>
                   <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">
-                    {ms.planEnd} · {ms.statusLabel} · {Math.round(ms.actualProgress)}%
+                    {ms.planEnd} · {ms.statusLabel} · {formatProgress(ms.actualProgress)}
                   </p>
                 </div>
                 <span className={cn(
@@ -1173,7 +1174,7 @@ function KpiCard({
   inverseDelta = false,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   unit: string;
   icon: React.ReactNode;
   gradient: string;
@@ -1428,8 +1429,8 @@ function TaskRow({ task }: { task: WeeklyReportTask }) {
               style={{ width: `${task.actualProgress}%` }}
             />
           </div>
-          <span className="text-xs font-semibold text-[color:var(--text-secondary)] w-8 text-right">
-            {task.actualProgress}%
+          <span className="text-xs font-semibold text-[color:var(--text-secondary)] w-12 text-right">
+            {formatProgress(task.actualProgress)}
           </span>
         </div>
       </td>

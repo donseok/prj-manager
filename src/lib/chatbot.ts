@@ -1,10 +1,14 @@
 import { type Project, type ProjectMember, type Task, type TaskStatus } from '../types';
 import i18n from '../i18n';
 
+/** 공정율을 '%' 없이 소수점 1자리 문자열로 (템플릿에서 %를 직접 붙인다) */
+const fmt = (value: number) => roundTo(value, PROGRESS_DISPLAY_DECIMALS).toFixed(PROGRESS_DISPLAY_DECIMALS);
+
 const tTaskStatus = (s: TaskStatus | string) => i18n.t(`labels.taskStatus.${s}`, { defaultValue: String(s) });
 const tProjectStatus = (s: string) => i18n.t(`labels.projectStatus.${s}`, { defaultValue: String(s) });
 const tLevel = (level: number | string, fallback = '작업') => i18n.t(`labels.level.${level}`, { defaultValue: fallback });
-import { calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
+import { calculateOverallPlanProgress, calculateOverallProgress, formatDate, getDelayedTasks, getDelayDays, getWeeklyTasks } from './utils';
+import { roundTo, PROGRESS_DISPLAY_DECIMALS } from './progress';
 import { getLeafTasks, getAssigneeName, calculateAssigneeWorkloads } from './taskAnalytics';
 import { supabase } from './supabase';
 import { loadProjectMembers, loadProjectTasks } from './dataRepository';
@@ -583,7 +587,7 @@ function getPriorityTasks(tasks: Task[], baseDate: Date): { task: Task; urgency:
           const progressRatio = task.actualProgress / 100;
           if (timeRatio > progressRatio + 0.2) {
             urgency += (timeRatio - progressRatio) * 10;
-            reasons.push(`기간 ${Math.round(timeRatio * 100)}% 소진, 진행 ${Math.round(task.actualProgress)}%`);
+            reasons.push(`기간 ${Math.round(timeRatio * 100)}% 소진, 진행 ${fmt(task.actualProgress)}%`);
           }
         }
       }
@@ -625,7 +629,7 @@ function buildGreeting(context: ChatbotContext): string {
   const projectCount = context.allProjects.filter((p) => p.status !== 'deleted').length;
   if (context.project) {
     const leafTasks = getLeafTasks(context.tasks);
-    const progress = Math.round(calculateOverallProgress(context.tasks));
+    const progress = fmt(calculateOverallProgress(context.tasks));
     const baseDate = getBaseDate(context.project);
     const delayed = getDelayedTasks(leafTasks, baseDate);
     return [
@@ -706,7 +710,7 @@ function buildProjectDetailAnswer(rc: ResolvedContext): string {
   const pending = leafTasks.filter((t) => t.status === 'pending').length;
   const onHold = leafTasks.filter((t) => t.status === 'on_hold').length;
   const delayed = getDelayedTasks(leafTasks, baseDate);
-  const progress = Math.round(calculateOverallProgress(rc.tasks));
+  const progress = fmt(calculateOverallProgress(rc.tasks));
   const unassigned = leafTasks.filter((t) => !t.assigneeId).length;
 
   const lines = [
@@ -746,7 +750,7 @@ function buildDelayAnswer(rc: ResolvedContext): string {
   const lines = [
     `"${rc.project.name}" 지연 작업 ${delayed.length}건`,
     ...delayed.slice(0, 7).map((t, i) =>
-      `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | 마감 ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연 | ${Math.round(t.actualProgress)}%`
+      `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | 마감 ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연 | ${fmt(t.actualProgress)}%`
     ),
   ];
 
@@ -767,7 +771,7 @@ function buildWeeklyAnswer(rc: ResolvedContext, type: 'this' | 'next'): string {
   const lines = [
     `"${rc.project.name}" ${label} 작업 ${weekly.length}건`,
     ...weekly.slice(0, 7).map((t, i) =>
-      `${i + 1}. ${t.name} | ${formatTaskPeriod(t)} | ${getAssigneeName(t, rc.members)} | ${Math.round(t.actualProgress)}%`
+      `${i + 1}. ${t.name} | ${formatTaskPeriod(t)} | ${getAssigneeName(t, rc.members)} | ${fmt(t.actualProgress)}%`
     ),
   ];
 
@@ -819,7 +823,7 @@ function buildMemberDetailAnswer(member: ProjectMember, rc: ResolvedContext): st
     `총 ${mt.length}건 | 진행 ${inProgress} | 완료 ${completed} | 대기 ${pending} | 지연 ${delayed.length}`,
     '',
     ...mt.slice(0, 6).map((t) =>
-      `- ${t.name} | ${tTaskStatus(t.status)} | ${Math.round(t.actualProgress)}%${getDelayDays(t, baseDate) > 0 ? ` | ${getDelayDays(t, baseDate)}일 지연` : ''}`
+      `- ${t.name} | ${tTaskStatus(t.status)} | ${fmt(t.actualProgress)}%${getDelayDays(t, baseDate) > 0 ? ` | ${getDelayDays(t, baseDate)}일 지연` : ''}`
     ),
   ];
 
@@ -841,7 +845,7 @@ function buildMemberDelayAnswer(member: ProjectMember, rc: ResolvedContext): str
   return [
     `${member.name}님 지연 작업 ${delayed.length}건`,
     ...delayed.slice(0, 5).map((t, i) =>
-      `${i + 1}. ${t.name} | 마감 ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연 | ${Math.round(t.actualProgress)}%`
+      `${i + 1}. ${t.name} | 마감 ${formatDate(t.planEnd)} | ${getDelayDays(t, baseDate)}일 지연 | ${fmt(t.actualProgress)}%`
     ),
   ].join('\n');
 }
@@ -855,7 +859,7 @@ function buildMemberWeeklyAnswer(member: ProjectMember, rc: ResolvedContext): st
   return [
     `${member.name}님 이번 주 작업 ${weekly.length}건`,
     ...weekly.slice(0, 5).map((t, i) =>
-      `${i + 1}. ${t.name} | ${formatTaskPeriod(t)} | ${Math.round(t.actualProgress)}%`
+      `${i + 1}. ${t.name} | ${formatTaskPeriod(t)} | ${fmt(t.actualProgress)}%`
     ),
   ].join('\n');
 }
@@ -870,7 +874,7 @@ function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
   const lines = [
     `"${task.name}" 상세 ("${rc.project.name}")`,
     `구분: ${tLevel(task.level)} | 상태: ${tTaskStatus(task.status)}`,
-    `담당: ${assignee} | 공정률: ${Math.round(task.actualProgress)}%`,
+    `담당: ${assignee} | 공정률: ${fmt(task.actualProgress)}%`,
     `계획: ${formatTaskPeriod(task)}`,
     task.actualStart || task.actualEnd
       ? `실적: ${formatDate(task.actualStart) || '미정'} ~ ${formatDate(task.actualEnd) || '미정'}`
@@ -890,7 +894,7 @@ function buildTaskDetailAnswer(task: Task, rc: ResolvedContext): string {
   if (children.length > 0) {
     lines.push(`하위 작업 ${children.length}건`);
     children.slice(0, 3).forEach((c) => {
-      lines.push(`  - ${c.name} | ${tTaskStatus(c.status)} | ${Math.round(c.actualProgress)}%`);
+      lines.push(`  - ${c.name} | ${tTaskStatus(c.status)} | ${fmt(c.actualProgress)}%`);
     });
     if (children.length > 3) lines.push(`  외 ${children.length - 3}건`);
   }
@@ -907,7 +911,7 @@ function buildStatusFilterAnswer(status: TaskStatus, rc: ResolvedContext): strin
   const lines = [
     `"${rc.project.name}" ${label} 작업 ${filtered.length}건`,
     ...filtered.slice(0, 10).map((t, i) =>
-      `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | ${Math.round(t.actualProgress)}%`
+      `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | ${fmt(t.actualProgress)}%`
     ),
   ];
 
@@ -928,7 +932,7 @@ function buildUpcomingDeadlineAnswer(rc: ResolvedContext): string {
     `"${rc.project.name}" 마감 임박 작업 (7일 이내) ${upcoming.length}건`,
     ...upcoming.slice(0, 7).map((t, i) => {
       const daysLeft = differenceInDays(parseISO(t.planEnd!), baseDate);
-      return `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | 마감 ${formatDate(t.planEnd)} (${daysLeft === 0 ? '오늘' : `${daysLeft}일 후`}) | ${Math.round(t.actualProgress)}%`;
+      return `${i + 1}. ${t.name} | ${getAssigneeName(t, rc.members)} | 마감 ${formatDate(t.planEnd)} (${daysLeft === 0 ? '오늘' : `${daysLeft}일 후`}) | ${fmt(t.actualProgress)}%`;
     }),
     upcoming.length > 7 ? `외 ${upcoming.length - 7}건` : '',
   ].filter(Boolean).join('\n');
@@ -966,19 +970,15 @@ function buildPriorityAnswer(rc: ResolvedContext): string {
 function buildProgressCompareAnswer(rc: ResolvedContext): string {
   const baseDate = getBaseDate(rc.project);
   const leafTasks = getLeafTasks(rc.tasks);
-  const progress = Math.round(calculateOverallProgress(rc.tasks));
+  const progressValue = calculateOverallProgress(rc.tasks);
+  const progress = fmt(progressValue);
 
-  // 계획 공정률 계산 (기간 대비 경과 비율)
-  let planProgress = 0;
-  if (rc.project.startDate && rc.project.endDate) {
-    const totalDays = differenceInDays(parseISO(rc.project.endDate), parseISO(rc.project.startDate));
-    const elapsed = differenceInDays(baseDate, parseISO(rc.project.startDate));
-    if (totalDays > 0) {
-      planProgress = Math.min(100, Math.round((elapsed / totalDays) * 100));
-    }
-  }
+  // 계획 공정률 — 대시보드/주간보고와 동일한 단일 기준 (Phase 가중 롤업)
+  const planProgressValue = calculateOverallPlanProgress(rc.tasks);
+  const planProgress = fmt(planProgressValue);
 
-  const gap = progress - planProgress;
+  const gapValue = progressValue - planProgressValue;
+  const gap = fmt(Math.abs(gapValue));
   const delayed = getDelayedTasks(leafTasks, baseDate);
 
   // 작업별 진행률 vs 기간 소진률 비교
@@ -996,8 +996,8 @@ function buildProgressCompareAnswer(rc: ResolvedContext): string {
 
   const lines = [
     `"${rc.project.name}" 계획 대비 실적 분석`,
-    planProgress > 0
-      ? `전체: 계획 ${planProgress}% 시점 → 실적 ${progress}% (${gap >= 0 ? `+${gap}%p 앞서는 중` : `${gap}%p 뒤처지는 중`})`
+    planProgressValue > 0
+      ? `전체: 계획 ${planProgress}% 시점 → 실적 ${progress}% (${gapValue >= 0 ? `+${gap}%p 앞서는 중` : `-${gap}%p 뒤처지는 중`})`
       : `전체 공정률: ${progress}%`,
     `지연 작업: ${delayed.length}건`,
   ];
@@ -1005,7 +1005,7 @@ function buildProgressCompareAnswer(rc: ResolvedContext): string {
   if (behindSchedule.length > 0) {
     lines.push(`\n기간 대비 진행이 부족한 작업:`);
     behindSchedule.slice(0, 5).forEach((item, i) => {
-      lines.push(`${i + 1}. ${item.task.name} | 진행 ${Math.round(item.task.actualProgress)}% | 차이 ${Math.round(item.gap * 100)}%p`);
+      lines.push(`${i + 1}. ${item.task.name} | 진행 ${fmt(item.task.actualProgress)}% | 차이 ${Math.round(item.gap * 100)}%p`);
     });
   } else {
     lines.push('기간 대비 진행이 부족한 작업이 없습니다.');
@@ -1296,7 +1296,7 @@ function buildFallbackFromLocal(question: string, context: ChatbotContext): stri
       '관련 가능성이 높은 작업입니다.',
       ...scored.map((s) => {
         const t = s.task;
-        return `- ${t.name} | ${tTaskStatus(t.status)} | ${Math.round(t.actualProgress)}%`;
+        return `- ${t.name} | ${tTaskStatus(t.status)} | ${fmt(t.actualProgress)}%`;
       }),
       '',
       '작업명을 포함하여 다시 질문하시면 상세 정보를 드릴 수 있습니다.',
@@ -1347,7 +1347,7 @@ async function searchSupabaseForAnswer(question: string): Promise<string | null>
       return [
         'DB에서 관련 작업을 찾았습니다.',
         ...tasks.map((t: { name: string; status: string; actual_progress: number }) =>
-          `- ${t.name} | ${tTaskStatus(t.status as TaskStatus)} | ${Math.round(t.actual_progress)}%`
+          `- ${t.name} | ${tTaskStatus(t.status as TaskStatus)} | ${fmt(t.actual_progress)}%`
         ),
       ].join('\n');
     }
@@ -1415,7 +1415,7 @@ function handleFollowUp(followUp: FollowUpResult, lastBotMessage: string, contex
     return [
       `${label} 작업 ${filtered.length}건`,
       ...filtered.slice(0, 10).map((t, i) =>
-        `${i + 1}. ${t.name} | ${getAssigneeName(t, context.members)} | ${Math.round(t.actualProgress)}%`
+        `${i + 1}. ${t.name} | ${getAssigneeName(t, context.members)} | ${fmt(t.actualProgress)}%`
       ),
       filtered.length > 10 ? `외 ${filtered.length - 10}건` : '',
     ].filter(Boolean).join('\n');

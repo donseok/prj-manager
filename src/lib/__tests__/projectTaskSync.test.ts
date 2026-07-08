@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { normalizeTaskHierarchy } from '../projectTaskSync';
+import { roundProgress } from '../progress';
 import type { Task } from '../../types';
 
 const now = new Date().toISOString();
@@ -217,10 +218,11 @@ describe('normalizeTaskHierarchy', () => {
       // Parent gets latest planEnd
       expect(parent?.planEnd).toBe('2026-12-31');
 
-      // Parent planProgress is weighted average of children's planProgress
+      // Parent planProgress is weighted average of children's planProgress,
+      // 저장 정밀도(소수점 2자리)를 유지한다 — 롤업 단계마다 정수로 깎으면 오차가 누적된다.
       const childA = result.find((t) => t.id === 'child-a');
       const childB = result.find((t) => t.id === 'child-b');
-      const expectedProgress = Math.round(
+      const expectedProgress = roundProgress(
         (childA!.planProgress * 3 + childB!.planProgress * 1) / 4,
       );
       expect(parent?.planProgress).toBe(expectedProgress);

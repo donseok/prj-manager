@@ -48,6 +48,7 @@ import {
   generateId,
   cn,
   calculateOverallProgress,
+  formatPercent,
   getDelayedTasks,
 } from '../lib/utils';
 import { getLeafTasks, getAssigneeName } from '../lib/taskAnalytics';
@@ -1259,7 +1260,7 @@ export default function WBS() {
                 style={{ width: `${planValue}%` }}
               />
             </div>
-            <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{planValue}%</span>
+            <span className="w-12 text-right text-xs text-[color:var(--text-secondary)]">{formatPercent(planValue)}</span>
           </div>
         );
       }
@@ -1282,7 +1283,7 @@ export default function WBS() {
                   style={{ width: `${actualValue}%` }}
                 />
               </div>
-              <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{actualValue}%</span>
+              <span className="w-12 text-right text-xs text-[color:var(--text-secondary)]">{formatPercent(actualValue)}</span>
             </div>
           );
         }
@@ -1322,7 +1323,7 @@ export default function WBS() {
                 style={{ width: `${actualValue}%` }}
               />
             </div>
-            <span className="w-8 text-right text-xs text-[color:var(--text-secondary)]">{actualValue}%</span>
+            <span className="w-12 text-right text-xs text-[color:var(--text-secondary)]">{formatPercent(actualValue)}</span>
           </div>
         );
       }
@@ -1657,7 +1658,7 @@ export default function WBS() {
               <span className="h-3.5 w-px bg-[var(--border-color)]" />
               <span>{t('wbs.heroDelayed')}: <strong className="text-[color:var(--accent-danger)]">{wbsStats.delayed}</strong></span>
               <span className="h-3.5 w-px bg-[var(--border-color)]" />
-              <span>{t('wbs.heroProgress')}: <strong className="text-[color:var(--text-primary)]">{wbsStats.overallProgress}%</strong></span>
+              <span>{t('wbs.heroProgress')}: <strong className="text-[color:var(--text-primary)]">{formatPercent(wbsStats.overallProgress)}</strong></span>
             </div>
           </div>
           <button
@@ -1728,7 +1729,7 @@ export default function WBS() {
                     <Target className="h-3 w-3 text-white/60" />
                     <p className="text-[11px] uppercase tracking-[0.28em] text-white/84">{t('wbs.heroProgress')}</p>
                   </div>
-                  <p className="mt-2 text-3xl font-semibold text-white">{wbsStats.overallProgress}%</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">{formatPercent(wbsStats.overallProgress)}</p>
                   <p className="mt-1 text-sm text-white/88">{t('wbs.heroProgressDesc')}</p>
                 </div>
               </div>

@@ -20,7 +20,7 @@ import { useTaskStore } from '../store/taskStore';
 import { useProjectStore } from '../store/projectStore';
 import GanttChart, { HEADER_HEIGHT } from '../components/wbs/GanttChart';
 import { getProjectVisualTone } from '../lib/projectVisuals';
-import { cn, formatDate, getDelayDays } from '../lib/utils';
+import { cn, formatDate, formatPercent, getDelayDays } from '../lib/utils';
 import Button from '../components/common/Button';
 import FeedbackNotice from '../components/common/FeedbackNotice';
 import { exportGanttWorkbook } from '../lib/excel';
@@ -497,7 +497,7 @@ export default function Gantt() {
                       </p>
                     </div>
                     <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
-                      {task.actualProgress}%
+                      {formatPercent(task.actualProgress)}
                     </span>
                     {delayDays > 0 && (
                       <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">
@@ -895,7 +895,7 @@ export default function Gantt() {
                     </div>
 
                     <span className="ml-2 flex-shrink-0 text-xs font-semibold text-[color:var(--text-secondary)]">
-                      {task.actualProgress}%
+                      {formatPercent(task.actualProgress)}
                     </span>
                     {delayDays > 0 && (
                       <span className="ml-1 flex-shrink-0 rounded-full bg-[rgba(203,75,95,0.1)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-danger)]">

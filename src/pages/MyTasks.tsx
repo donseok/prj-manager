@@ -21,6 +21,7 @@ import { useProjectStore } from '../store/projectStore';
 import { useThemeStore } from '../store/themeStore';
 import { loadProjectMembers, loadProjectTasks } from '../lib/dataRepository';
 import { getLeafTasks } from '../lib/taskAnalytics';
+import { formatPercent } from '../lib/utils';
 import type { Project, ProjectMember, Task, TaskStatus } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -567,7 +568,7 @@ function TaskCard({ entry, sectionAccent }: { entry: MyTask; sectionAccent: stri
       <div>
         <div className="flex items-center justify-between text-[11px] text-[color:var(--text-secondary)]">
           <span>진도</span>
-          <span className="font-semibold text-[color:var(--text-primary)]">{task.actualProgress}%</span>
+          <span className="font-semibold text-[color:var(--text-primary)]">{formatPercent(task.actualProgress)}</span>
         </div>
         <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--bg-tertiary)]">
           <div
