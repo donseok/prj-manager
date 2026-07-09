@@ -666,7 +666,7 @@ const en = {
       actualProgress: 'Actual Progress',
       actualStart: 'Actual Start',
       actualEnd: 'Actual End',
-      progressValidation: 'Actual progress must be an integer between 0 and 100.',
+      progressValidation: 'Actual progress must be a number between 0 and 100 (up to one decimal place).',
       endDateValidation: 'Actual end date must be after the actual start date.',
     },
 

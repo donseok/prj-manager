@@ -51,6 +51,7 @@ import {
   formatPercent,
   getDelayedTasks,
 } from '../lib/utils';
+import { parseProgressInput, sanitizeProgressInput } from '../lib/progress';
 import { getLeafTasks, getAssigneeName } from '../lib/taskAnalytics';
 import { exportWbsWorkbook } from '../lib/excel';
 import { syncProjectWorkspace } from '../lib/projectTaskSync';
@@ -1292,19 +1293,18 @@ export default function WBS() {
           <div className="flex items-center gap-1">
             <input
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               defaultValue={actualValue}
               onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9]/g, '');
-                const num = Math.min(100, Math.max(0, parseInt(raw) || 0));
-                e.target.value = raw === '' ? '' : String(num);
+                const raw = sanitizeProgressInput(e.target.value);
+                e.target.value = raw;
                 if (raw !== '') {
-                  handleCellChange(task.id, columnId as keyof Task, num);
+                  handleCellChange(task.id, columnId as keyof Task, parseProgressInput(raw));
                 }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === 'Escape') handleCellCommit();
-                if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
+                if (e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
               }}
               onBlur={() => handleCellCommit()}
               className="cell-input w-full text-right text-xs"

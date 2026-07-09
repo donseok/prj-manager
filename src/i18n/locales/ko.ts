@@ -840,7 +840,7 @@ const ko = {
       actualProgress: '실적 진행률',
       actualStart: '실적 시작일',
       actualEnd: '실적 종료일',
-      progressValidation: '실적 진행률은 0~100 사이의 정수여야 합니다.',
+      progressValidation: '실적 진행률은 0~100 사이의 숫자여야 합니다 (소수점 첫째 자리까지).',
       endDateValidation: '실적 종료일은 실적 시작일 이후여야 합니다.',
     },
 

@@ -9,6 +9,7 @@
 import { differenceInCalendarDays, format } from 'date-fns';
 import type { Task, TaskStatus } from '../types';
 import { parseDate } from './utils';
+import { clampProgress, roundProgress } from './progress';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 
@@ -229,7 +230,7 @@ function applySyncFromPlanDates(task: Task, updates: Partial<Task>) {
   }
 
   const elapsedDays = differenceInCalendarDays(now, start);
-  updates.planProgress = Math.round(Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)));
+  updates.planProgress = roundProgress(clampProgress((elapsedDays / totalDays) * 100));
 }
 
 /** 동기화 대상 필드인지 확인 */

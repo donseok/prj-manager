@@ -665,7 +665,7 @@ const vi = {
       actualProgress: 'Tiến độ thực tế',
       actualStart: 'Ngày bắt đầu thực tế',
       actualEnd: 'Ngày kết thúc thực tế',
-      progressValidation: 'Tiến độ thực tế phải là số nguyên từ 0 đến 100.',
+      progressValidation: 'Tiến độ thực tế phải là số từ 0 đến 100 (tối đa một chữ số thập phân).',
       endDateValidation: 'Ngày kết thúc thực tế phải sau ngày bắt đầu thực tế.',
     },
 

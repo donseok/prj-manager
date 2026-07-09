@@ -15,6 +15,9 @@ export const PROGRESS_STORAGE_DECIMALS = 2;
 /** 화면·리포트 표시 정밀도 */
 export const PROGRESS_DISPLAY_DECIMALS = 1;
 
+/** 사용자가 직접 입력할 수 있는 정밀도 */
+export const PROGRESS_INPUT_DECIMALS = 1;
+
 export type ProgressField = 'planProgress' | 'actualProgress';
 
 export function roundTo(value: number, decimals: number): number {
@@ -138,4 +141,39 @@ export function calculateProjectProgress(tasks: Task[], field: ProgressField): n
 /** 공정율 표시 문자열 (기본 소수점 1자리) */
 export function formatProgress(value: number, decimals: number = PROGRESS_DISPLAY_DECIMALS): string {
   return `${roundTo(value, decimals).toFixed(decimals)}%`;
+}
+
+/** 0~100 범위로 자른다. */
+export function clampProgress(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+}
+
+/**
+ * 공정율 입력 문자열 정리. "42." 처럼 타이핑 도중의 미완성 상태를 그대로 돌려주므로
+ * 제어 컴포넌트에서도 소수점을 찍는 순간 지워지지 않는다.
+ * 숫자와 소수점 첫 자리만 남기고, 100을 넘으면 100으로 자른다.
+ */
+export function sanitizeProgressInput(raw: string): string {
+  let cleaned = raw.replace(/[^0-9.]/g, '');
+
+  const dotIndex = cleaned.indexOf('.');
+  if (dotIndex >= 0) {
+    const intPart = cleaned.slice(0, dotIndex);
+    const fracPart = cleaned
+      .slice(dotIndex + 1)
+      .replace(/\./g, '')
+      .slice(0, PROGRESS_INPUT_DECIMALS);
+    cleaned = `${intPart || '0'}.${fracPart}`;
+  }
+
+  if (cleaned === '') return '';
+  return Number(cleaned) > 100 ? '100' : cleaned;
+}
+
+/** 정리된 입력 문자열을 저장용 숫자로 변환 (0~100, 소수점 1자리). */
+export function parseProgressInput(raw: string): number {
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return 0;
+  return clampProgress(roundTo(num, PROGRESS_INPUT_DECIMALS));
 }

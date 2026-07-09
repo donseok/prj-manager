@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, AlertTriangle } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { cn, formatDate, getLocalDateString } from '../../lib/utils';
+import { parseProgressInput, sanitizeProgressInput } from '../../lib/progress';
 import type { Task, ProjectMember } from '../../types';
 
 interface QuickProgressModalProps {
@@ -23,6 +24,8 @@ export default function QuickProgressModal({
 }: QuickProgressModalProps) {
   const { t } = useTranslation();
   const [localChanges, setLocalChanges] = useState<Record<string, Partial<Task>>>({});
+  // 타이핑 중인 원문("42." 등)을 그대로 보존한다. 확정된 숫자는 localChanges 에만 담는다.
+  const [progressDrafts, setProgressDrafts] = useState<Record<string, string>>({});
 
   // Show only leaf tasks that are not completed
   const activeTasks = useMemo(() => {
@@ -58,6 +61,16 @@ export default function QuickProgressModal({
     }));
   };
 
+  /** 입력이 끝나면 원문 대신 정규화된 숫자("42." → 42)를 보여준다. */
+  const clearProgressDraft = (taskId: string) => {
+    setProgressDrafts((prev) => {
+      if (!(taskId in prev)) return prev;
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+  };
+
   const handleApplyAll = () => {
     for (const [taskId, changes] of Object.entries(localChanges)) {
       if (Object.keys(changes).length > 0) {
@@ -65,6 +78,7 @@ export default function QuickProgressModal({
       }
     }
     setLocalChanges({});
+    setProgressDrafts({});
     onClose();
   };
 
@@ -84,6 +98,7 @@ export default function QuickProgressModal({
       delete next[taskId];
       return next;
     });
+    clearProgressDraft(taskId);
   };
 
 
@@ -165,15 +180,16 @@ export default function QuickProgressModal({
                       <div className="flex w-20 items-center gap-1">
                         <input
                           type="text"
-                          inputMode="numeric"
-                          value={progress}
+                          inputMode="decimal"
+                          value={progressDrafts[task.id] ?? String(progress)}
                           onChange={(e) => {
-                            const intPart = e.target.value.split('.')[0].replace(/[^0-9]/g, '');
-                            const num = Math.min(100, Math.max(0, parseInt(intPart) || 0));
-                            handleLocalChange(task.id, 'actualProgress', intPart === '' ? 0 : num);
+                            const raw = sanitizeProgressInput(e.target.value);
+                            setProgressDrafts((prev) => ({ ...prev, [task.id]: raw }));
+                            handleLocalChange(task.id, 'actualProgress', raw === '' ? 0 : parseProgressInput(raw));
                           }}
+                          onBlur={() => clearProgressDraft(task.id)}
                           onKeyDown={(e) => {
-                            if (e.key === '.' || e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
+                            if (e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault();
                           }}
                           className="w-full rounded-lg border border-[var(--border-color)] bg-[color:var(--bg-secondary-solid)] px-2 py-1 text-center text-sm text-[color:var(--text-primary)] outline-none focus:border-[rgba(15,118,110,0.4)]"
                         />

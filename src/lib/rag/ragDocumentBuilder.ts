@@ -7,6 +7,7 @@ import {
   type Task,
 } from '../../types';
 import { calculateOverallProgress, formatDate } from '../utils';
+import { formatProgress } from '../progress';
 import { getAssigneeName, getLeafTasks } from '../taskAnalytics';
 
 export type RagSourceType = 'project' | 'task' | 'member';
@@ -52,7 +53,7 @@ export function buildProjectDoc(
     project.baseDate ? `진척기준일: ${formatDate(project.baseDate)}` : null,
     `작업 수: ${leafTaskCount}건`,
     `멤버 수: ${memberCount}명`,
-    `공정률: ${Math.round(progressPercent)}%`,
+    `공정률: ${formatProgress(progressPercent)}`,
   ]);
 
   return {
@@ -83,8 +84,8 @@ export function buildTaskDoc(task: Task, project: Project, members: ProjectMembe
     task.actualStart || task.actualEnd
       ? `실적 일정: ${formatDate(task.actualStart) || '미정'} ~ ${formatDate(task.actualEnd) || '미정'}`
       : null,
-    `계획 공정률: ${Math.round(task.planProgress)}%`,
-    `실적 공정률: ${Math.round(task.actualProgress)}%`,
+    `계획 공정률: ${formatProgress(task.planProgress)}`,
+    `실적 공정률: ${formatProgress(task.actualProgress)}`,
     task.description ? `설명: ${task.description}` : null,
     task.output ? `산출물: ${task.output}` : null,
   ]);
@@ -115,7 +116,7 @@ export function buildMemberDoc(member: ProjectMember, tasks: Task[], project: Pr
     on_hold: myTasks.filter((t) => t.status === 'on_hold'),
   };
 
-  const taskPreview = myTasks.slice(0, 8).map((t) => `- ${t.name} (${TASK_STATUS_LABELS[t.status]}, ${Math.round(t.actualProgress)}%)`);
+  const taskPreview = myTasks.slice(0, 8).map((t) => `- ${t.name} (${TASK_STATUS_LABELS[t.status]}, ${formatProgress(t.actualProgress)})`);
 
   const content = joinLines([
     `멤버: ${member.name}`,

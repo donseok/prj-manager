@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, CheckCircle2, Circle, Calendar, User, TrendingUp } from 'lucide-react';
 import { cn, formatPercent } from '../../lib/utils';
+import {
+  clampProgress,
+  parseProgressInput,
+  roundTo,
+  sanitizeProgressInput,
+  PROGRESS_INPUT_DECIMALS,
+} from '../../lib/progress';
 import type { Task, ProjectMember, TaskStatus } from '../../types';
 import { TASK_STATUS_COLORS } from '../../types';
 import { format } from 'date-fns';
@@ -37,6 +44,8 @@ function KanbanTaskEditModal({
   const { t } = useTranslation();
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [actualProgress, setActualProgress] = useState<number>(task.actualProgress);
+  // 타이핑 중인 원문("42." 등). null 이면 actualProgress 를 그대로 보여준다.
+  const [progressDraft, setProgressDraft] = useState<string | null>(null);
   const [actualStart, setActualStart] = useState<string>(task.actualStart || '');
   const [actualEnd, setActualEnd] = useState<string>(task.actualEnd || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -49,6 +58,7 @@ function KanbanTaskEditModal({
     setPrevTaskId(task.id);
     setStatus(task.status);
     setActualProgress(task.actualProgress);
+    setProgressDraft(null);
     setActualStart(task.actualStart || '');
     setActualEnd(task.actualEnd || '');
     setErrors({});
@@ -79,7 +89,7 @@ function KanbanTaskEditModal({
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (actualProgress < 0 || actualProgress > 100 || !Number.isInteger(actualProgress)) {
+    if (!Number.isFinite(actualProgress) || actualProgress < 0 || actualProgress > 100) {
       newErrors.actualProgress = t('kanbanComponents.progressValidation');
     }
 
@@ -96,6 +106,7 @@ function KanbanTaskEditModal({
 
     if (newStatus === 'completed') {
       setActualProgress(100);
+      setProgressDraft(null);
       if (!actualEnd) {
         setActualEnd(getTodayString());
       }
@@ -109,7 +120,7 @@ function KanbanTaskEditModal({
   };
 
   const handleProgressChange = (value: number) => {
-    const clamped = Math.min(100, Math.max(0, Math.round(value)));
+    const clamped = clampProgress(roundTo(value, PROGRESS_INPUT_DECIMALS));
     setActualProgress(clamped);
 
     if (clamped === 100 && status !== 'completed') {
@@ -303,18 +314,25 @@ function KanbanTaskEditModal({
                   type="range"
                   min="0"
                   max="100"
-                  step="1"
+                  step="0.1"
                   value={actualProgress}
-                  onChange={(e) => handleProgressChange(Number(e.target.value))}
+                  onChange={(e) => {
+                    setProgressDraft(null);
+                    handleProgressChange(Number(e.target.value));
+                  }}
                   className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-[color:var(--bg-tertiary)] accent-[var(--accent-primary)]"
                 />
                 <div className="relative flex items-center">
                   <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={actualProgress}
-                    onChange={(e) => handleProgressChange(Number(e.target.value) || 0)}
+                    type="text"
+                    inputMode="decimal"
+                    value={progressDraft ?? String(actualProgress)}
+                    onChange={(e) => {
+                      const raw = sanitizeProgressInput(e.target.value);
+                      setProgressDraft(raw);
+                      handleProgressChange(raw === '' ? 0 : parseProgressInput(raw));
+                    }}
+                    onBlur={() => setProgressDraft(null)}
                     className="field-input w-20 pr-7 text-right"
                   />
                   <span className="pointer-events-none absolute right-3 text-sm text-[color:var(--text-muted)]">

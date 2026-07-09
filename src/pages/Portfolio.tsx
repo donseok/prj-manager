@@ -87,6 +87,7 @@ import { loadProjectTasks, loadProjectMembers } from '../lib/dataRepository';
 import { calculateProjectStats } from '../lib/taskAnalytics';
 import { getLeafTasks } from '../lib/taskAnalytics';
 import { formatDate, formatPercent, getDelayedTasks } from '../lib/utils';
+import { roundTo, PROGRESS_DISPLAY_DECIMALS } from '../lib/progress';
 import type { Project, Task, ProjectMember, ProjectStatus } from '../types';
 import { PROJECT_STATUS_COLORS } from '../types';
 
@@ -268,7 +269,10 @@ export default function Portfolio() {
     const inProgress = activeProjects.filter((p) => p.status === 'active').length;
     const avgProgress =
       portfolioData.length > 0
-        ? Math.round(portfolioData.reduce((s, d) => s + d.actualProgress, 0) / portfolioData.length)
+        ? roundTo(
+            portfolioData.reduce((s, d) => s + d.actualProgress, 0) / portfolioData.length,
+            PROGRESS_DISPLAY_DECIMALS
+          )
         : 0;
     return { total, inProgress, avgProgress };
   }, [activeProjects, portfolioData]);
