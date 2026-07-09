@@ -1,8 +1,8 @@
-import { differenceInCalendarDays, format } from 'date-fns';
+import { format } from 'date-fns';
 import type { Project, ProjectStatus, Task } from '../types';
 import { syncProjectTasks, upsertProject } from './dataRepository';
 import { getLeafTasks } from './taskAnalytics';
-import { roundProgress, weightedProgress, type ProgressField } from './progress';
+import { roundProgress, weightedProgress, calculateLeafPlanProgress, type ProgressField } from './progress';
 import { parseDate } from './utils';
 
 type InternalTask = Task & {
@@ -51,25 +51,6 @@ function calculateAggregateProgress(tasks: Task[], field: ProgressField) {
   return roundProgress(weightedProgress(tasks, field));
 }
 
-
-/**
- * 리프 Task의 계획 공정율을 오늘 날짜 기준으로 자동 계산.
- * planned_progress = clamp(0, 100, (today - planStart) / (planEnd - planStart) * 100)
- */
-function calculateLeafPlanProgress(task: Task, today: Date): number {
-  const start = parseDate(task.planStart);
-  const end = parseDate(task.planEnd);
-  if (!start || !end) return 0;
-
-  const totalDays = differenceInCalendarDays(end, start);
-  if (totalDays <= 0) {
-    return today >= start ? 100 : 0;
-  }
-
-  const elapsedDays = differenceInCalendarDays(today, start);
-  const progress = (elapsedDays / totalDays) * 100;
-  return roundProgress(Math.min(100, Math.max(0, progress)));
-}
 
 function deriveParentStatus(children: Task[]): Task['status'] {
   if (children.length === 0) return 'pending';
