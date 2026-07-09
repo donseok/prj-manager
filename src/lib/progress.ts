@@ -1,3 +1,4 @@
+import { parseISO, differenceInCalendarDays } from 'date-fns';
 import type { Task } from '../types';
 
 /**
@@ -54,13 +55,84 @@ export function getRootTasks(tasks: Task[]): Task[] {
 }
 
 /**
+ * 리프 Task의 계획 공정율을 "오늘" 기준으로 계산.
+ * planned_progress = clamp(0, 100, (today - planStart) / (planEnd - planStart) * 100)
+ *
+ * normalizeTaskHierarchy()가 저장 시점에 적용하는 것과 동일한 공식이다.
+ * (원본은 projectTaskSync.ts에 있었으나, 저장 시점뿐 아니라 조회 시점에도
+ * 같은 공식을 재사용해야 해서 단일 기준 모듈인 이 파일로 옮겼다.)
+ */
+export function calculateLeafPlanProgress(task: Task, today: Date): number {
+  const start = task.planStart ? parseISO(task.planStart) : null;
+  const end = task.planEnd ? parseISO(task.planEnd) : null;
+  if (!start || !end) return 0;
+
+  const totalDays = differenceInCalendarDays(end, start);
+  if (totalDays <= 0) {
+    return today >= start ? 100 : 0;
+  }
+
+  const elapsedDays = differenceInCalendarDays(today, start);
+  const progress = (elapsedDays / totalDays) * 100;
+  return roundProgress(Math.min(100, Math.max(0, progress)));
+}
+
+/**
+ * 계획 공정율은 "오늘"까지의 경과 비율로 정의되므로, 저장된 값을 그대로 쓰면
+ * 화면을 오래 열어둔 세션과 예전에 내보낸 파일이 서로 다른 값을 보여준다
+ * (예: 며칠 전 내보낸 주간보고 엑셀 52% vs 방금 연 대시보드 57%).
+ *
+ * 조회 시점마다 트리 전체의 계획 공정율을 "지금"으로 다시 계산해서, 대시보드·
+ * 주간보고·현황 보고서(PDF/PPT)가 언제 열어봐도 항상 같은 값을 내도록 한다.
+ * (actualProgress는 시간에 따라 자동으로 변하는 값이 아니므로 대상이 아니다.)
+ */
+export function refreshPlanProgress(tasks: Task[], today: Date = new Date()): Task[] {
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const childrenByParent = new Map<string, Task[]>();
+  tasks.forEach((t) => {
+    const parentId = t.parentId && byId.has(t.parentId) ? t.parentId : null;
+    if (parentId) {
+      const siblings = childrenByParent.get(parentId) ?? [];
+      siblings.push(t);
+      childrenByParent.set(parentId, siblings);
+    }
+  });
+
+  const resolved = new Map<string, number>();
+  const visiting = new Set<string>();
+  const resolve = (task: Task): number => {
+    const cached = resolved.get(task.id);
+    if (cached !== undefined) return cached;
+    if (visiting.has(task.id)) return task.planProgress; // 순환 참조 방지
+    visiting.add(task.id);
+
+    const children = childrenByParent.get(task.id);
+    const value =
+      !children || children.length === 0
+        ? calculateLeafPlanProgress(task, today)
+        : roundProgress(
+            weightedProgress(
+              children.map((c) => ({ ...c, planProgress: resolve(c) })),
+              'planProgress'
+            )
+          );
+
+    resolved.set(task.id, value);
+    return value;
+  };
+
+  return tasks.map((t) => ({ ...t, planProgress: resolve(t) }));
+}
+
+/**
  * 프로젝트 전체 공정율 — 대시보드/주간보고/포트폴리오 공통 기준.
  *
  * Phase 가중치를 존중하는 계층적 롤업을 사용한다. 리프 작업을 전역 가중 평균하면
  * 사용자가 지정한 Phase 가중치가 무시되고, 작업 개수가 많은 Phase가 과대 반영된다.
  */
 export function calculateProjectProgress(tasks: Task[], field: ProgressField): number {
-  return roundProgress(weightedProgress(getRootTasks(tasks), field));
+  const effectiveTasks = field === 'planProgress' ? refreshPlanProgress(tasks) : tasks;
+  return roundProgress(weightedProgress(getRootTasks(effectiveTasks), field));
 }
 
 /** 공정율 표시 문자열 (기본 소수점 1자리) */
